@@ -1,0 +1,1088 @@
+@import "tailwindcss";
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SOLO-NO-MORE — NOKIA SOUL DESIGN SYSTEM
+   Nokia 90s-inspired UI with Light + Dark theme support
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Google Font Variables ────────────────────────────────────────────────── */
+@theme inline {
+  --font-pixel:  var(--font-pixel), "Courier New", monospace;   /* Press Start 2P */
+  --font-lcd:    var(--font-lcd), "Courier New", monospace;     /* VT323 */
+  --font-mono:   var(--font-mono), "Courier New", monospace;    /* IBM Plex Mono */
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LIGHT THEME — Warm Nokia Beige
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root,
+[data-theme="light"] {
+  /* Surface layers */
+  --bg-base:        #E8E3D5;   /* warm Nokia beige */
+  --bg-surface:     #D4CFC6;   /* slightly darker panel */
+  --bg-raised:      #F0EDE6;   /* lighter card surface */
+  --bg-sunken:      #C4BFB7;   /* inset / recessed area */
+  --bg-overlay:     rgba(200,195,188,0.95);
+
+  /* Borders */
+  --border-strong:  #3A3835;   /* near-black outer border */
+  --border-mid:     #8A8580;   /* mid border */
+  --border-light:   #B8B4AD;   /* subtle separator */
+
+  /* Nokia Blue accent system */
+  --accent-primary: #0033CC;   /* Nokia Royal Blue */
+  --accent-hover:   #0025A0;
+  --accent-glow:    rgba(0,51,204,0.18);
+  --accent-text:    #0033CC;
+
+  /* Secondary: Nokia Red */
+  --accent-danger:  #CC3300;
+  --accent-warning: #FF8800;
+  --accent-success: #006600;
+
+  /* Typography */
+  --text-primary:   #111111;
+  --text-secondary: #3A3835;
+  --text-muted:     #6A6560;
+  --text-inverse:   #F0EDE6;
+
+  /* 3D Bevel effect tokens */
+  --bevel-light:    #FFFFFF;
+  --bevel-mid:      #E0DDD8;
+  --bevel-dark:     #888480;
+  --bevel-darkest:  #3A3835;
+
+  /* Status bar */
+  --statusbar-bg:   #0033CC;
+  --statusbar-text: #FFFFFF;
+
+  /* LCD/Display element */
+  --lcd-bg:         #9BB065;   /* classic Nokia green LCD */
+  --lcd-bg-glow:    #B2C981;   /* illuminated LCD center glow */
+  --lcd-text:       #1A2800;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DARK THEME — Phosphor Green / Amber CRT
+   ═══════════════════════════════════════════════════════════════════════════ */
+[data-theme="dark"] {
+  /* Surface layers */
+  --bg-base:        #050A14;   /* deep navy black */
+  --bg-surface:     #0D1520;   /* dark panel */
+  --bg-raised:      #0F1C2C;   /* raised card */
+  --bg-sunken:      #030710;   /* sunken inset */
+  --bg-overlay:     rgba(5,10,20,0.96);
+
+  /* Borders */
+  --border-strong:  #33FF66;   /* phosphor green outer */
+  --border-mid:     #1E3A5F;   /* cold blue mid */
+  --border-light:   #122030;   /* subtle separator */
+
+  /* Phosphor green accent system */
+  --accent-primary: #33FF66;   /* phosphor green */
+  --accent-hover:   #00FF44;
+  --accent-glow:    rgba(51,255,102,0.15);
+  --accent-text:    #33FF66;
+
+  /* Secondary: amber */
+  --accent-danger:  #FF4444;
+  --accent-warning: #FFB300;   /* amber LCD glow */
+  --accent-success: #33FF66;
+
+  /* Typography */
+  --text-primary:   #D0EDD0;   /* soft phosphor white */
+  --text-secondary: #8AB890;
+  --text-muted:     #4A7A5A;
+  --text-inverse:   #050A14;
+
+  /* 3D Bevel effect tokens (inverted for dark) */
+  --bevel-light:    #1E3A2A;
+  --bevel-mid:      #0F1C14;
+  --bevel-dark:     #001A08;
+  --bevel-darkest:  #000A04;
+
+  /* Status bar */
+  --statusbar-bg:   #0A0F0A;
+  --statusbar-text: #33FF66;
+
+  /* LCD/Display element */
+  --lcd-bg:         #001A08;
+  --lcd-bg-glow:    #0B3A17;   /* illuminated Phosphor center glow */
+  --lcd-text:       #33FF66;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BASE STYLES
+   ═══════════════════════════════════════════════════════════════════════════ */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  height: 100%;
+}
+
+body {
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-mono), "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  min-height: 100%;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TYPOGRAPHY CLASSES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Pixel display font — for headings, badges, labels */
+.font-pixel {
+  font-family: var(--font-pixel), "Courier New", monospace;
+  letter-spacing: 0.05em;
+  text-rendering: optimizeSpeed;
+  image-rendering: pixelated;
+}
+
+/* LCD font — for big numbers, stats, timers */
+.font-lcd {
+  font-family: var(--font-lcd), "Courier New", monospace;
+  letter-spacing: 0.08em;
+}
+
+/* Monospace body — default body text */
+.font-mono {
+  font-family: var(--font-mono), "Courier New", monospace;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   NOKIA BEVEL — The signature 3D raised-panel look
+   ═══════════════════════════════════════════════════════════════════════════ */
+.nokia-panel {
+  background: var(--bg-surface);
+  border: 2px solid var(--border-strong);
+  box-shadow:
+    inset  2px  2px 0 var(--bevel-light),
+    inset -2px -2px 0 var(--bevel-dark),
+         3px  3px 0 var(--bevel-darkest);
+  border-radius: 2px;
+}
+
+.nokia-panel-raised {
+  background: var(--bg-raised);
+  border: 2px solid var(--border-strong);
+  box-shadow:
+    inset  2px  2px 0 var(--bevel-light),
+    inset -2px -2px 0 var(--bevel-dark),
+         2px  2px 0 var(--bevel-darkest);
+  border-radius: 2px;
+}
+
+.nokia-panel-sunken {
+  background: var(--bg-sunken);
+  border: 2px solid var(--border-strong);
+  box-shadow:
+    inset  2px  2px 0 var(--bevel-dark),
+    inset -2px -2px 0 var(--bevel-light);
+  border-radius: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   NOKIA BUTTONS
+   ═══════════════════════════════════════════════════════════════════════════ */
+.nokia-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-family: var(--font-pixel), "Courier New", monospace;
+  font-size: 8px;
+  letter-spacing: 0.05em;
+  color: var(--text-primary);
+  background: var(--bg-raised);
+  border: 2px solid var(--border-strong);
+  box-shadow:
+    inset  2px  2px 0 var(--bevel-light),
+    inset -2px -2px 0 var(--bevel-dark),
+         2px  2px 0 var(--bevel-darkest);
+  cursor: pointer;
+  border-radius: 2px;
+  text-transform: uppercase;
+  transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.15s ease, color 0.15s ease;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.nokia-btn:hover:not(:disabled) {
+  background: var(--bg-surface);
+  color: var(--accent-text);
+  transform: translateY(-2px);
+  box-shadow:
+    inset  2px  2px 0 var(--bevel-light),
+    inset -2px -2px 0 var(--bevel-dark),
+         3px  4px 0 var(--bevel-darkest);
+}
+
+.nokia-btn:active:not(:disabled) {
+  /* Pressed state — springy collapse */
+  transform: translate(2px, 2px);
+  box-shadow:
+    inset  2px  2px 0 var(--bevel-dark),
+    inset -2px -2px 0 var(--bevel-light),
+         0px  0px 0 transparent;
+}
+
+.nokia-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Primary Nokia Button */
+.nokia-btn-primary {
+  background: var(--accent-primary);
+  color: var(--text-inverse);
+  border-color: var(--border-strong);
+  box-shadow:
+    inset  2px  2px 0 rgba(255,255,255,0.3),
+    inset -2px -2px 0 rgba(0,0,0,0.4),
+         2px  2px 0 var(--bevel-darkest);
+}
+
+.nokia-btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+  color: var(--text-inverse);
+  transform: translateY(-2px);
+  box-shadow:
+    inset  2px  2px 0 rgba(255,255,255,0.3),
+    inset -2px -2px 0 rgba(0,0,0,0.4),
+         3px  4px 0 var(--bevel-darkest);
+}
+
+.nokia-btn-primary:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow:
+    inset  2px  2px 0 rgba(0,0,0,0.4),
+    inset -2px -2px 0 rgba(255,255,255,0.15),
+         0px  0px 0 transparent;
+}
+
+/* Danger Button */
+.nokia-btn-danger {
+  background: var(--accent-danger);
+  color: #FFFFFF;
+  border-color: var(--border-strong);
+}
+
+.nokia-btn-danger:hover:not(:disabled) {
+  background: #E63D00;
+  color: #FFFFFF;
+}
+
+/* Warning / Amber Button */
+.nokia-btn-warning {
+  background: var(--accent-warning);
+  color: #111111;
+  border-color: var(--border-strong);
+  box-shadow:
+    inset  2px  2px 0 rgba(255,255,255,0.4),
+    inset -2px -2px 0 rgba(0,0,0,0.3),
+         2px  2px 0 var(--bevel-darkest);
+}
+
+.nokia-btn-warning:hover:not(:disabled) {
+  background: #FFA000;
+  color: #111111;
+  transform: translateY(-2px);
+  box-shadow:
+    inset  2px  2px 0 rgba(255,255,255,0.4),
+    inset -2px -2px 0 rgba(0,0,0,0.3),
+         3px  4px 0 var(--bevel-darkest);
+}
+
+.nokia-btn-warning:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow:
+    inset  2px  2px 0 rgba(0,0,0,0.3),
+    inset -2px -2px 0 rgba(255,255,255,0.15),
+         0px  0px 0 transparent;
+}
+
+/* Ghost Button */
+.nokia-btn-ghost {
+  background: transparent;
+  color: var(--accent-text);
+  border-color: var(--accent-primary);
+  box-shadow: none;
+}
+
+.nokia-btn-ghost:hover:not(:disabled) {
+  background: var(--accent-glow);
+  transform: translateY(-1px);
+  box-shadow: none;
+}
+
+.nokia-btn-ghost:active:not(:disabled) {
+  transform: translate(1px, 1px);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   NOKIA INPUT FIELDS
+   ═══════════════════════════════════════════════════════════════════════════ */
+.nokia-input {
+  width: 100%;
+  padding: 8px 12px;
+  font-family: var(--font-mono), "Courier New", monospace;
+  font-size: 13px;
+  color: var(--text-primary);
+  background: var(--bg-sunken);
+  border: 2px solid var(--border-strong);
+  box-shadow:
+    inset  2px  2px 0 var(--bevel-dark),
+    inset -2px -2px 0 var(--bevel-light);
+  border-radius: 2px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.nokia-input::placeholder {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.nokia-input:focus {
+  border-color: var(--accent-primary);
+  box-shadow:
+    inset  2px  2px 0 var(--bevel-dark),
+    inset -2px -2px 0 var(--bevel-light),
+    0 0 0 2px var(--accent-glow);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   NOKIA STATUS BAR — Top phone status strip
+   ═══════════════════════════════════════════════════════════════════════════ */
+.nokia-statusbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 12px;
+  background: var(--statusbar-bg);
+  color: var(--statusbar-text);
+  font-family: var(--font-pixel), "Courier New", monospace;
+  font-size: 7px;
+  letter-spacing: 0.08em;
+  border-bottom: 2px solid var(--border-strong);
+  min-height: 24px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   NOKIA BADGE
+   ═══════════════════════════════════════════════════════════════════════════ */
+.nokia-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  font-family: var(--font-pixel), "Courier New", monospace;
+  font-size: 7px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 2px solid var(--border-strong);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border-radius: 2px;
+  box-shadow:
+    inset  1px  1px 0 var(--bevel-light),
+    inset -1px -1px 0 var(--bevel-dark),
+         1px  1px 0 var(--bevel-darkest);
+}
+
+.nokia-badge-primary {
+  background: var(--accent-primary);
+  color: white;
+  border-color: var(--border-strong);
+}
+
+.nokia-badge-success {
+  background: var(--accent-success);
+  color: white;
+  border-color: var(--border-strong);
+}
+
+.nokia-badge-warning {
+  background: var(--accent-warning);
+  color: #111;
+  border-color: var(--border-strong);
+}
+
+.nokia-badge-danger {
+  background: var(--accent-danger);
+  color: white;
+  border-color: var(--border-strong);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   NOKIA LCD DISPLAY — For big stats, counters, scores
+   ═══════════════════════════════════════════════════════════════════════════ */
+.nokia-lcd {
+  background: radial-gradient(circle at center, var(--lcd-bg-glow) 0%, var(--lcd-bg) 100%);
+  color: var(--lcd-text);
+  text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.15);
+  font-family: var(--font-lcd), "Courier New", monospace;
+  font-size: 32px;
+  padding: 8px 16px;
+  border: 2px solid var(--border-strong);
+  box-shadow:
+    inset  2px  2px 0 rgba(0,0,0,0.3),
+    inset -1px -1px 0 rgba(255,255,255,0.05),
+         2px  2px 0 var(--bevel-darkest);
+  letter-spacing: 0.1em;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   NOKIA DIVIDER
+   ═══════════════════════════════════════════════════════════════════════════ */
+.nokia-divider {
+  height: 2px;
+  background: linear-gradient(
+    to right,
+    var(--bevel-dark),
+    var(--border-mid),
+    var(--bevel-dark)
+  );
+  border: none;
+  margin: 12px 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   NOKIA MENU ITEM — List-row style navigation item
+   ═══════════════════════════════════════════════════════════════════════════ */
+.nokia-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  font-family: var(--font-mono), "Courier New", monospace;
+  font-size: 12px;
+  color: var(--text-primary);
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-light);
+  cursor: pointer;
+  transition: background 0.1s ease, color 0.1s ease;
+  text-decoration: none;
+}
+
+.nokia-menu-item:hover,
+.nokia-menu-item.active {
+  background: var(--accent-primary);
+  color: white;
+}
+
+.nokia-menu-item:hover .menu-icon,
+.nokia-menu-item.active .menu-icon {
+  color: white;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SCANLINE OVERLAY — Optional CRT effect (dark theme)
+   ═══════════════════════════════════════════════════════════════════════════ */
+.nokia-scanlines::before {
+  content: "";
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 2px,
+    rgba(0, 0, 0, 0.07) 2px,
+    rgba(0, 0, 0, 0.07) 3px
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   NOKIA GRID ICON NAV — Mobile Nokia-style menu grid
+   ═══════════════════════════════════════════════════════════════════════════ */
+.nokia-icon-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  padding: 8px;
+}
+
+.nokia-icon-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 4px;
+  font-family: var(--font-pixel), "Courier New", monospace;
+  font-size: 6px;
+  text-align: center;
+  color: var(--text-primary);
+  background: var(--bg-surface);
+  border: 2px solid var(--border-strong);
+  box-shadow:
+    inset  1px  1px 0 var(--bevel-light),
+    inset -1px -1px 0 var(--bevel-dark),
+         1px  1px 0 var(--bevel-darkest);
+  cursor: pointer;
+  transition: all 0.08s ease;
+  text-decoration: none;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.nokia-icon-cell:hover,
+.nokia-icon-cell.active {
+  background: var(--accent-primary);
+  color: white;
+  box-shadow:
+    inset  1px  1px 0 rgba(255,255,255,0.2),
+    inset -1px -1px 0 rgba(0,0,0,0.3),
+         1px  1px 0 var(--bevel-darkest);
+}
+
+.nokia-icon-cell:active {
+  transform: translate(1px,1px);
+  box-shadow: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   THEME TOGGLE BUTTON
+   ═══════════════════════════════════════════════════════════════════════════ */
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-family: var(--font-pixel), "Courier New", monospace;
+  font-size: 7px;
+  letter-spacing: 0.06em;
+  color: var(--statusbar-text);
+  background: rgba(0, 0, 0, 0.2);
+  border: 2px solid var(--border-strong);
+  box-shadow: inset 1px 1px 0 rgba(0,0,0,0.4), inset -1px -1px 0 rgba(255,255,255,0.1);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  text-transform: uppercase;
+}
+
+.theme-toggle:hover {
+  background: rgba(0, 0, 0, 0.35);
+  transform: scale(1.05);
+}
+
+.theme-toggle:active {
+  transform: scale(0.95);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   UTILITY HELPERS
+   ═══════════════════════════════════════════════════════════════════════════ */
+.text-accent   { color: var(--accent-primary); }
+.text-muted    { color: var(--text-muted); }
+.text-danger   { color: var(--accent-danger); }
+.text-warning  { color: var(--accent-warning); }
+.text-success  { color: var(--accent-success); }
+
+.bg-surface    { background-color: var(--bg-surface); }
+.bg-raised     { background-color: var(--bg-raised); }
+.bg-sunken     { background-color: var(--bg-sunken); }
+.border-strong { border-color: var(--border-strong); }
+.border-mid    { border-color: var(--border-mid); }
+
+/* Pixel cursor for pixel-font elements */
+.font-pixel, .nokia-btn, .nokia-icon-cell {
+  cursor: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'><rect width='2' height='2' fill='%23000'/><rect x='2' y='2' width='2' height='2' fill='%23000'/><rect x='4' y='4' width='2' height='2' fill='%23000'/><rect x='6' y='6' width='2' height='2' fill='%23000'/></svg>"), auto;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ANIMATION — Pixel blink for LCD elements
+   ═══════════════════════════════════════════════════════════════════════════ */
+@keyframes pixel-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+@keyframes phosphor-pulse {
+  0%, 100% { text-shadow: 0 0 4px var(--accent-primary), 0 0 10px var(--accent-primary); }
+  50%       { text-shadow: 0 0 2px var(--accent-primary); }
+}
+
+@keyframes nokia-boot {
+  0%   { opacity: 0; transform: scaleY(0.02); }
+  20%  { opacity: 1; transform: scaleY(0.02); }
+  40%  { transform: scaleY(1); }
+  100% { transform: scaleY(1); opacity: 1; }
+}
+
+@keyframes nokia-swipe {
+  0%   { transform: translateY(8px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.pixel-blink { animation: pixel-blink 1s step-end infinite; }
+.phosphor    { animation: phosphor-pulse 2s ease-in-out infinite; }
+.nokia-boot  { animation: nokia-boot 0.6s ease-out forwards; }
+.page-swipe  { animation: nokia-swipe 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.1) forwards; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SCROLLBAR — Nokia-style thin scrollbar
+   ═══════════════════════════════════════════════════════════════════════════ */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-sunken); }
+::-webkit-scrollbar-thumb {
+  background: var(--border-mid);
+  border: 1px solid var(--border-strong);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--accent-primary); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SELECTION HIGHLIGHT
+   ═══════════════════════════════════════════════════════════════════════════ */
+::selection {
+  background: var(--accent-primary);
+  color: white;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PARTNER PROMO CARD INVERTED THEME
+   ═══════════════════════════════════════════════════════════════════════════ */
+[data-theme="dark"] .partner-offer-card {
+  background: #33FF66 !important;
+  color: #050A14 !important;
+  border-color: #050A14 !important;
+}
+[data-theme="dark"] .partner-offer-card * {
+  color: #050A14 !important;
+  --accent-primary: #050A14;
+}
+[data-theme="dark"] .partner-offer-card .nokia-badge {
+  background: #050A14 !important;
+  color: #33FF66 !important;
+  border-color: #050A14 !important;
+}
+[data-theme="dark"] .partner-offer-card .nokia-panel-sunken {
+  background: rgba(5, 10, 20, 0.15) !important;
+  border-color: #050A14 !important;
+}
+[data-theme="dark"] .partner-offer-card .nokia-btn {
+  background: #050A14 !important;
+  color: #33FF66 !important;
+  border-color: #050A14 !important;
+}
+
+:root .partner-offer-card,
+[data-theme="light"] .partner-offer-card {
+  background: #0033CC !important;
+  color: #E8E3D5 !important;
+  border-color: #3A3835 !important;
+}
+:root .partner-offer-card *,
+[data-theme="light"] .partner-offer-card * {
+  color: #E8E3D5 !important;
+  --accent-primary: #E8E3D5;
+}
+:root .partner-offer-card .nokia-badge,
+[data-theme="light"] .partner-offer-card .nokia-badge {
+  background: #E8E3D5 !important;
+  color: #0033CC !important;
+  border-color: #3A3835 !important;
+}
+:root .partner-offer-card .nokia-panel-sunken,
+[data-theme="light"] .partner-offer-card .nokia-panel-sunken {
+  background: rgba(232, 227, 213, 0.15) !important;
+  border-color: #3A3835 !important;
+}
+:root .partner-offer-card .nokia-btn,
+[data-theme="light"] .partner-offer-card .nokia-btn {
+  background: #E8E3D5 !important;
+  color: #0033CC !important;
+  border-color: #3A3835 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RESPONSIVE UTILITIES AND MODAL ADAPTATIONS
+   ═══════════════════════════════════════════════════════════════════════════ */
+.responsive-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+@media (min-width: 480px) {
+  .responsive-grid-2 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.responsive-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+@media (min-width: 480px) and (max-width: 639px) {
+  .responsive-grid-3 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (min-width: 640px) {
+  .responsive-grid-3 {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
+/* Responsive Event Cards */
+.event-card {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+}
+@media (min-width: 768px) {
+  .event-card {
+    flex-direction: row !important;
+    align-items: center !important;
+  }
+  .event-checkout-block {
+    align-self: center !important;
+    flex-shrink: 0 !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TINY VIEWPORT OVERRIDES — Deep responsive audit for all modals/widgets
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Bottom Navigation: Compress 6-item grid on very narrow screens ─────── */
+@media (max-width: 360px) {
+  .nokia-icon-cell {
+    padding: 6px 1px !important;
+    font-size: 5px !important;
+    gap: 2px !important;
+  }
+  .nokia-icon-cell span:first-child {
+    font-size: 13px !important;
+  }
+}
+
+/* ── Squad Chat Modal — ultra-small screen adjustments ──────────────────── */
+@media (max-width: 400px) {
+  .squad-chat-overlay {
+    padding: 8px !important;
+  }
+}
+
+/* ── Beacon Grid — ensure single column on tiny phones ──────────────────── */
+@media (max-width: 320px) {
+  .beacon-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── Global: Prevent horizontal overflow on any nokia-panel ─────────────── */
+.nokia-panel,
+.nokia-panel-sunken,
+.nokia-panel-raised {
+  min-width: 0;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* ── Global: nokia-btn text should shrink before overflowing ────────────── */
+.nokia-btn {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Inputs: Must never overflow their containers ───────────────────────── */
+.nokia-input {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* ── Apply Page role tabs: Wrap safely below 320px ─────────────────────── */
+@media (max-width: 320px) {
+  .role-toggle-row {
+    flex-direction: column !important;
+  }
+}
+
+/* ── Manage/Host: Applicant action buttons wrap on mobile ───────────────── */
+@media (max-width: 480px) {
+  .applicant-actions {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+  .applicant-profile-col {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+}
+
+/* ── Partner Dashboard: Stack stats on very small screens ───────────────── */
+@media (max-width: 360px) {
+  .partner-stats-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── Lobby Header: Ensure city selector + badge wrap correctly ───────────── */
+@media (max-width: 380px) {
+  .lobby-header-right {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+}
+
+/* ── CreateBeaconModal category grid: Stack on very narrow screens ────────── */
+@media (max-width: 320px) {
+  .beacon-category-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── Chat modal input form: Ensure button never clips ────────────────────── */
+@media (max-width: 360px) {
+  .chat-input-form {
+    flex-direction: column !important;
+  }
+  .chat-input-form .nokia-btn {
+    width: 100% !important;
+  }
+}
+
+/* ── Promo offer meta row: Allow wrapping ────────────────────────────────── */
+.promo-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+/* ── Beacon card: Title text truncation prevention ──────────────────────── */
+.nokia-panel article h3,
+article.nokia-panel h3 {
+  overflow-wrap: break-word;
+  word-break: break-word;
+  hyphens: auto;
+}
+
+/* ── Status bar: Compress on tiny screens ───────────────────────────────── */
+@media (max-width: 360px) {
+  .nokia-statusbar {
+    padding: 3px 8px !important;
+  }
+  .nokia-statusbar .font-lcd {
+    font-size: 11px !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PREMIUM REDESIGN UTILITIES — RADAR, SANDBOX, PHONE MOCKUP, AND QUIZ
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Radar Sweep Animations ──────────────────────────────────────────────── */
+.radar-container {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  background: radial-gradient(circle, rgba(16, 32, 16, 0.95) 0%, rgba(5, 10, 5, 0.98) 100%);
+  border: 3px solid var(--border-strong);
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 
+    inset 0 0 30px rgba(51, 255, 102, 0.2),
+    0 0 20px rgba(51, 255, 102, 0.15);
+}
+
+.radar-grid {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    radial-gradient(circle, transparent 30%, rgba(51, 255, 102, 0.15) 30.5%, rgba(51, 255, 102, 0.15) 31%, transparent 31.5%, transparent 60%, rgba(51, 255, 102, 0.15) 60.5%, rgba(51, 255, 102, 0.15) 61%, transparent 61.5%),
+    linear-gradient(to right, rgba(51, 255, 102, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(51, 255, 102, 0.05) 1px, transparent 1px);
+  background-size: 100% 100%, 10% 100%, 100% 10%;
+  border-radius: 50%;
+}
+
+.radar-sweep {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 50%;
+  height: 50%;
+  transform-origin: top left;
+  background: linear-gradient(45deg, rgba(51, 255, 102, 0.3) 0%, transparent 70%);
+  animation: radar-sweep-anim 4s linear infinite;
+  border-left: 1px solid rgba(51, 255, 102, 0.7);
+  pointer-events: none;
+}
+
+@keyframes radar-sweep-anim {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.radar-blip {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: #33FF66;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  box-shadow: 0 0 12px #33FF66, 0 0 24px #33FF66;
+  z-index: 10;
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), background-color 0.2s;
+}
+
+.radar-blip:hover {
+  transform: translate(-50%, -50%) scale(1.4);
+  background: #FFFFFF;
+}
+
+.radar-blip-pulse {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  background: rgba(51, 255, 102, 0.4);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  animation: blip-pulse-anim 1.8s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes blip-pulse-anim {
+  0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(3); opacity: 0; }
+}
+
+/* ── Interactive Signal Sandbox Waves ─────────────────────────────────────── */
+.signal-wave-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.signal-wave {
+  position: absolute;
+  border: 2px solid var(--accent-primary);
+  border-radius: 50%;
+  animation: signal-wave-anim 1.2s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+  pointer-events: none;
+}
+
+@keyframes signal-wave-anim {
+  0% { width: 0; height: 0; opacity: 1; transform: translate(-50%, -50%) scale(0); }
+  100% { width: 400px; height: 400px; opacity: 0; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* ── Premium CSS Phone Mockup ─────────────────────────────────────────────── */
+.phone-mockup {
+  position: relative;
+  width: 320px;
+  height: 640px;
+  background: #1e1e24;
+  border: 12px solid #0f0f12;
+  border-radius: 40px;
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.5),
+    inset 0 4px 8px rgba(255, 255, 255, 0.1),
+    inset 0 -4px 8px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Speaker Bezel + Camera Notch */
+.phone-mockup::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 150px;
+  height: 25px;
+  background: #0f0f12;
+  border-bottom-left-radius: 18px;
+  border-bottom-right-radius: 18px;
+  z-index: 100;
+  box-shadow: inset 0 -2px 4px rgba(0,0,0,0.5);
+}
+
+/* Inner Screen Container */
+.phone-screen {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  background: var(--bg-base);
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  padding-top: 25px; /* offset camera notch */
+}
+
+/* Home Indicator Line */
+.phone-mockup::after {
+  content: "";
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 110px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 2px;
+  z-index: 100;
+  pointer-events: none;
+}
+
+/* ── Interactive Vibe Quiz Transitions ────────────────────────────────────── */
+.quiz-slide-enter {
+  animation: slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slide-in {
+  from { transform: translateX(30px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* Glassmorphism Panel */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="dark"] .glass-panel {
+  background: rgba(13, 21, 32, 0.65);
+  border-color: rgba(51, 255, 102, 0.25);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5), 0 0 10px rgba(51, 255, 102, 0.05);
+}
+
+/* ── Glow animations ──────────────────────────────────────────────────────── */
+.glow-primary {
+  box-shadow: 0 0 15px var(--accent-glow);
+}
+
+.text-glow-green {
+  text-shadow: 0 0 8px rgba(51, 255, 102, 0.6);
+}
+
+.text-glow-blue {
+  text-shadow: 0 0 8px rgba(0, 51, 204, 0.4);
+}
