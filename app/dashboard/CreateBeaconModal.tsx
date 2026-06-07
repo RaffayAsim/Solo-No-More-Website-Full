@@ -186,7 +186,7 @@ export default function CreateBeaconModal({
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <span className="font-pixel" style={{ fontSize: "8px" }}>
+            <span className="font-pixel" style={{ fontSize: "11px" }}>
               {isPartnerOffer ? "▤ BROADCAST PARTNER OFFER" : "★ POST A BEACON"}
             </span>
           </div>
@@ -233,7 +233,7 @@ export default function CreateBeaconModal({
               className="font-pixel"
               style={{
                 display: "block",
-                fontSize: "7px",
+                fontSize: "11px",
                 marginBottom: "6px",
                 color: "var(--text-muted)",
                 letterSpacing: "0.08em",
@@ -254,7 +254,7 @@ export default function CreateBeaconModal({
             <div
               className="font-pixel"
               style={{
-                fontSize: "6px",
+                fontSize: "10px",
                 color: "var(--text-muted)",
                 marginTop: "4px",
                 textAlign: "right",
@@ -286,7 +286,7 @@ export default function CreateBeaconModal({
                   cursor: "pointer",
                 }}
               />
-              <label htmlFor="partner-offer-toggle" className="font-pixel" style={{ fontSize: "7px", color: "var(--accent-success)", cursor: "pointer" }}>
+              <label htmlFor="partner-offer-toggle" className="font-pixel" style={{ fontSize: "11px", color: "var(--accent-success)", cursor: "pointer" }}>
                 ◈ MARK AS BUSINESS PARTNER PROMO OFFER
               </label>
             </div>
@@ -298,7 +298,7 @@ export default function CreateBeaconModal({
               className="font-pixel"
               style={{
                 display: "block",
-                fontSize: "7px",
+                fontSize: "11px",
                 marginBottom: "6px",
                 color: "var(--text-muted)",
                 letterSpacing: "0.08em",
@@ -314,9 +314,9 @@ export default function CreateBeaconModal({
                   onClick={() => setCategory(value)}
                   className={category === value ? "nokia-btn nokia-btn-primary" : "nokia-btn"}
                   style={{
-                    fontSize: "7px",
+                    fontSize: "8.5px",
                     width: "100%",
-                    padding: "10px 4px",
+                    padding: "8px 4px",
                   }}
                 >
                   {glyph}
@@ -331,7 +331,7 @@ export default function CreateBeaconModal({
               className="font-pixel"
               style={{
                 display: "block",
-                fontSize: "7px",
+                fontSize: "11px",
                 marginBottom: "6px",
                 color: "var(--text-muted)",
                 letterSpacing: "0.08em",
@@ -354,7 +354,7 @@ export default function CreateBeaconModal({
                 className="nokia-btn text-center"
                 style={{
                   padding: "10px",
-                  fontSize: "8px",
+                  fontSize: "11px",
                   cursor: "pointer",
                   display: "block",
                   fontFamily: "var(--font-pixel)",
@@ -387,7 +387,7 @@ export default function CreateBeaconModal({
                     filter: "grayscale(1) contrast(1.3)",
                   }}
                 />
-                <div className="font-pixel text-center text-muted" style={{ fontSize: "6px", padding: "4px" }}>
+                <div className="font-pixel text-center text-muted" style={{ fontSize: "10px", padding: "4px" }}>
                   90S LOW-RES CRT DITHER PREVIEW
                 </div>
               </div>
@@ -400,7 +400,7 @@ export default function CreateBeaconModal({
               className="font-pixel"
               style={{
                 display: "block",
-                fontSize: "7px",
+                fontSize: "11px",
                 marginBottom: "6px",
                 color: "var(--text-muted)",
                 letterSpacing: "0.08em",
@@ -440,10 +440,10 @@ export default function CreateBeaconModal({
                     borderRadius: "2px",
                   }}
                 >
-                  <span className="font-pixel" style={{ fontSize: "7px", fontWeight: "bold" }}>
+                  <span className="font-pixel" style={{ fontSize: "8.5px", fontWeight: "bold" }}>
                     {prefix} {label}
                   </span>
-                  <span className="font-mono text-muted" style={{ fontSize: "9px" }}>
+                  <span className="font-mono text-muted" style={{ fontSize: "10px" }}>
                     {sub}
                   </span>
                 </button>
@@ -457,7 +457,7 @@ export default function CreateBeaconModal({
               className="font-pixel"
               style={{
                 display: "block",
-                fontSize: "7px",
+                fontSize: "11px",
                 marginBottom: "6px",
                 color: "var(--text-muted)",
                 letterSpacing: "0.08em",
@@ -490,7 +490,7 @@ export default function CreateBeaconModal({
               className="font-pixel"
               style={{
                 display: "block",
-                fontSize: "7px",
+                fontSize: "11px",
                 marginBottom: "6px",
                 color: "var(--text-muted)",
                 letterSpacing: "0.08em",
@@ -572,7 +572,7 @@ export default function CreateBeaconModal({
               className="font-pixel"
               style={{
                 display: "block",
-                fontSize: "7px",
+                fontSize: "11px",
                 marginBottom: "6px",
                 color: "var(--text-muted)",
                 letterSpacing: "0.08em",
@@ -585,7 +585,7 @@ export default function CreateBeaconModal({
                 type="button"
                 onClick={() => setScoutMode("venue")}
                 className={scoutMode === "venue" ? "nokia-btn nokia-btn-primary" : "nokia-btn"}
-                style={{ fontSize: "7px", width: "100%", padding: "10px 4px" }}
+                style={{ fontSize: "11px", width: "100%", padding: "10px 4px" }}
               >
                 SPECIFIC VENUE
               </button>
@@ -593,7 +593,7 @@ export default function CreateBeaconModal({
                 type="button"
                 onClick={() => setScoutMode("neighborhood")}
                 className={scoutMode === "neighborhood" ? "nokia-btn nokia-btn-primary" : "nokia-btn"}
-                style={{ fontSize: "7px", width: "100%", padding: "10px 4px" }}
+                style={{ fontSize: "11px", width: "100%", padding: "10px 4px" }}
               >
                 NEIGHBORHOOD SCOUT
               </button>
@@ -606,7 +606,7 @@ export default function CreateBeaconModal({
               className="font-pixel"
               style={{
                 display: "block",
-                fontSize: "7px",
+                fontSize: "11px",
                 marginBottom: "6px",
                 color: "var(--text-muted)",
                 letterSpacing: "0.08em",
@@ -631,7 +631,7 @@ export default function CreateBeaconModal({
                 className="font-pixel"
                 style={{
                   display: "block",
-                  fontSize: "7px",
+                  fontSize: "11px",
                   marginBottom: "6px",
                   color: "var(--text-muted)",
                   letterSpacing: "0.08em",
@@ -655,7 +655,7 @@ export default function CreateBeaconModal({
                   className="font-pixel"
                   style={{
                     display: "block",
-                    fontSize: "7px",
+                    fontSize: "11px",
                     marginBottom: "6px",
                     color: "var(--text-muted)",
                     letterSpacing: "0.08em",
@@ -668,7 +668,7 @@ export default function CreateBeaconModal({
                     type="button"
                     onClick={() => setScoutDay("today")}
                     className={scoutDay === "today" ? "nokia-btn nokia-btn-primary" : "nokia-btn"}
-                    style={{ fontSize: "7px", width: "100%", padding: "10px 4px" }}
+                    style={{ fontSize: "8.5px", width: "100%", padding: "8px 4px" }}
                   >
                     TODAY
                   </button>
@@ -676,7 +676,7 @@ export default function CreateBeaconModal({
                     type="button"
                     onClick={() => setScoutDay("tomorrow")}
                     className={scoutDay === "tomorrow" ? "nokia-btn nokia-btn-primary" : "nokia-btn"}
-                    style={{ fontSize: "7px", width: "100%", padding: "10px 4px" }}
+                    style={{ fontSize: "8.5px", width: "100%", padding: "8px 4px" }}
                   >
                     TOMORROW
                   </button>
@@ -688,7 +688,7 @@ export default function CreateBeaconModal({
                   className="font-pixel"
                   style={{
                     display: "block",
-                    fontSize: "7px",
+                    fontSize: "11px",
                     marginBottom: "6px",
                     color: "var(--text-muted)",
                     letterSpacing: "0.08em",
@@ -701,7 +701,7 @@ export default function CreateBeaconModal({
                     type="button"
                     onClick={() => setScoutTimeBand("evening")}
                     className={scoutTimeBand === "evening" ? "nokia-btn nokia-btn-primary" : "nokia-btn"}
-                    style={{ fontSize: "6.5px", width: "100%", padding: "10px 2px" }}
+                    style={{ fontSize: "7.5px", width: "100%", padding: "8px 2px" }}
                   >
                     EVENING (6PM)
                   </button>
@@ -709,7 +709,7 @@ export default function CreateBeaconModal({
                     type="button"
                     onClick={() => setScoutTimeBand("latenight")}
                     className={scoutTimeBand === "latenight" ? "nokia-btn nokia-btn-primary" : "nokia-btn"}
-                    style={{ fontSize: "6.5px", width: "100%", padding: "10px 2px" }}
+                    style={{ fontSize: "7.5px", width: "100%", padding: "8px 2px" }}
                   >
                     LATE NIGHT (10PM)
                   </button>
@@ -717,7 +717,7 @@ export default function CreateBeaconModal({
                     type="button"
                     onClick={() => setScoutTimeBand("midnight")}
                     className={scoutTimeBand === "midnight" ? "nokia-btn nokia-btn-primary" : "nokia-btn"}
-                    style={{ fontSize: "6.5px", width: "100%", padding: "10px 2px" }}
+                    style={{ fontSize: "7.5px", width: "100%", padding: "8px 2px" }}
                   >
                     MIDNIGHT (12AM)
                   </button>
@@ -732,7 +732,7 @@ export default function CreateBeaconModal({
               className="nokia-panel-sunken"
               style={{ padding: "10px 14px", borderColor: "var(--accent-danger)" }}
             >
-              <span className="font-pixel" style={{ fontSize: "7px", color: "var(--accent-danger)" }}>
+              <span className="font-pixel" style={{ fontSize: "11px", color: "var(--accent-danger)" }}>
                 ✕ ERROR:{" "}
               </span>
               <span style={{ fontSize: "11px", color: "var(--accent-danger)" }}>{error}</span>
@@ -747,7 +747,7 @@ export default function CreateBeaconModal({
               type="button"
               onClick={onClose}
               className="nokia-btn"
-              style={{ fontSize: "8px" }}
+              style={{ fontSize: "11px" }}
             >
               ✕ CANCEL
             </button>
@@ -756,7 +756,7 @@ export default function CreateBeaconModal({
               type="submit"
               disabled={isLoading || success}
               className="nokia-btn nokia-btn-primary"
-              style={{ fontSize: "8px" }}
+              style={{ fontSize: "11px" }}
             >
               {success ? (
                 "✓ POSTED!"

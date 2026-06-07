@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { AccountStatus } from "@/lib/supabase/types";
 import SignOutButton from "./SignOutButton";
 import ApprovedScreen from "./ApprovedScreen";
 import { writeLazyTimeAlerts } from "@/app/actions/notifications";
+import { getSessionUserSecurely } from "@/lib/supabase/session";
 
 export const metadata = {
   title: "Dashboard — Solo-No-More",
@@ -13,39 +13,9 @@ export const metadata = {
 
 // ─── Helper to read the Supabase session from cookies ───────────────────────
 async function getSessionUser() {
-  const cookieStore = await cookies();
-
-  // Supabase stores its session JWT in this cookie
-  const sessionCookie = cookieStore.get(
-    "sb-dmmgzpiskyocdsxamrgf-auth-token"
-  );
-
-  if (!sessionCookie?.value) return null;
-
-  try {
-    // The cookie value is a base64url-encoded JSON array: [access_token, ...]
-    // We decode it to get the access_token for getUser()
-    let raw = sessionCookie.value;
-
-    // Supabase cookie may be URL-encoded
-    if (raw.startsWith("base64-")) {
-      raw = Buffer.from(raw.slice(7), "base64").toString("utf-8");
-    }
-
-    const parsed = JSON.parse(raw);
-    const accessToken: string =
-      Array.isArray(parsed) ? parsed[0] : parsed.access_token;
-
-    if (!accessToken) return null;
-
-    // Verify the JWT and get the user — uses service role client
-    const { data, error } = await supabaseAdmin.auth.getUser(accessToken);
-    if (error || !data.user) return null;
-
-    return data.user;
-  } catch {
-    return null;
-  }
+  const result = await getSessionUserSecurely();
+  if ("error" in result) return null;
+  return { id: result.userId, email: result.email, user_metadata: result.user_metadata };
 }
 
 // ─── UI States ───────────────────────────────────────────────────────────────

@@ -67,48 +67,64 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 [data-theme="dark"] {
   /* Surface layers */
-  --bg-base:        #050A14;   /* deep navy black */
-  --bg-surface:     #0D1520;   /* dark panel */
-  --bg-raised:      #0F1C2C;   /* raised card */
-  --bg-sunken:      #030710;   /* sunken inset */
-  --bg-overlay:     rgba(5,10,20,0.96);
+  --bg-base:        #0B0816;   /* deep cosmic midnight */
+  --bg-surface:     #120E26;   /* dark purple panel */
+  --bg-raised:      #1A1435;   /* raised purple card */
+  --bg-sunken:      #05030B;   /* inset deep space */
+  --bg-overlay:     rgba(11,8,22,0.96);
 
   /* Borders */
-  --border-strong:  #33FF66;   /* phosphor green outer */
-  --border-mid:     #1E3A5F;   /* cold blue mid */
-  --border-light:   #122030;   /* subtle separator */
+  --border-strong:  #FF007F;   /* neon pink/magenta */
+  --border-mid:     #8B00FF;   /* cosmic violet */
+  --border-light:   #2E1B4E;   /* subtle dark separator */
 
-  /* Phosphor green accent system */
-  --accent-primary: #33FF66;   /* phosphor green */
-  --accent-hover:   #00FF44;
-  --accent-glow:    rgba(51,255,102,0.15);
-  --accent-text:    #33FF66;
+  /* Synthwave Accent system */
+  --accent-primary: #FF007F;   /* neon pink */
+  --accent-hover:   #FF3399;
+  --accent-glow:    rgba(255,0,127,0.22);
+  --accent-text:    #FF007F;
 
-  /* Secondary: amber */
-  --accent-danger:  #FF4444;
-  --accent-warning: #FFB300;   /* amber LCD glow */
-  --accent-success: #33FF66;
+  /* Secondary colors */
+  --accent-danger:  #FF3366;
+  --accent-warning: #FFCC00;   /* neon yellow/gold */
+  --accent-success: #00F0FF;   /* electric cyan */
 
   /* Typography */
-  --text-primary:   #D0EDD0;   /* soft phosphor white */
-  --text-secondary: #8AB890;
-  --text-muted:     #4A7A5A;
-  --text-inverse:   #050A14;
+  --text-primary:   #F4EFFF;   /* off-white lilac */
+  --text-secondary: #CBB4FF;   /* soft violet */
+  --text-muted:     #7E6C9E;   /* muted purple-gray */
+  --text-inverse:   #0B0816;
 
-  /* 3D Bevel effect tokens (inverted for dark) */
-  --bevel-light:    #1E3A2A;
-  --bevel-mid:      #0F1C14;
-  --bevel-dark:     #001A08;
-  --bevel-darkest:  #000A04;
+  /* 3D Bevel effect tokens (adapted to synthwave glowing edges) */
+  --bevel-light:    #FF3399;
+  --bevel-mid:      #8B00FF;
+  --bevel-dark:     #120E26;
+  --bevel-darkest:  #0B0816;
 
   /* Status bar */
-  --statusbar-bg:   #0A0F0A;
-  --statusbar-text: #33FF66;
+  --statusbar-bg:   #120E26;
+  --statusbar-text: #00F0FF;   /* electric cyan status text */
 
   /* LCD/Display element */
-  --lcd-bg:         #001A08;
-  --lcd-bg-glow:    #0B3A17;   /* illuminated Phosphor center glow */
-  --lcd-text:       #33FF66;
+  --lcd-bg:         #05030B;
+  --lcd-bg-glow:    #32004A;   /* deep violet LCD background glow */
+  --lcd-text:       #00F0FF;   /* neon cyan numbers/text */
+}
+
+/* Global viewport CRT scanlines overlay in dark mode */
+[data-theme="dark"] body::before {
+  content: "";
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 2px,
+    rgba(255, 0, 127, 0.02) 2px,
+    rgba(255, 0, 127, 0.02) 3px
+  );
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -195,10 +211,10 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 8px 16px;
+  gap: 8px;
+  padding: 10px 18px;
   font-family: var(--font-pixel), "Courier New", monospace;
-  font-size: 8px;
+  font-size: 11px;
   letter-spacing: 0.05em;
   color: var(--text-primary);
   background: var(--bg-raised);
@@ -367,14 +383,14 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 3px 12px;
+  padding: 4px 12px;
   background: var(--statusbar-bg);
   color: var(--statusbar-text);
   font-family: var(--font-pixel), "Courier New", monospace;
-  font-size: 7px;
+  font-size: 11px;
   letter-spacing: 0.08em;
   border-bottom: 2px solid var(--border-strong);
-  min-height: 24px;
+  min-height: 32px;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -382,9 +398,9 @@ body {
    ═══════════════════════════════════════════════════════════════════════════ */
 .nokia-badge {
   display: inline-block;
-  padding: 2px 8px;
+  padding: 3px 8px;
   font-family: var(--font-pixel), "Courier New", monospace;
-  font-size: 7px;
+  font-size: 10px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   border: 2px solid var(--border-strong);
@@ -399,13 +415,13 @@ body {
 
 .nokia-badge-primary {
   background: var(--accent-primary);
-  color: white;
+  color: var(--text-inverse);
   border-color: var(--border-strong);
 }
 
 .nokia-badge-success {
   background: var(--accent-success);
-  color: white;
+  color: var(--text-inverse);
   border-color: var(--border-strong);
 }
 
@@ -477,7 +493,7 @@ body {
 .nokia-menu-item:hover,
 .nokia-menu-item.active {
   background: var(--accent-primary);
-  color: white;
+  color: var(--text-inverse);
 }
 
 .nokia-menu-item:hover .menu-icon,
@@ -518,10 +534,10 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 10px 4px;
+  gap: 6px;
+  padding: 12px 6px;
   font-family: var(--font-pixel), "Courier New", monospace;
-  font-size: 6px;
+  font-size: 10px;
   text-align: center;
   color: var(--text-primary);
   background: var(--bg-surface);
@@ -540,7 +556,7 @@ body {
 .nokia-icon-cell:hover,
 .nokia-icon-cell.active {
   background: var(--accent-primary);
-  color: white;
+  color: var(--text-inverse);
   box-shadow:
     inset  1px  1px 0 rgba(255,255,255,0.2),
     inset -1px -1px 0 rgba(0,0,0,0.3),
@@ -559,9 +575,9 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
+  padding: 5px 12px;
   font-family: var(--font-pixel), "Courier New", monospace;
-  font-size: 7px;
+  font-size: 10px;
   letter-spacing: 0.06em;
   color: var(--statusbar-text);
   background: rgba(0, 0, 0, 0.2);
@@ -598,8 +614,34 @@ body {
 .border-mid    { border-color: var(--border-mid); }
 
 /* Pixel cursor for pixel-font elements */
-.font-pixel, .nokia-btn, .nokia-icon-cell {
+.font-pixel, .nokia-btn, .nokia-icon-cell, .theme-toggle, button, a {
   cursor: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'><rect width='2' height='2' fill='%23000'/><rect x='2' y='2' width='2' height='2' fill='%23000'/><rect x='4' y='4' width='2' height='2' fill='%23000'/><rect x='6' y='6' width='2' height='2' fill='%23000'/></svg>"), auto;
+}
+
+/* Playful active pointer hover animation for widgets */
+.nokia-btn:hover, .nokia-icon-cell:hover, .theme-toggle:hover, a:hover, button:hover {
+  cursor: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'><path d='M2,0 L14,8 L8,8 L12,16 L9,16 L5,9 L2,11 Z' fill='%23fff' stroke='%23000' stroke-width='1.5'/></svg>"), pointer !important;
+}
+
+/* Retro wiggle and scale micro-interaction */
+.nokia-btn:hover:not(:disabled), .theme-toggle:hover {
+  animation: playful-hover-pulse 0.4s ease-in-out infinite alternate;
+}
+
+@keyframes playful-hover-pulse {
+  0% { transform: scale(1.02) translateY(-2px); }
+  100% { transform: scale(1.05) translateY(-3px); }
+}
+
+/* Phosphor pulse glow helpers */
+.nokia-panel-interactive:hover {
+  border-color: var(--accent-primary);
+  box-shadow: 
+    inset 2px 2px 0 var(--bevel-light),
+    inset -2px -2px 0 var(--bevel-dark),
+    0 0 15px var(--accent-glow);
+  transform: translateY(-2px);
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -655,27 +697,27 @@ body {
    PARTNER PROMO CARD INVERTED THEME
    ═══════════════════════════════════════════════════════════════════════════ */
 [data-theme="dark"] .partner-offer-card {
-  background: #33FF66 !important;
-  color: #050A14 !important;
-  border-color: #050A14 !important;
+  background: #FF007F !important;
+  color: #0B0816 !important;
+  border-color: #0B0816 !important;
 }
 [data-theme="dark"] .partner-offer-card * {
-  color: #050A14 !important;
-  --accent-primary: #050A14;
+  color: #0B0816 !important;
+  --accent-primary: #0B0816;
 }
 [data-theme="dark"] .partner-offer-card .nokia-badge {
-  background: #050A14 !important;
-  color: #33FF66 !important;
-  border-color: #050A14 !important;
+  background: #0B0816 !important;
+  color: #FF007F !important;
+  border-color: #0B0816 !important;
 }
 [data-theme="dark"] .partner-offer-card .nokia-panel-sunken {
-  background: rgba(5, 10, 20, 0.15) !important;
-  border-color: #050A14 !important;
+  background: rgba(11, 8, 22, 0.15) !important;
+  border-color: #0B0816 !important;
 }
 [data-theme="dark"] .partner-offer-card .nokia-btn {
-  background: #050A14 !important;
-  color: #33FF66 !important;
-  border-color: #050A14 !important;
+  background: #0B0816 !important;
+  color: #FF007F !important;
+  border-color: #0B0816 !important;
 }
 
 :root .partner-offer-card,
@@ -1069,9 +1111,9 @@ article.nokia-panel h3 {
 }
 
 [data-theme="dark"] .glass-panel {
-  background: rgba(13, 21, 32, 0.65);
-  border-color: rgba(51, 255, 102, 0.25);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5), 0 0 10px rgba(51, 255, 102, 0.05);
+  background: rgba(18, 14, 37, 0.65);
+  border-color: rgba(255, 0, 127, 0.25);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5), 0 0 10px rgba(255, 0, 127, 0.05);
 }
 
 /* ── Glow animations ──────────────────────────────────────────────────────── */
@@ -1086,3 +1128,215 @@ article.nokia-panel h3 {
 .text-glow-blue {
   text-shadow: 0 0 8px rgba(0, 51, 204, 0.4);
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SYNTHWAVE GLOW & SYSTEM OVERRIDES (DARK THEME)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Neon glow for panels & raised cards */
+[data-theme="dark"] .nokia-panel,
+[data-theme="dark"] .nokia-panel-raised {
+  box-shadow: 
+    inset 2px 2px 0 var(--bevel-light),
+    inset -2px -2px 0 var(--bevel-dark),
+    0 0 12px rgba(255, 0, 127, 0.2);
+}
+
+/* Neon glow for sunken input/text areas */
+[data-theme="dark"] .nokia-panel-sunken {
+  box-shadow: 
+    inset 2px 2px 0 var(--bevel-dark),
+    inset -2px -2px 0 var(--bevel-light),
+    0 0 8px rgba(0, 240, 255, 0.05);
+}
+
+/* Neon outline & glow for buttons */
+[data-theme="dark"] .nokia-btn {
+  box-shadow: 
+    inset 2px 2px 0 var(--bevel-light),
+    inset -2px -2px 0 var(--bevel-dark),
+    0 0 8px rgba(139, 0, 255, 0.25);
+}
+
+[data-theme="dark"] .nokia-btn-primary {
+  box-shadow: 
+    inset 2px 2px 0 rgba(255, 255, 255, 0.4),
+    inset -2px -2px 0 rgba(0, 0, 0, 0.4),
+    0 0 12px rgba(255, 0, 127, 0.45);
+}
+
+[data-theme="dark"] .nokia-btn:hover:not(:disabled) {
+  box-shadow: 
+    inset 2px 2px 0 var(--bevel-light),
+    inset -2px -2px 0 var(--bevel-dark),
+    0 0 15px rgba(0, 240, 255, 0.45);
+}
+
+[data-theme="dark"] .nokia-btn:active:not(:disabled) {
+  box-shadow: 
+    inset 2px 2px 0 var(--bevel-dark),
+    inset -2px -2px 0 var(--bevel-light),
+    0 0 0px transparent;
+}
+
+/* Inverted scanlines to match Neon Magenta */
+[data-theme="dark"] .nokia-scanlines::before {
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 2px,
+    rgba(255, 0, 127, 0.02) 2px,
+    rgba(255, 0, 127, 0.02) 3px
+  );
+}
+
+/* Text glow redirections */
+[data-theme="dark"] .text-glow-green {
+  text-shadow: 0 0 8px rgba(255, 0, 127, 0.75), 0 0 16px rgba(255, 0, 127, 0.3);
+}
+
+[data-theme="dark"] .text-glow-blue {
+  text-shadow: 0 0 8px rgba(0, 240, 255, 0.75), 0 0 16px rgba(0, 240, 255, 0.3);
+}
+
+/* Radar Sweep Adaptations to Synthwave Palette */
+[data-theme="dark"] .radar-container {
+  background: radial-gradient(circle, rgba(28, 22, 53, 0.95) 0%, rgba(10, 8, 22, 0.98) 100%);
+  box-shadow: 
+    inset 0 0 35px rgba(255, 0, 127, 0.25),
+    0 0 25px rgba(0, 240, 255, 0.15);
+  border-color: var(--border-strong);
+}
+
+[data-theme="dark"] .radar-grid {
+  background-image: 
+    radial-gradient(circle, transparent 30%, rgba(255, 0, 127, 0.15) 30.5%, rgba(255, 0, 127, 0.15) 31%, transparent 31.5%, transparent 60%, rgba(255, 0, 127, 0.15) 60.5%, rgba(255, 0, 127, 0.15) 61%, transparent 61.5%),
+    linear-gradient(to right, rgba(0, 240, 255, 0.1) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 240, 255, 0.1) 1px, transparent 1px);
+}
+
+[data-theme="dark"] .radar-sweep {
+  background: linear-gradient(45deg, rgba(255, 0, 127, 0.3) 0%, transparent 70%);
+  border-left: 1px solid rgba(255, 0, 127, 0.7);
+}
+
+[data-theme="dark"] .radar-blip {
+  background: #00F0FF;
+  box-shadow: 0 0 12px #00F0FF, 0 0 24px #00F0FF;
+}
+
+[data-theme="dark"] .radar-blip-pulse {
+  background: rgba(0, 240, 255, 0.4);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PREMIUM PLAYFUL RETRO STYLES (NEW)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 3D Neon Horizon Grid (OutRun Style) ── */
+.neon-grid-perspective {
+  position: relative;
+  overflow: hidden;
+}
+
+.neon-grid-perspective::before {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 180px;
+  background-image: 
+    linear-gradient(to bottom, transparent, var(--bg-base) 85%),
+    linear-gradient(to right, rgba(255, 0, 127, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 0, 127, 0.08) 1px, transparent 1px);
+  background-size: 100% 100%, 40px 100%, 100% 20px;
+  transform: perspective(120px) rotateX(65deg);
+  transform-origin: bottom;
+  z-index: 0;
+  pointer-events: none;
+  animation: grid-scroll 2.5s linear infinite;
+}
+
+[data-theme="light"] .neon-grid-perspective::before {
+  background-image: 
+    linear-gradient(to bottom, transparent, var(--bg-base) 85%),
+    linear-gradient(to right, rgba(0, 51, 204, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 51, 204, 0.06) 1px, transparent 1px);
+}
+
+@keyframes grid-scroll {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 20px; }
+}
+
+/* ── Vaporwave Retro Sun ── */
+.retro-sun {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 380px;
+  height: 380px;
+  border-radius: 50%;
+  background: linear-gradient(to bottom, var(--accent-primary) 0%, var(--accent-warning) 100%);
+  opacity: 0.08;
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(1px) drop-shadow(0 0 25px var(--accent-glow));
+  mask-image: linear-gradient(to bottom,
+    black 0%, black 50%,
+    transparent 50%, transparent 53%,
+    black 53%, black 58%,
+    transparent 58%, transparent 62%,
+    black 62%, black 68%,
+    transparent 68%, transparent 73%,
+    black 73%, black 80%,
+    transparent 80%, transparent 86%,
+    black 86%, black 100%);
+  -webkit-mask-image: linear-gradient(to bottom,
+    black 0%, black 50%,
+    transparent 50%, transparent 53%,
+    black 53%, black 58%,
+    transparent 58%, transparent 62%,
+    black 62%, black 68%,
+    transparent 68%, transparent 73%,
+    black 73%, black 80%,
+    transparent 80%, transparent 86%,
+    black 86%, black 100%);
+}
+
+[data-theme="light"] .retro-sun {
+  opacity: 0.05;
+  filter: blur(1px);
+}
+
+/* ── Tactical Corner Brackets ── */
+.retro-corners {
+  position: relative;
+}
+
+.retro-corners::before,
+.retro-corners::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-color: var(--border-strong);
+  border-style: solid;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.retro-corners::before {
+  top: 4px;
+  left: 4px;
+  border-width: 2px 0 0 2px;
+}
+
+.retro-corners::after {
+  bottom: 4px;
+  right: 4px;
+  border-width: 0 2px 2px 0;
+}
+

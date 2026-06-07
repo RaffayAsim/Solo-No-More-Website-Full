@@ -1,8 +1,8 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { writeNotification } from "@/app/actions/notifications";
+import { getSessionUserSecurely } from "@/lib/supabase/session";
 
 export type ApplicationActionResult =
   | { success: true }
@@ -12,31 +12,11 @@ export type ApplicationActionResult =
  * Helper to securely get current logged-in user ID via Server Session cookie.
  */
 async function getUserIdSecurely(): Promise<{ userId: string } | { error: string }> {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get("sb-dmmgzpiskyocdsxamrgf-auth-token");
-
-  if (!sessionCookie?.value) {
-    return { error: "Not authenticated. Please sign in again." };
+  const result = await getSessionUserSecurely();
+  if ("error" in result) {
+    return { error: result.error };
   }
-
-  let accessToken: string;
-  try {
-    let raw = sessionCookie.value;
-    if (raw.startsWith("base64-")) {
-      raw = Buffer.from(raw.slice(7), "base64").toString("utf-8");
-    }
-    const parsed = JSON.parse(raw);
-    accessToken = Array.isArray(parsed) ? parsed[0] : parsed.access_token;
-  } catch {
-    return { error: "Invalid session format." };
-  }
-
-  const { data, error } = await supabaseAdmin.auth.getUser(accessToken);
-  if (error || !data.user) {
-    return { error: "Session expired. Please sign in again." };
-  }
-
-  return { userId: data.user.id };
+  return { userId: result.userId };
 }
 
 /**

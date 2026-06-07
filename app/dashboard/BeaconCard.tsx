@@ -38,7 +38,7 @@ function SlotDots({ filled, total }: { filled: number; total: number }) {
           {i < filled ? "●" : "○"}
         </span>
       ))}
-      <span className="font-pixel" style={{ marginLeft: "4px", fontSize: "7px", color: "var(--text-muted)" }}>
+      <span className="font-pixel" style={{ marginLeft: "4px", fontSize: "10px", color: "var(--text-muted)" }}>
         {total - filled} LEFT
       </span>
     </div>
@@ -112,7 +112,7 @@ export default function BeaconCard({ beacon, onApply, isLateNightRadar, currentU
 
   return (
     <article
-      className={beacon.is_partner_offer ? "nokia-panel partner-offer-card" : "nokia-panel"}
+      className={beacon.is_partner_offer ? "nokia-panel partner-offer-card retro-corners" : "nokia-panel retro-corners"}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       style={{
@@ -159,7 +159,7 @@ export default function BeaconCard({ beacon, onApply, isLateNightRadar, currentU
               background: accent,
               color: "var(--text-inverse)",
               borderColor: "var(--border-strong)",
-              fontSize: "7px",
+              fontSize: "10px",
             }}
           >
             {meta.icon} {meta.label}
@@ -168,9 +168,9 @@ export default function BeaconCard({ beacon, onApply, isLateNightRadar, currentU
             <span
               className="nokia-badge"
               style={{
-                fontSize: "7px",
+                fontSize: "10px",
                 background: "var(--accent-success)",
-                color: "white",
+                color: "var(--text-inverse)",
               }}
             >
               ✓ JOINED
@@ -180,9 +180,9 @@ export default function BeaconCard({ beacon, onApply, isLateNightRadar, currentU
             <span
               className="nokia-badge"
               style={{
-                fontSize: "7px",
+                fontSize: "10px",
                 background: "var(--accent-primary)",
-                color: "white",
+                color: "var(--text-inverse)",
               }}
             >
               ★ HOST
@@ -192,9 +192,9 @@ export default function BeaconCard({ beacon, onApply, isLateNightRadar, currentU
         <span
           className="nokia-badge"
           style={{
-            fontSize: "7px",
+            fontSize: "10px",
             background: beacon.visibility_mode === "friend" ? "var(--accent-primary)" : "var(--bg-sunken)",
-            color: beacon.visibility_mode === "friend" ? "white" : "var(--text-muted)",
+            color: beacon.visibility_mode === "friend" ? "var(--text-inverse)" : "var(--text-muted)",
           }}
         >
           {beacon.visibility_mode === "friend" ? "♥ FRIENDS" : "◈ OPEN"}
@@ -202,7 +202,7 @@ export default function BeaconCard({ beacon, onApply, isLateNightRadar, currentU
       </div>
 
       {/* Title */}
-      <h3 className="font-mono" style={{ fontSize: "12px", fontWeight: "bold", lineHeight: "1.4", color: "var(--text-primary)", letterSpacing: "0.02em" }}>
+      <h3 className="font-mono" style={{ fontSize: "14px", fontWeight: "bold", lineHeight: "1.4", color: "var(--text-primary)", letterSpacing: "0.02em" }}>
         {beacon.title.toUpperCase()}
       </h3>
 
@@ -219,18 +219,18 @@ export default function BeaconCard({ beacon, onApply, isLateNightRadar, currentU
         >
           {beacon.profiles?.avatar_icon || "👾"}
         </span>
-        <span style={{ fontSize: "9px", fontWeight: "600", color: "var(--text-muted)", letterSpacing: "0.04em" }}>
+        <span style={{ fontSize: "11px", fontWeight: "600", color: "var(--text-muted)", letterSpacing: "0.04em" }}>
           BY {beacon.profiles?.full_name?.toUpperCase() || "ANONYMOUS"}
         </span>
       </div>
 
       {/* LCD meta row */}
       <div className="nokia-panel-sunken" style={{ padding: "6px 10px" }}>
-        <div className="font-lcd" style={{ fontSize: "14px", color: accent, letterSpacing: "0.06em", lineHeight: "1.3" }}>
+        <div className="font-lcd" style={{ fontSize: "16px", color: accent, letterSpacing: "0.06em", lineHeight: "1.3" }}>
           {formatScheduledAt(beacon.scheduled_at)}
         </div>
         {beacon.location_name && (
-          <div style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "2px" }}>
+          <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>
             ▸ {beacon.location_name}
           </div>
         )}
@@ -242,7 +242,7 @@ export default function BeaconCard({ beacon, onApply, isLateNightRadar, currentU
       {/* Error */}
       {errorMessage && (
         <div className="nokia-panel-sunken" style={{ padding: "6px 10px", borderColor: "var(--accent-danger)" }}>
-          <span className="font-pixel" style={{ fontSize: "7px", color: "var(--accent-danger)" }}>
+          <span className="font-pixel" style={{ fontSize: "10px", color: "var(--accent-danger)" }}>
             ✕ {errorMessage}
           </span>
         </div>
@@ -256,14 +256,14 @@ export default function BeaconCard({ beacon, onApply, isLateNightRadar, currentU
             <button
               onClick={() => setIsChatOpen(true)}
               className="nokia-btn nokia-btn-primary"
-              style={{ marginTop: "auto", width: "100%", fontSize: "8px" }}
+              style={{ marginTop: "auto", width: "100%", fontSize: "11px" }}
             >
               💬 SQUAD CHAT (HOST)
             </button>
           ) : appliedStatus === "withdrawn" ? (
             // WITHDRAWN STATE
             <div className="nokia-panel-sunken" style={{ padding: "8px", textAlign: "center" }}>
-              <span className="font-pixel" style={{ fontSize: "7px", color: "var(--text-muted)" }}>⊠ WITHDRAWN FROM SQUAD</span>
+              <span className="font-pixel" style={{ fontSize: "10px", color: "var(--text-muted)" }}>⊠ WITHDRAWN FROM SQUAD</span>
             </div>
           ) : beacon.application_status === "approved" ? (
             // APPROVED GUEST VIEW — Chat + Withdraw
@@ -271,7 +271,7 @@ export default function BeaconCard({ beacon, onApply, isLateNightRadar, currentU
               <button
                 onClick={() => setIsChatOpen(true)}
                 className="nokia-btn nokia-btn-primary"
-                style={{ width: "100%", fontSize: "8px", background: "var(--accent-success)", color: "white" }}
+                style={{ width: "100%", fontSize: "11px", background: "var(--accent-success)", color: "var(--text-inverse)" }}
               >
                 💬 SQUAD CHAT
               </button>
@@ -281,7 +281,7 @@ export default function BeaconCard({ beacon, onApply, isLateNightRadar, currentU
                 <button
                   onClick={() => setShowWithdrawConfirm(true)}
                   className="nokia-btn"
-                  style={{ width: "100%", fontSize: "7px", opacity: 0.7 }}
+                  style={{ width: "100%", fontSize: "10px", opacity: 0.7 }}
                 >
                   ⊠ WITHDRAW FROM SQUAD
                 </button>
@@ -289,19 +289,19 @@ export default function BeaconCard({ beacon, onApply, isLateNightRadar, currentU
                 <div className="nokia-panel-sunken" style={{ padding: "8px" }}>
                   {isNearEvent && (
                     <div style={{ marginBottom: "6px" }}>
-                      <span className="font-pixel" style={{ fontSize: "6px", color: "var(--accent-danger)" }}>
+                      <span className="font-pixel" style={{ fontSize: "9px", color: "var(--accent-danger)" }}>
                         ⚠ EVENT IS WITHIN 2H — WITHDRAWING NOW WILL NOTIFY THE HOST!
                       </span>
                     </div>
                   )}
-                  <div className="font-pixel" style={{ fontSize: "6px", marginBottom: "8px", color: "var(--text-muted)" }}>
+                  <div className="font-pixel" style={{ fontSize: "10px", marginBottom: "8px", color: "var(--text-muted)" }}>
                     CONFIRM WITHDRAW?
                   </div>
                   <div style={{ display: "flex", gap: "6px" }}>
                     <button
                       onClick={() => setShowWithdrawConfirm(false)}
                       className="nokia-btn"
-                      style={{ flex: 1, fontSize: "7px" }}
+                      style={{ flex: 1, fontSize: "10px" }}
                     >
                       ✕ CANCEL
                     </button>
@@ -309,7 +309,7 @@ export default function BeaconCard({ beacon, onApply, isLateNightRadar, currentU
                       onClick={handleWithdraw}
                       disabled={isWithdrawing}
                       className="nokia-btn nokia-btn-danger"
-                      style={{ flex: 1, fontSize: "7px" }}
+                      style={{ flex: 1, fontSize: "10px" }}
                     >
                       {isWithdrawing ? "..." : "⊠ CONFIRM"}
                     </button>
@@ -340,7 +340,7 @@ export default function BeaconCard({ beacon, onApply, isLateNightRadar, currentU
               style={{
                 marginTop: "auto",
                 width: "100%",
-                fontSize: "8px",
+                fontSize: "11px",
                 opacity: isFull ? 0.5 : 1,
                 background:
                   appliedStatus === "requested" || beacon.application_status === "pending"
@@ -348,7 +348,7 @@ export default function BeaconCard({ beacon, onApply, isLateNightRadar, currentU
                     : undefined,
                 color:
                   appliedStatus === "requested" || beacon.application_status === "pending"
-                    ? "white"
+                    ? "var(--text-inverse)"
                     : undefined,
               }}
             >

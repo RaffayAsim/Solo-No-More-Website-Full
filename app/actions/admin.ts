@@ -1,8 +1,9 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { getSessionUserSecurely } from "@/lib/supabase/session";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 
 export type AdminActionResult =
   | { success: true }
@@ -12,31 +13,7 @@ export type AdminActionResult =
  * Helper to securely get current logged-in user and email via Server Session cookie.
  */
 async function getUserIdSecurelyWithEmail(): Promise<{ userId: string; email: string | undefined } | { error: string }> {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get("sb-dmmgzpiskyocdsxamrgf-auth-token");
-
-  if (!sessionCookie?.value) {
-    return { error: "Not authenticated. Please sign in again." };
-  }
-
-  let accessToken: string;
-  try {
-    let raw = sessionCookie.value;
-    if (raw.startsWith("base64-")) {
-      raw = Buffer.from(raw.slice(7), "base64").toString("utf-8");
-    }
-    const parsed = JSON.parse(raw);
-    accessToken = Array.isArray(parsed) ? parsed[0] : parsed.access_token;
-  } catch {
-    return { error: "Invalid session format." };
-  }
-
-  const { data, error } = await supabaseAdmin.auth.getUser(accessToken);
-  if (error || !data.user) {
-    return { error: "Session expired. Please sign in again." };
-  }
-
-  return { userId: data.user.id, email: data.user.email };
+  return getSessionUserSecurely();
 }
 
 /**
@@ -77,7 +54,8 @@ export async function verifyAdminStatus(): Promise<{ userId: string; email: stri
 export async function approveUserAction(profileId: string): Promise<AdminActionResult> {
   try {
     await verifyAdminStatus();
-  } catch {
+  } catch (err) {
+    if (isRedirectError(err)) throw err;
     return { success: false, error: "Unauthorized. Admin privileges required." };
   }
 
@@ -99,7 +77,8 @@ export async function approveUserAction(profileId: string): Promise<AdminActionR
 export async function suspendUserAction(profileId: string): Promise<AdminActionResult> {
   try {
     await verifyAdminStatus();
-  } catch {
+  } catch (err) {
+    if (isRedirectError(err)) throw err;
     return { success: false, error: "Unauthorized. Admin privileges required." };
   }
 
@@ -121,7 +100,8 @@ export async function suspendUserAction(profileId: string): Promise<AdminActionR
 export async function resetStrikesAction(profileId: string): Promise<AdminActionResult> {
   try {
     await verifyAdminStatus();
-  } catch {
+  } catch (err) {
+    if (isRedirectError(err)) throw err;
     return { success: false, error: "Unauthorized. Admin privileges required." };
   }
 
@@ -157,7 +137,8 @@ export interface OfficialEventPayload {
 export async function createEventAction(payload: OfficialEventPayload): Promise<AdminActionResult> {
   try {
     await verifyAdminStatus();
-  } catch {
+  } catch (err) {
+    if (isRedirectError(err)) throw err;
     return { success: false, error: "Unauthorized. Admin privileges required." };
   }
 
@@ -193,7 +174,8 @@ export async function updateEventAction(
 ): Promise<AdminActionResult> {
   try {
     await verifyAdminStatus();
-  } catch {
+  } catch (err) {
+    if (isRedirectError(err)) throw err;
     return { success: false, error: "Unauthorized. Admin privileges required." };
   }
 
@@ -224,7 +206,8 @@ export async function updateEventAction(
 export async function deleteEventAction(eventId: string): Promise<AdminActionResult> {
   try {
     await verifyAdminStatus();
-  } catch {
+  } catch (err) {
+    if (isRedirectError(err)) throw err;
     return { success: false, error: "Unauthorized. Admin privileges required." };
   }
 
@@ -259,7 +242,8 @@ export async function upgradeToPartnerAction(
 ): Promise<AdminActionResult> {
   try {
     await verifyAdminStatus();
-  } catch {
+  } catch (err) {
+    if (isRedirectError(err)) throw err;
     return { success: false, error: "Unauthorized. Admin privileges required." };
   }
 

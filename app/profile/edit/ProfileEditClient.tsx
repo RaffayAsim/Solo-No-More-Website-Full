@@ -111,10 +111,10 @@ export default function ProfileEditClient({ initialProfile }: ProfileEditClientP
         marginBottom: "16px",
         borderRadius: "2px",
       }}>
-        <Link href={`/profile/${initialProfile.id}`} className="nokia-btn" style={{ fontSize: "7px", textDecoration: "none" }}>
+        <Link href={`/profile/${initialProfile.id}`} className="nokia-btn" style={{ fontSize: "11px", textDecoration: "none" }}>
           ◀ MY PROFILE
         </Link>
-        <span className="font-pixel" style={{ fontSize: "8px", color: "var(--accent-primary)", letterSpacing: "0.08em" }}>
+        <span className="font-pixel" style={{ fontSize: "11px", color: "var(--accent-primary)", letterSpacing: "0.08em" }}>
           ◈ EDIT VIBE PROFILE
         </span>
       </div>
@@ -128,7 +128,7 @@ export default function ProfileEditClient({ initialProfile }: ProfileEditClientP
         {/* Error */}
         {errorMsg && (
           <div className="nokia-panel-sunken" style={{ padding: "10px 14px", marginBottom: "12px", borderColor: "var(--accent-danger)" }}>
-            <span className="font-pixel" style={{ fontSize: "7px", color: "var(--accent-danger)" }}>✕ ERROR: </span>
+            <span className="font-pixel" style={{ fontSize: "10px", color: "var(--accent-danger)" }}>✕ ERROR: </span>
             <span style={{ fontSize: "11px", color: "var(--accent-danger)" }}>{errorMsg}</span>
           </div>
         )}
@@ -136,7 +136,7 @@ export default function ProfileEditClient({ initialProfile }: ProfileEditClientP
         {/* Success */}
         {success && (
           <div className="nokia-panel-sunken" style={{ padding: "10px 14px", marginBottom: "12px", borderColor: "var(--accent-success)" }}>
-            <span className="font-pixel" style={{ fontSize: "7px", color: "var(--accent-success)" }}>✓ SAVED! </span>
+            <span className="font-pixel" style={{ fontSize: "10px", color: "var(--accent-success)" }}>✓ SAVED! </span>
             <span style={{ fontSize: "11px", color: "var(--accent-success)" }}>Routing you back to profile...</span>
           </div>
         )}
@@ -145,14 +145,14 @@ export default function ProfileEditClient({ initialProfile }: ProfileEditClientP
         <div className="nokia-panel" style={{ padding: "0" }}>
           {/* Title bar */}
           <div style={{ background: "var(--accent-primary)", color: "white", padding: "8px 14px", borderBottom: "2px solid var(--border-strong)" }}>
-            <span className="font-pixel" style={{ fontSize: "8px" }}>◈ PROFILE SETTINGS</span>
+            <span className="font-pixel" style={{ fontSize: "11px" }}>◈ PROFILE SETTINGS</span>
           </div>
 
           <form onSubmit={handleSubmit} style={{ padding: "16px" }}>
 
             {/* Display Name */}
             <div style={{ marginBottom: "14px" }}>
-              <label className="font-pixel" style={{ display: "block", fontSize: "7px", marginBottom: "6px", color: "var(--text-muted)", letterSpacing: "0.08em" }}>
+              <label className="font-pixel" style={{ display: "block", fontSize: "10px", marginBottom: "6px", color: "var(--text-muted)", letterSpacing: "0.08em" }}>
                 ♦ DISPLAY NAME
               </label>
               <input
@@ -164,7 +164,7 @@ export default function ProfileEditClient({ initialProfile }: ProfileEditClientP
                 onChange={(e) => setFullName(e.target.value)}
                 className="nokia-input"
               />
-              <div className="font-pixel" style={{ fontSize: "6px", color: "var(--text-muted)", marginTop: "4px", textAlign: "right" }}>
+              <div className="font-pixel" style={{ fontSize: "9px", color: "var(--text-muted)", marginTop: "4px", textAlign: "right" }}>
                 {fullName.length}/50 CHARS
               </div>
             </div>
@@ -172,7 +172,7 @@ export default function ProfileEditClient({ initialProfile }: ProfileEditClientP
             {/* IF partner, display Business Name */}
             {isPartner && (
               <div style={{ marginBottom: "14px" }}>
-                <label className="font-pixel" style={{ display: "block", fontSize: "7px", marginBottom: "6px", color: "var(--accent-success)", letterSpacing: "0.08em" }}>
+                <label className="font-pixel" style={{ display: "block", fontSize: "10px", marginBottom: "6px", color: "var(--accent-success)", letterSpacing: "0.08em" }}>
                   ▤ BUSINESS NAME (PARTNER ONLY)
                 </label>
                 <input
@@ -190,7 +190,7 @@ export default function ProfileEditClient({ initialProfile }: ProfileEditClientP
 
             {/* Retro Avatars scrolling list */}
             <div style={{ marginBottom: "14px" }}>
-              <label className="font-pixel" style={{ display: "block", fontSize: "7px", marginBottom: "6px", color: "var(--text-muted)", letterSpacing: "0.08em" }}>
+              <label className="font-pixel" style={{ display: "block", fontSize: "10px", marginBottom: "6px", color: "var(--text-muted)", letterSpacing: "0.08em" }}>
                 👾 SELECT RETRO AVATAR ICON
               </label>
               <div style={{
@@ -227,7 +227,7 @@ export default function ProfileEditClient({ initialProfile }: ProfileEditClientP
 
             {/* City Selection */}
             <div style={{ marginBottom: "14px" }}>
-              <label className="font-pixel" style={{ display: "block", fontSize: "7px", marginBottom: "6px", color: "var(--text-muted)", letterSpacing: "0.08em" }}>
+              <label className="font-pixel" style={{ display: "block", fontSize: "10px", marginBottom: "6px", color: "var(--text-muted)", letterSpacing: "0.08em" }}>
                 🏙 SELECT RESIDENT CITY
               </label>
               <select
@@ -259,10 +259,10 @@ export default function ProfileEditClient({ initialProfile }: ProfileEditClientP
             }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
                 <div>
-                  <span className="font-pixel" style={{ display: "block", fontSize: "8px", color: "var(--accent-success)", letterSpacing: "0.08em" }}>
+                  <span className="font-pixel" style={{ display: "block", fontSize: "10px", color: "var(--accent-success)", letterSpacing: "0.08em" }}>
                     ● SEEKING SQUAD THIS WEEK?
                   </span>
-                  <span style={{ fontSize: "10px", color: "var(--text-muted)", display: "block", marginTop: "2px", lineHeight: "1.2" }}>
+                  <span style={{ fontSize: "12px", color: "var(--text-muted)", display: "block", marginTop: "2px", lineHeight: "1.2" }}>
                     Toggles a green pulse indicator on your network card so potential hosts see you are actively seeking matching vibing squads. Auto-expires after 7 days.
                   </span>
                 </div>
@@ -270,7 +270,7 @@ export default function ProfileEditClient({ initialProfile }: ProfileEditClientP
                   type="button"
                   className={isActiveSeeker ? "nokia-btn nokia-btn-primary" : "nokia-btn"}
                   style={{
-                    fontSize: "8px",
+                    fontSize: "11px",
                     minWidth: "75px",
                     height: "30px",
                     justifyContent: "center",
@@ -286,7 +286,7 @@ export default function ProfileEditClient({ initialProfile }: ProfileEditClientP
 
             {/* Vibe Tags Selector */}
             <div style={{ marginBottom: "14px" }}>
-              <label className="font-pixel" style={{ display: "block", fontSize: "7px", marginBottom: "6px", color: "var(--text-muted)", letterSpacing: "0.08em" }}>
+              <label className="font-pixel" style={{ display: "block", fontSize: "10px", marginBottom: "6px", color: "var(--text-muted)", letterSpacing: "0.08em" }}>
                 🏷 SELECT RETRO VIBE TAGS (MAX 5)
               </label>
               <div style={{
@@ -305,7 +305,7 @@ export default function ProfileEditClient({ initialProfile }: ProfileEditClientP
                       key={tag}
                       type="button"
                       className={isSelected ? "nokia-btn nokia-btn-primary" : "nokia-btn"}
-                      style={{ fontSize: "8px", padding: "4px 8px" }}
+                      style={{ fontSize: "10px", padding: "4px 8px" }}
                       onClick={() => {
                         if (isSelected) {
                           setVibeTags(vibeTags.filter((t) => t !== tag));
@@ -324,14 +324,14 @@ export default function ProfileEditClient({ initialProfile }: ProfileEditClientP
                   );
                 })}
               </div>
-              <div className="font-pixel" style={{ fontSize: "6px", color: "var(--text-muted)", marginTop: "4px", textAlign: "right" }}>
+              <div className="font-pixel" style={{ fontSize: "9px", color: "var(--text-muted)", marginTop: "4px", textAlign: "right" }}>
                 {vibeTags.length}/5 SELECTED
               </div>
             </div>
 
             {/* Bio */}
             <div style={{ marginBottom: "14px" }}>
-              <label className="font-pixel" style={{ display: "block", fontSize: "7px", marginBottom: "6px", color: "var(--text-muted)", letterSpacing: "0.08em" }}>
+              <label className="font-pixel" style={{ display: "block", fontSize: "10px", marginBottom: "6px", color: "var(--text-muted)", letterSpacing: "0.08em" }}>
                 ✎ VIBE BIO
               </label>
               <textarea
@@ -343,14 +343,14 @@ export default function ProfileEditClient({ initialProfile }: ProfileEditClientP
                 className="nokia-input"
                 style={{ resize: "none" }}
               />
-              <div className="font-pixel" style={{ fontSize: "6px", color: "var(--text-muted)", marginTop: "4px", textAlign: "right" }}>
+              <div className="font-pixel" style={{ fontSize: "9px", color: "var(--text-muted)", marginTop: "4px", textAlign: "right" }}>
                 {bio.length}/160 CHARS
               </div>
             </div>
 
             {/* Social Link */}
             <div style={{ marginBottom: "16px" }}>
-              <label className="font-pixel" style={{ display: "block", fontSize: "7px", marginBottom: "6px", color: "var(--text-muted)", letterSpacing: "0.08em" }}>
+              <label className="font-pixel" style={{ display: "block", fontSize: "10px", marginBottom: "6px", color: "var(--text-muted)", letterSpacing: "0.08em" }}>
                 ◉ SOCIAL LINK
               </label>
               <input
@@ -373,7 +373,7 @@ export default function ProfileEditClient({ initialProfile }: ProfileEditClientP
               <Link
                 href={`/profile/${initialProfile.id}`}
                 className="nokia-btn"
-                style={{ textDecoration: "none", fontSize: "8px", justifyContent: "center" }}
+                style={{ textDecoration: "none", fontSize: "11px", justifyContent: "center" }}
               >
                 ✕ CANCEL
               </Link>
@@ -381,7 +381,7 @@ export default function ProfileEditClient({ initialProfile }: ProfileEditClientP
                 type="submit"
                 disabled={isLoading || success}
                 className="nokia-btn nokia-btn-primary"
-                style={{ fontSize: "8px" }}
+                style={{ fontSize: "11px" }}
               >
                 {isLoading ? <span className="pixel-blink">▌ SAVING...</span> : "✓ SAVE CHANGES"}
               </button>

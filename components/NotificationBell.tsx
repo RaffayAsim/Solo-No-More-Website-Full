@@ -114,7 +114,7 @@ export default function NotificationBell() {
         id="notification-bell-btn"
         style={{
           padding: "3px 10px",
-          fontSize: "7px",
+          fontSize: "11px",
           fontFamily: "var(--font-pixel)",
           letterSpacing: "0.06em",
           color: "var(--statusbar-text)",
@@ -142,7 +142,7 @@ export default function NotificationBell() {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: "8px",
+              fontSize: "10px",
               fontFamily: "var(--font-pixel)",
               fontWeight: "bold",
               border: "1px solid var(--border-strong)",
@@ -183,7 +183,7 @@ export default function NotificationBell() {
               flexShrink: 0,
             }}
           >
-            <span className="font-pixel" style={{ fontSize: "7px", letterSpacing: "0.08em" }}>
+            <span className="font-pixel" style={{ fontSize: "11px", letterSpacing: "0.08em" }}>
               🔔 ALERTS &amp; NOTIFICATIONS
             </span>
             <button
@@ -193,7 +193,7 @@ export default function NotificationBell() {
                 border: "none",
                 color: "white",
                 cursor: "pointer",
-                fontSize: "12px",
+                fontSize: "14px",
                 padding: 0,
                 lineHeight: 1,
               }}
@@ -206,16 +206,16 @@ export default function NotificationBell() {
           <div style={{ overflowY: "auto", flex: 1 }}>
             {isLoading ? (
               <div style={{ padding: "24px", textAlign: "center" }}>
-                <span className="font-lcd pixel-blink" style={{ fontSize: "18px", color: "var(--accent-primary)" }}>
+                <span className="font-lcd pixel-blink" style={{ fontSize: "20px", color: "var(--accent-primary)" }}>
                   LOADING...
                 </span>
               </div>
             ) : notifications.length === 0 ? (
               <div style={{ padding: "32px 16px", textAlign: "center" }}>
-                <div className="font-lcd" style={{ fontSize: "22px", color: "var(--text-muted)" }}>
+                <div className="font-lcd" style={{ fontSize: "24px", color: "var(--text-muted)" }}>
                   ALL CLEAR
                 </div>
-                <div className="font-pixel" style={{ fontSize: "6px", color: "var(--text-muted)", marginTop: "6px", letterSpacing: "0.06em" }}>
+                <div className="font-pixel" style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "6px", letterSpacing: "0.06em" }}>
                   NO NEW NOTIFICATIONS
                 </div>
               </div>
@@ -238,7 +238,7 @@ export default function NotificationBell() {
                       {/* Icon */}
                       <span
                         style={{
-                          fontSize: "16px",
+                          fontSize: "20px",
                           lineHeight: 1,
                           flexShrink: 0,
                           marginTop: "1px",
@@ -253,7 +253,7 @@ export default function NotificationBell() {
                         <div
                           className="font-pixel"
                           style={{
-                            fontSize: "7px",
+                            fontSize: "11px",
                             letterSpacing: "0.06em",
                             color: notif.is_read ? "var(--text-muted)" : "var(--text-primary)",
                             marginBottom: "3px",
@@ -264,7 +264,7 @@ export default function NotificationBell() {
                         <div
                           className="font-mono"
                           style={{
-                            fontSize: "10px",
+                            fontSize: "12px",
                             color: "var(--text-muted)",
                             lineHeight: "1.4",
                             wordBreak: "break-word",
@@ -283,7 +283,7 @@ export default function NotificationBell() {
                                   setVibeBeaconId(notif.related_beacon_id!);
                                 }}
                                 className="nokia-btn nokia-btn-primary"
-                                style={{ fontSize: "6px", padding: "4px 10px" }}
+                                style={{ fontSize: "8.5px", padding: "4px 8px" }}
                               >
                                 ⭐ RATE THE VIBE
                               </button>
@@ -302,7 +302,7 @@ export default function NotificationBell() {
                                       handleVibeRate(notif.related_beacon_id!, val);
                                     }}
                                     className="nokia-btn"
-                                    style={{ fontSize: "6px", padding: "4px 8px", background: color, color: "white", borderColor: "var(--border-strong)" }}
+                                    style={{ fontSize: "8.5px", padding: "4px 8px", background: color, color: "var(--text-inverse)", borderColor: "var(--border-strong)" }}
                                   >
                                     {vibeSending ? "..." : label}
                                   </button>
@@ -315,7 +315,7 @@ export default function NotificationBell() {
                         {/* Timestamp */}
                         <div
                           className="font-mono"
-                          style={{ fontSize: "9px", color: "var(--text-muted)", marginTop: "4px", opacity: 0.7 }}
+                          style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "4px", opacity: 0.7 }}
                         >
                           {timeAgo(notif.created_at)}
                         </div>
@@ -353,7 +353,7 @@ export default function NotificationBell() {
                 flexShrink: 0,
               }}
             >
-              <span className="font-pixel" style={{ fontSize: "6px", color: "var(--text-muted)" }}>
+              <span className="font-pixel" style={{ fontSize: "10px", color: "var(--text-muted)" }}>
                 {notifications.filter((n) => !n.is_read).length} UNREAD
               </span>
               <button
@@ -363,7 +363,7 @@ export default function NotificationBell() {
                   setUnreadCount(0);
                 }}
                 className="nokia-btn"
-                style={{ fontSize: "6px", padding: "3px 8px" }}
+                style={{ fontSize: "10px", padding: "3px 8px" }}
               >
                 ✓ MARK ALL READ
               </button>

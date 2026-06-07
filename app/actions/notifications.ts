@@ -1,8 +1,8 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { Notification, NotificationType } from "@/lib/supabase/types";
+import { getSessionUserSecurely } from "@/lib/supabase/session";
 
 export type NotificationResult<T = any> =
   | { success: true; data?: T }
@@ -10,21 +10,11 @@ export type NotificationResult<T = any> =
 
 // ── Auth Helper ───────────────────────────────────────────────────────────────
 async function getUserIdSecurely(): Promise<{ userId: string } | { error: string }> {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get("sb-dmmgzpiskyocdsxamrgf-auth-token");
-  if (!sessionCookie?.value) return { error: "Not authenticated." };
-  let accessToken: string;
-  try {
-    let raw = sessionCookie.value;
-    if (raw.startsWith("base64-")) raw = Buffer.from(raw.slice(7), "base64").toString("utf-8");
-    const parsed = JSON.parse(raw);
-    accessToken = Array.isArray(parsed) ? parsed[0] : parsed.access_token;
-  } catch {
-    return { error: "Invalid session format." };
+  const result = await getSessionUserSecurely();
+  if ("error" in result) {
+    return { error: result.error };
   }
-  const { data, error } = await supabaseAdmin.auth.getUser(accessToken);
-  if (error || !data.user) return { error: "Session expired." };
-  return { userId: data.user.id };
+  return { userId: result.userId };
 }
 
 // ── Internal helper: write a single notification ──────────────────────────────

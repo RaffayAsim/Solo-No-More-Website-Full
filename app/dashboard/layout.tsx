@@ -11,12 +11,12 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
 
 const navItems = [
-  { label: "LOBBY",   short: "LOBBY",   icon: "◈", href: "/dashboard" },
-  { label: "HOSTING", short: "HOST",    icon: "◉", href: "/dashboard/manage" },
-  { label: "EVENTS",  short: "EVNTS",   icon: "★", href: "/dashboard/events" },
-  { label: "NETWORK", short: "NET",     icon: "▣", href: "/dashboard/network" },
-  { label: "MY VIBE", short: "VIBE",    icon: "♦", href: "/profile/me" },
-  { label: "UPGRADE", short: "UPG",     icon: "▲", href: "/dashboard/upgrade" },
+  { label: "LOBBY",   short: "LOBBY",   icon: "★", href: "/dashboard" },
+  { label: "HOSTING", short: "HOST",    icon: "📼", href: "/dashboard/manage" },
+  { label: "EVENTS",  short: "EVNTS",   icon: "▶", href: "/dashboard/events" },
+  { label: "NETWORK", short: "NET",     icon: "👥", href: "/dashboard/network" },
+  { label: "MY VIBE", short: "VIBE",    icon: "👤", href: "/profile/me" },
+  { label: "UPGRADE", short: "UPG",     icon: "⚡", href: "/dashboard/upgrade" },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -43,12 +43,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const dynamicNavItems = isPartner
     ? [
-        { label: "LOBBY",   short: "LOBBY",   icon: "◈", href: "/dashboard" },
-        { label: "HOSTING", short: "HOST",    icon: "◉", href: "/dashboard/manage" },
-        { label: "EVENTS",  short: "EVNTS",   icon: "★", href: "/dashboard/events" },
-        { label: "NETWORK", short: "NET",     icon: "▣", href: "/dashboard/network" },
-        { label: "MY VIBE", short: "VIBE",    icon: "♦", href: "/profile/me" },
-        { label: "PARTNER", short: "PARTN",   icon: "▤", href: "/dashboard/partner" },
+        { label: "LOBBY",   short: "LOBBY",   icon: "★", href: "/dashboard" },
+        { label: "HOSTING", short: "HOST",    icon: "📼", href: "/dashboard/manage" },
+        { label: "EVENTS",  short: "EVNTS",   icon: "▶", href: "/dashboard/events" },
+        { label: "NETWORK", short: "NET",     icon: "👥", href: "/dashboard/network" },
+        { label: "MY VIBE", short: "VIBE",    icon: "👤", href: "/profile/me" },
+        { label: "PARTNER", short: "PARTN",   icon: "💼", href: "/dashboard/partner" },
       ]
     : navItems;
 
@@ -63,16 +63,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* ── Top Status Bar ──────────────────────────────────────────────────── */}
       <div className="nokia-statusbar" style={{ flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <span className="font-pixel" style={{ fontSize: "8px", color: "var(--statusbar-text)" }}>◈ SNM</span>
-          <span style={{ fontSize: "8px", opacity: 0.6 }}>VIBE LOBBY</span>
+          <span className="font-pixel" style={{ fontSize: "11px", color: "var(--statusbar-text)" }}>◈ SNM</span>
+          <span style={{ fontSize: "11px", opacity: 0.6 }}>VIBE LOBBY</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           <NotificationBell />
           <ThemeToggle />
           <SignOutButton variant="statusbar" />
-          <span className="font-lcd" style={{ fontSize: "14px", letterSpacing: "0.06em", display: "inline-flex", alignItems: "center", gap: "6px" }}>
-            📶 ▰▰▰▰▱  [▰▰▰▰]
-          </span>
         </div>
       </div>
 
@@ -103,10 +100,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               padding: "10px 12px",
               textAlign: "center",
             }}>
-              <div className="font-pixel" style={{ fontSize: "9px", color: "var(--accent-primary)", letterSpacing: "0.08em" }}>
+              <div className="font-pixel" style={{ fontSize: "12px", color: "var(--accent-primary)", letterSpacing: "0.08em" }}>
                 SOLO-NO-MORE
               </div>
-              <div className="font-lcd" style={{ fontSize: "16px", color: "var(--accent-primary)", marginTop: "2px" }}>
+              <div className="font-lcd" style={{ fontSize: "20px", color: "var(--accent-primary)", marginTop: "2px" }}>
                 {">> ONLINE <<"}
               </div>
             </div>
@@ -122,16 +119,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     className="nokia-menu-item"
                     style={{
                       background: active ? "var(--accent-primary)" : undefined,
-                      color: active ? "white" : undefined,
+                      color: active ? "var(--text-inverse)" : undefined,
                       fontFamily: "var(--font-pixel)",
-                      fontSize: "7px",
+                      fontSize: "11px",
                       letterSpacing: "0.06em",
                       textDecoration: "none",
                     }}
                   >
-                    <span style={{ fontSize: "12px" }}>{icon}</span>
+                    <span style={{ fontSize: "16px" }}>{icon}</span>
                     {label}
-                    {active && <span style={{ marginLeft: "auto", fontSize: "10px" }}>◄</span>}
+                    {active && <span style={{ marginLeft: "auto", fontSize: "12px" }}>◄</span>}
                   </Link>
                 );
               })}
@@ -155,6 +152,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* ── Mobile Bottom Navigation — Nokia Icon Grid style ─────────────── */}
       <nav
+        id="mobile-bottom-nav"
         className="nokia-panel"
         style={{
           position: "fixed",
@@ -182,17 +180,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               className="nokia-icon-cell"
               style={{
                 background: active ? "var(--accent-primary)" : undefined,
-                color: active ? "white" : undefined,
+                color: active ? "var(--text-inverse)" : undefined,
                 borderColor: active ? "var(--border-strong)" : "transparent",
                 boxShadow: active
                   ? "inset 1px 1px 0 rgba(255,255,255,0.2), inset -1px -1px 0 rgba(0,0,0,0.3), 1px 1px 0 var(--bevel-darkest)"
                   : "none",
                 border: active ? "2px solid var(--border-strong)" : "2px solid transparent",
                 textDecoration: "none",
-                padding: "8px 2px",
+                padding: "10px 4px",
               }}
             >
-              <span style={{ fontSize: "16px" }}>{icon}</span>
+              <span style={{ fontSize: "18px" }}>{icon}</span>
               <span>{short}</span>
             </Link>
           );
@@ -203,6 +201,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <style>{`
         @media (min-width: 768px) {
           #desktop-sidebar { display: flex !important; }
+          #mobile-bottom-nav { display: none !important; }
           main { padding-bottom: 0 !important; }
         }
       `}</style>

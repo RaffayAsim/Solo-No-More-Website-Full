@@ -323,13 +323,13 @@ export default function LandingPageClient() {
   const displayedBeacons = [...sandboxBeacons, ...MOCK_DATA[activeCity]];
 
   return (
-    <main className="min-h-screen flex flex-col" style={{ background: "var(--bg-base)" }}>
+    <main className="min-h-screen flex flex-col neon-grid-perspective" style={{ background: "var(--bg-base)" }}>
 
       {/* ── Status Bar ─────────────────────────────────────────────────────── */}
       <header className="nokia-statusbar">
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <span className="font-pixel" style={{ fontSize: "7px" }}>SOLO-NO-MORE // V2.0</span>
-          <span className="pixel-blink" style={{ color: "var(--accent-primary)", fontSize: "8px" }}>● RADAR ONLINE</span>
+          <span className="font-pixel" style={{ fontSize: "11px" }}>🎵 SOLO-NO-MORE // V2.0</span>
+          <span className="pixel-blink" style={{ color: "var(--accent-primary)", fontSize: "11px" }}>🟢 RADAR ONLINE</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <ThemeToggle />
@@ -355,23 +355,24 @@ export default function LandingPageClient() {
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           <span className="font-pixel text-accent phosphor text-glow-blue" style={{ fontSize: "12px" }}>
-            ◈ SOLO-NO-MORE
+            🛸 SOLO-NO-MORE
           </span>
         </div>
         <div style={{ display: "flex", gap: "10px" }}>
-          <Link href="/login" id="nav-login-btn" className="nokia-btn" style={{ fontSize: "8px", padding: "6px 14px", textDecoration: "none" }}>
-            ► LOGIN
+          <Link href="/login" id="nav-login-btn" className="nokia-btn" style={{ fontSize: "11px", padding: "8px 16px", textDecoration: "none" }}>
+            🔑 LOGIN
           </Link>
-          <Link href="/apply" id="nav-apply-btn" className="nokia-btn nokia-btn-primary" style={{ fontSize: "8px", padding: "6px 14px", textDecoration: "none" }}>
-            ✦ APPLY FOR MEMBERSHIP
+          <Link href="/apply" id="nav-apply-btn" className="nokia-btn nokia-btn-primary" style={{ fontSize: "11px", padding: "8px 16px", textDecoration: "none" }}>
+            🎟 APPLY FOR MEMBERSHIP
           </Link>
         </div>
       </nav>
 
       {/* ── Hero Headline Section ──────────────────────────────────────────── */}
-      <section style={{ padding: "48px 20px 28px", textAlign: "center", maxWidth: "900px", margin: "0 auto", width: "100%" }}>
-        <div className="nokia-badge nokia-badge-warning" style={{ marginBottom: "20px", display: "inline-block" }}>
-          ► INVITE-ONLY COMMUNITY — APPLICATIONS ACTIVE FOR 2026
+      <section style={{ padding: "48px 20px 28px", textAlign: "center", maxWidth: "900px", margin: "0 auto", width: "100%", position: "relative" }}>
+        <div className="retro-sun" />
+        <div className="nokia-badge nokia-badge-warning" style={{ marginBottom: "20px", display: "inline-block", position: "relative", zIndex: 1 }}>
+          🎟 INVITE-ONLY COMMUNITY — APPLICATIONS ACTIVE FOR 2026
         </div>
 
         <h1 className="font-pixel text-glow-green" style={{
@@ -379,9 +380,11 @@ export default function LandingPageClient() {
           letterSpacing: "0.02em",
           lineHeight: "1.2",
           color: "var(--text-primary)",
-          marginBottom: "16px"
+          marginBottom: "16px",
+          position: "relative",
+          zIndex: 1
         }}>
-          FIND YOUR VIBE <span className="text-accent" style={{ color: "var(--accent-primary)" }}>IRL</span>
+          FIND YOUR VIBE <span className="text-accent" style={{ color: "var(--accent-primary)" }}>IRL 🔥</span>
         </h1>
 
         <p style={{
@@ -390,18 +393,20 @@ export default function LandingPageClient() {
           lineHeight: "1.8",
           color: "var(--text-secondary)",
           maxWidth: "600px",
-          margin: "0 auto 28px"
+          margin: "0 auto 28px",
+          position: "relative",
+          zIndex: 1
         }}>
           No infinite scrolling algorithms. No performing for feeds. Real Gen-Z members in Pakistan hosting casual meetups happening offline, right now.
         </p>
 
         {/* Quick CTA row */}
-        <div style={{ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" }}>
-          <Link href="/apply" className="nokia-btn nokia-btn-primary" style={{ fontSize: "10px", padding: "14px 28px", textDecoration: "none" }}>
-            ✦ APPLY TO JOIN THE COHORT
+        <div style={{ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap", position: "relative", zIndex: 1 }}>
+          <Link href="/apply" className="nokia-btn nokia-btn-primary" style={{ fontSize: "11px", padding: "14px 28px", textDecoration: "none" }}>
+            🎟 APPLY TO JOIN THE COHORT
           </Link>
-          <a href="#radar-section" className="nokia-btn" style={{ fontSize: "10px", padding: "14px 28px", textDecoration: "none" }}>
-            ⚡ EXPLORE LIVE RADAR
+          <a href="#radar-section" className="nokia-btn" style={{ fontSize: "11px", padding: "14px 28px", textDecoration: "none" }}>
+            🛰 EXPLORE LIVE RADAR
           </a>
         </div>
       </section>
@@ -424,9 +429,9 @@ export default function LandingPageClient() {
         }}>
 
           {/* COLUMN 1: INTERACTIVE LIVE RADAR WIDGET */}
-          <div className="nokia-panel" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+          <div className="nokia-panel retro-corners" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h2 className="font-pixel" style={{ fontSize: "10px", margin: 0 }}>📡 LIVE VIBE RADAR</h2>
+              <h2 className="font-pixel" style={{ fontSize: "11px", margin: 0 }}>📡 LIVE VIBE RADAR</h2>
               <div style={{ display: "flex", gap: "4px" }}>
                 {["Karachi", "Lahore", "Islamabad"].map((city) => (
                   <button
@@ -436,7 +441,7 @@ export default function LandingPageClient() {
                       handleResetSandbox();
                     }}
                     className={activeCity === city ? "nokia-btn nokia-btn-primary" : "nokia-btn"}
-                    style={{ fontSize: "6px", padding: "4px 8px" }}
+                    style={{ fontSize: "8px", padding: "5px 10px" }}
                   >
                     {city.toUpperCase()}
                   </button>
@@ -485,10 +490,10 @@ export default function LandingPageClient() {
               {selectedBeacon ? (
                 <div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-                    <span className="nokia-badge nokia-badge-primary" style={{ fontSize: "6px" }}>
+                    <span className="nokia-badge nokia-badge-primary" style={{ fontSize: "8px" }}>
                       {selectedBeacon.category.toUpperCase()}
                     </span>
-                    <span className="font-pixel text-accent" style={{ fontSize: "8px" }}>
+                    <span className="font-pixel text-accent" style={{ fontSize: "9px" }}>
                       ⚡ {selectedBeacon.filledSlots}/{selectedBeacon.totalSlots} SPOTS
                     </span>
                   </div>
@@ -516,15 +521,15 @@ export default function LandingPageClient() {
           </div>
 
           {/* COLUMN 2: PLAYABLE SANDBOX BROADCASTER */}
-          <div className="nokia-panel" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
-            <h2 className="font-pixel" style={{ fontSize: "10px", margin: 0 }}>⚡ BEACON SANDBOX BROADCASTER</h2>
+          <div className="nokia-panel retro-corners" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+            <h2 className="font-pixel" style={{ fontSize: "11px", margin: 0 }}>⚡ BEACON SANDBOX BROADCASTER</h2>
             <p style={{ fontSize: "11px", color: "var(--text-muted)", margin: 0 }}>
               Test drive the app right now. Create a mock meetup and see the local community intercept and apply instantly!
             </p>
 
             <form style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
               <div>
-                <label className="font-pixel" style={{ fontSize: "6px", display: "block", marginBottom: "4px" }}>1. WHAT IS THE PLAN?</label>
+                <label className="font-pixel" style={{ fontSize: "10px", display: "block", marginBottom: "4px" }}>📼 1. WHAT IS THE PLAN?</label>
                 <input
                   type="text"
                   value={sandboxTitle}
@@ -537,7 +542,7 @@ export default function LandingPageClient() {
               </div>
 
               <div>
-                <label className="font-pixel" style={{ fontSize: "6px", display: "block", marginBottom: "4px" }}>2. WHERE ARE YOU MEETING?</label>
+                <label className="font-pixel" style={{ fontSize: "10px", display: "block", marginBottom: "4px" }}>📍 2. WHERE ARE YOU MEETING?</label>
                 <input
                   type="text"
                   value={sandboxLocation}
@@ -550,7 +555,7 @@ export default function LandingPageClient() {
               </div>
 
               <div>
-                <label className="font-pixel" style={{ fontSize: "6px", display: "block", marginBottom: "4px" }}>3. SELECT THE PLAN VIBE</label>
+                <label className="font-pixel" style={{ fontSize: "10px", display: "block", marginBottom: "4px" }}>🕹 3. SELECT THE PLAN VIBE</label>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "4px" }}>
                   {(["casual", "sports", "nightlife"] as const).map((vibe) => (
                     <button
@@ -558,7 +563,7 @@ export default function LandingPageClient() {
                       key={vibe}
                       onClick={() => setSandboxVibe(vibe)}
                       className={sandboxVibe === vibe ? "nokia-btn nokia-btn-primary" : "nokia-btn"}
-                      style={{ fontSize: "6px", padding: "6px 2px" }}
+                      style={{ fontSize: "8.5px", padding: "6px 4px" }}
                       disabled={isBroadcasting || sandboxBeacons.length > 0}
                     >
                       {vibe.toUpperCase()}
@@ -580,7 +585,7 @@ export default function LandingPageClient() {
                     onClick={handleBroadcast}
                     disabled={!sandboxTitle.trim() || !sandboxLocation.trim() || isBroadcasting}
                     className="nokia-btn nokia-btn-primary"
-                    style={{ width: "100%", fontSize: "9px", padding: "12px" }}
+                    style={{ width: "100%", fontSize: "10px", padding: "12px" }}
                   >
                     {isBroadcasting ? "🛰 SIGNAL BROADCASTING..." : "🛰 BROADCAST SIGNAL"}
                   </button>
@@ -590,7 +595,7 @@ export default function LandingPageClient() {
                   type="button"
                   onClick={handleResetSandbox}
                   className="nokia-btn nokia-btn-warning"
-                  style={{ width: "100%", fontSize: "9px", padding: "12px", marginTop: "8px" }}
+                  style={{ width: "100%", fontSize: "10px", padding: "12px", marginTop: "8px" }}
                 >
                   ↻ CLEAR SANDBOX & BROADCAST AGAIN
                 </button>
@@ -599,7 +604,7 @@ export default function LandingPageClient() {
 
             {/* Sandbox Activity Feed */}
             <div className="nokia-panel-sunken" style={{ padding: "12px", flex: 1, minHeight: "130px" }}>
-              <span className="font-pixel text-accent text-glow-green" style={{ fontSize: "7px", display: "block", marginBottom: "6px" }}>
+              <span className="font-pixel text-accent text-glow-green" style={{ fontSize: "10px", display: "block", marginBottom: "6px" }}>
                 🛰 REAL-TIME TELEMETRY FEED:
               </span>
               {sandboxSubscribers.length > 0 ? (
@@ -635,7 +640,7 @@ export default function LandingPageClient() {
               <div className="phone-screen">
                 
                 {/* Nokia app status */}
-                <div className="nokia-statusbar" style={{ borderTop: "none" }}>
+                <div className="nokia-statusbar" style={{ borderTop: "none", fontSize: "9px" }}>
                   <span>SOLO PREVIEW</span>
                   <span>9:41 AM</span>
                 </div>
@@ -644,7 +649,7 @@ export default function LandingPageClient() {
                 <div style={{ padding: "10px", display: "flex", flexDirection: "column", gap: "10px", flex: 1 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span className="font-pixel" style={{ fontSize: "8px" }}>🏙 {activeCity.toUpperCase()} RADAR</span>
-                    <span className="nokia-badge nokia-badge-success" style={{ fontSize: "5px" }}>LIVE</span>
+                    <span className="nokia-badge nokia-badge-success" style={{ fontSize: "7px" }}>LIVE</span>
                   </div>
 
                   {/* Simulator Beacon Cards List */}
@@ -663,14 +668,14 @@ export default function LandingPageClient() {
                         }}
                       >
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-                          <span style={{ fontSize: "5px", padding: "1px 4px" }} className="nokia-badge font-pixel">
+                          <span style={{ fontSize: "7px", padding: "1px 4px" }} className="nokia-badge font-pixel">
                             {b.category.toUpperCase()}
                           </span>
-                          <span className="font-pixel" style={{ fontSize: "6px", color: "var(--accent-primary)" }}>
+                          <span className="font-pixel" style={{ fontSize: "8px", color: "var(--accent-primary)" }}>
                             {b.filledSlots}/{b.totalSlots} JOINED
                           </span>
                         </div>
-                        <div className="font-pixel" style={{ fontSize: "7px", margin: "2px 0", color: "var(--text-primary)" }}>
+                        <div className="font-pixel" style={{ fontSize: "9px", margin: "2px 0", color: "var(--text-primary)" }}>
                           {b.title}
                         </div>
                         <div style={{ fontSize: "9px", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "4px" }}>
@@ -741,7 +746,7 @@ export default function LandingPageClient() {
             {quizStep > 0 && quizStep < 4 && (
               <div className="quiz-slide-enter">
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "16px" }}>
-                  <span className="font-pixel text-muted" style={{ fontSize: "6px" }}>
+                  <span className="font-pixel text-muted" style={{ fontSize: "9px" }}>
                     QUESTION {quizStep} OF 3
                   </span>
                   <span className="font-lcd text-accent" style={{ fontSize: "12px" }}>
@@ -749,7 +754,7 @@ export default function LandingPageClient() {
                   </span>
                 </div>
 
-                <h3 className="font-pixel" style={{ fontSize: "10px", marginBottom: "16px", color: "var(--text-primary)" }}>
+                <h3 className="font-pixel" style={{ fontSize: "11px", marginBottom: "16px", color: "var(--text-primary)" }}>
                   {QUIZ_QUESTIONS[quizStep - 1].question}
                 </h3>
 
@@ -761,7 +766,7 @@ export default function LandingPageClient() {
                       className="nokia-btn"
                       style={{
                         width: "100%",
-                        fontSize: "8px",
+                        fontSize: "9.5px",
                         padding: "12px",
                         textAlign: "left",
                         justifyContent: "flex-start",
@@ -779,7 +784,7 @@ export default function LandingPageClient() {
             {quizStep === 4 && (
               <div className="quiz-slide-enter" style={{ textAlign: "center" }}>
                 <span className="nokia-badge nokia-badge-success" style={{ marginBottom: "12px" }}>
-                  ● RADAR PROFILE GENERATED
+                  🎉 RADAR PROFILE GENERATED
                 </span>
                 
                 <h3 className="font-pixel text-accent text-glow-green" style={{ fontSize: "14px", margin: "8px 0 16px" }}>
@@ -787,7 +792,7 @@ export default function LandingPageClient() {
                 </h3>
 
                 <div className="nokia-panel-sunken" style={{ padding: "14px", textAlign: "left", marginBottom: "20px", background: "rgba(0,0,0,0.05)" }}>
-                  <span className="font-pixel" style={{ fontSize: "6px", display: "block", color: "var(--accent-warning)", marginBottom: "8px" }}>
+                  <span className="font-pixel" style={{ fontSize: "9px", display: "block", color: "var(--accent-warning)", marginBottom: "8px" }}>
                     MATCHING CIRCLES ACTIVE IN YOUR AREA:
                   </span>
                   <ul style={{ margin: 0, paddingLeft: "16px", fontSize: "12px", display: "flex", flexDirection: "column", gap: "6px", color: "var(--text-primary)" }}>
@@ -798,13 +803,13 @@ export default function LandingPageClient() {
                 </div>
 
                 <div style={{ display: "flex", gap: "8px", justifyContent: "center", flexWrap: "wrap" }}>
-                  <Link href="/apply" className="nokia-btn nokia-btn-primary" style={{ fontSize: "8px", padding: "12px 20px", textDecoration: "none" }}>
+                  <Link href="/apply" className="nokia-btn nokia-btn-primary" style={{ fontSize: "10px", padding: "12px 20px", textDecoration: "none" }}>
                     ✦ APPLY FOR ACCESS TO THESE GROUPS
                   </Link>
                   <button
                     onClick={resetQuiz}
                     className="nokia-btn"
-                    style={{ fontSize: "8px", padding: "12px 20px" }}
+                    style={{ fontSize: "10px", padding: "12px 20px" }}
                   >
                     ↻ RETAKE
                   </button>
@@ -820,7 +825,7 @@ export default function LandingPageClient() {
       {/* ── CORE PILLARS SECTION ──────────────────────────────────────────── */}
       <section style={{ padding: "40px 20px", maxWidth: "900px", margin: "0 auto", width: "100%" }}>
         <div className="font-pixel" style={{
-          fontSize: "8px",
+          fontSize: "10px",
           letterSpacing: "0.1em",
           color: "var(--text-muted)",
           marginBottom: "24px",
@@ -838,7 +843,7 @@ export default function LandingPageClient() {
           <div className="nokia-panel" style={{ padding: "20px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
               <span className="font-lcd text-accent" style={{ fontSize: "24px" }}>◈</span>
-              <span className="font-pixel" style={{ fontSize: "8px", color: "var(--text-primary)" }}>100% VETTED MEMBERS</span>
+              <span className="font-pixel" style={{ fontSize: "10px", color: "var(--text-primary)" }}>100% VETTED MEMBERS</span>
             </div>
             <p style={{ fontSize: "12px", color: "var(--text-secondary)", lineHeight: "1.6" }}>
               Zero algorithms. Zero fake profiles or endless doomscroll reels. Every applicant is manually vetted by our committee to ensure real, respectful, and awesome humans.
@@ -848,7 +853,7 @@ export default function LandingPageClient() {
           <div className="nokia-panel" style={{ padding: "20px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
               <span className="font-lcd text-accent" style={{ fontSize: "24px" }}>◉</span>
-              <span className="font-pixel" style={{ fontSize: "8px", color: "var(--text-primary)" }}>REAL-WORLD MEETUPS</span>
+              <span className="font-pixel" style={{ fontSize: "10px", color: "var(--text-primary)" }}>REAL-WORLD MEETUPS</span>
             </div>
             <p style={{ fontSize: "12px", color: "var(--text-secondary)", lineHeight: "1.6" }}>
               We facilitate real-life meetups. Connection happens offline at dhaba joints, sports fields, coffee bars, and gaming circles, not in an online messaging graveyard.
@@ -858,7 +863,7 @@ export default function LandingPageClient() {
           <div className="nokia-panel" style={{ padding: "20px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
               <span className="font-lcd text-accent" style={{ fontSize: "24px" }}>★</span>
-              <span className="font-pixel" style={{ fontSize: "8px", color: "var(--text-primary)" }}>ZERO GHOSTING COVENANT</span>
+              <span className="font-pixel" style={{ fontSize: "10px", color: "var(--text-primary)" }}>ZERO GHOSTING COVENANT</span>
             </div>
             <p style={{ fontSize: "12px", color: "var(--text-secondary)", lineHeight: "1.6" }}>
               Our strict community standards ensure that members show up. Confirmed beacon slots that result in deliberate ghosting lead to permanent account suspensions.

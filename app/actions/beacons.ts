@@ -1,9 +1,9 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { CreateBeaconInput } from "@/lib/supabase/types";
 import { writeNotification } from "@/app/actions/notifications";
+import { getSessionUserSecurely } from "@/lib/supabase/session";
 
 export type CreateBeaconResult =
   | { success: true; beaconId: string }
@@ -19,23 +19,9 @@ export type BeaconActionResult =
 export async function createBeacon(
   data: CreateBeaconInput
 ): Promise<CreateBeaconResult> {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get("sb-dmmgzpiskyocdsxamrgf-auth-token");
-  if (!sessionCookie?.value) return { success: false, error: "Not authenticated." };
-
-  let accessToken: string;
-  try {
-    let raw = sessionCookie.value;
-    if (raw.startsWith("base64-")) raw = Buffer.from(raw.slice(7), "base64").toString("utf-8");
-    const parsed = JSON.parse(raw);
-    accessToken = Array.isArray(parsed) ? parsed[0] : parsed.access_token;
-  } catch {
-    return { success: false, error: "Invalid session." };
-  }
-
-  const { data: authData, error: authError } = await supabaseAdmin.auth.getUser(accessToken);
-  if (authError || !authData.user) return { success: false, error: "Session expired. Please sign in again." };
-  const userId = authData.user.id;
+  const authCheck = await getSessionUserSecurely();
+  if ("error" in authCheck) return { success: false, error: authCheck.error };
+  const userId = authCheck.userId;
 
   const { data: profile } = await (supabaseAdmin
     .from("profiles")
@@ -87,23 +73,9 @@ export async function createBeacon(
  * Only allowed if filled_slots === 0 (no approved attendees).
  */
 export async function cancelBeacon(beaconId: string): Promise<BeaconActionResult> {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get("sb-dmmgzpiskyocdsxamrgf-auth-token");
-  if (!sessionCookie?.value) return { success: false, error: "Not authenticated." };
-
-  let accessToken: string;
-  try {
-    let raw = sessionCookie.value;
-    if (raw.startsWith("base64-")) raw = Buffer.from(raw.slice(7), "base64").toString("utf-8");
-    const parsed = JSON.parse(raw);
-    accessToken = Array.isArray(parsed) ? parsed[0] : parsed.access_token;
-  } catch {
-    return { success: false, error: "Invalid session." };
-  }
-
-  const { data: authData, error: authError } = await supabaseAdmin.auth.getUser(accessToken);
-  if (authError || !authData.user) return { success: false, error: "Session expired." };
-  const userId = authData.user.id;
+  const authCheck = await getSessionUserSecurely();
+  if ("error" in authCheck) return { success: false, error: authCheck.error };
+  const userId = authCheck.userId;
 
   const { data: beacon, error: fetchError } = await (supabaseAdmin
     .from("beacons") as any)
@@ -139,23 +111,9 @@ export async function updateBeaconCapacity(
   beaconId: string,
   newTotal: number
 ): Promise<BeaconActionResult> {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get("sb-dmmgzpiskyocdsxamrgf-auth-token");
-  if (!sessionCookie?.value) return { success: false, error: "Not authenticated." };
-
-  let accessToken: string;
-  try {
-    let raw = sessionCookie.value;
-    if (raw.startsWith("base64-")) raw = Buffer.from(raw.slice(7), "base64").toString("utf-8");
-    const parsed = JSON.parse(raw);
-    accessToken = Array.isArray(parsed) ? parsed[0] : parsed.access_token;
-  } catch {
-    return { success: false, error: "Invalid session." };
-  }
-
-  const { data: authData, error: authError } = await supabaseAdmin.auth.getUser(accessToken);
-  if (authError || !authData.user) return { success: false, error: "Session expired." };
-  const userId = authData.user.id;
+  const authCheck = await getSessionUserSecurely();
+  if ("error" in authCheck) return { success: false, error: authCheck.error };
+  const userId = authCheck.userId;
 
   if (newTotal < 1 || newTotal > 10) return { success: false, error: "Capacity must be between 1 and 10." };
 
@@ -217,23 +175,9 @@ export async function updateLiveBeacon(
   newTime: string,
   newGoogleMapsUrl: string | null
 ): Promise<BeaconActionResult> {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get("sb-dmmgzpiskyocdsxamrgf-auth-token");
-  if (!sessionCookie?.value) return { success: false, error: "Not authenticated." };
-
-  let accessToken: string;
-  try {
-    let raw = sessionCookie.value;
-    if (raw.startsWith("base64-")) raw = Buffer.from(raw.slice(7), "base64").toString("utf-8");
-    const parsed = JSON.parse(raw);
-    accessToken = Array.isArray(parsed) ? parsed[0] : parsed.access_token;
-  } catch {
-    return { success: false, error: "Invalid session." };
-  }
-
-  const { data: authData, error: authError } = await supabaseAdmin.auth.getUser(accessToken);
-  if (authError || !authData.user) return { success: false, error: "Session expired." };
-  const userId = authData.user.id;
+  const authCheck = await getSessionUserSecurely();
+  if ("error" in authCheck) return { success: false, error: authCheck.error };
+  const userId = authCheck.userId;
 
   const { data: beacon, error: fetchError } = await (supabaseAdmin
     .from("beacons") as any)

@@ -295,10 +295,10 @@ export default function VibeProfileView({
         padding: "8px 14px", marginBottom: "12px", borderRadius: "2px",
         justifyContent: "space-between"
       }}>
-        <Link href="/dashboard" className="nokia-btn" style={{ fontSize: "7px", textDecoration: "none" }}>
+        <Link href="/dashboard" className="nokia-btn" style={{ fontSize: "11px", textDecoration: "none" }}>
           ◀ LOBBY
         </Link>
-        <span className="font-pixel" style={{ fontSize: "8px", color: "var(--accent-primary)" }}>
+        <span className="font-pixel" style={{ fontSize: "11px", color: "var(--accent-primary)" }}>
           ◈ VIBE PROFILE
         </span>
       </div>
@@ -306,7 +306,7 @@ export default function VibeProfileView({
       {/* Error alerts */}
       {errorMsg && (
         <div className="nokia-panel-sunken" style={{ padding: "8px 14px", marginBottom: "12px", borderColor: "var(--accent-danger)" }}>
-          <span className="font-pixel" style={{ fontSize: "7px", color: "var(--accent-danger)" }}>✕ {errorMsg}</span>
+          <span className="font-pixel" style={{ fontSize: "10px", color: "var(--accent-danger)" }}>✕ {errorMsg}</span>
         </div>
       )}
 
@@ -321,7 +321,7 @@ export default function VibeProfileView({
           borderBottom: "2px solid var(--border-strong)",
           display: "flex", alignItems: "center", justifyContent: "space-between",
         }}>
-          <span className="font-pixel" style={{ fontSize: "8px", letterSpacing: "0.08em" }}>
+          <span className="font-pixel" style={{ fontSize: "11px", letterSpacing: "0.08em" }}>
             {isFamily ? "★ FAMILY MEMBER" : "◈ ACTIVE MEMBER"}
           </span>
           <span className="font-lcd" style={{ fontSize: "14px", display: "flex", alignItems: "center", gap: "6px" }}>
@@ -378,16 +378,16 @@ export default function VibeProfileView({
 
               {/* Tag Badges */}
               <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", marginBottom: "8px" }}>
-                <span className="nokia-badge font-pixel" style={{ fontSize: "6px" }}>
+                <span className="nokia-badge font-pixel" style={{ fontSize: "10px" }}>
                   🏙 {profile.city?.toUpperCase() || "KARACHI"}
                 </span>
                 {profile.is_partner && (
-                  <span className="nokia-badge nokia-badge-success font-pixel" style={{ fontSize: "6px" }}>
+                  <span className="nokia-badge nokia-badge-success font-pixel" style={{ fontSize: "10px" }}>
                     ● PARTNER
                   </span>
                 )}
                 {profile.vibe_tags && profile.vibe_tags.map(tag => (
-                  <span key={tag} className="nokia-badge font-pixel" style={{ fontSize: "6px", background: "var(--bg-sunken)", border: "1px solid var(--accent-primary)" }}>
+                  <span key={tag} className="nokia-badge font-pixel" style={{ fontSize: "10px", background: "var(--bg-sunken)", border: "1px solid var(--accent-primary)" }}>
                     {tag}
                   </span>
                 ))}
@@ -395,12 +395,12 @@ export default function VibeProfileView({
 
               {/* Strikes warnings */}
               {profile.no_show_strikes === 1 && (
-                <div className="nokia-badge nokia-badge-warning" style={{ marginBottom: "8px", fontSize: "7px" }}>
+                <div className="nokia-badge nokia-badge-warning" style={{ marginBottom: "8px", fontSize: "10px" }}>
                   ⚠ FLAKE RISK (1 STRIKE)
                 </div>
               )}
               {profile.account_status === "suspended" && (
-                <div className="nokia-badge nokia-badge-danger" style={{ marginBottom: "8px", fontSize: "7px" }}>
+                <div className="nokia-badge nokia-badge-danger" style={{ marginBottom: "8px", fontSize: "10px" }}>
                   ■ SUSPENDED (2+ STRIKES)
                 </div>
               )}
@@ -424,7 +424,7 @@ export default function VibeProfileView({
                   href={profile.social_link.startsWith("http") ? profile.social_link : `https://${profile.social_link}`}
                   target="_blank" rel="noopener noreferrer"
                   className="font-pixel"
-                  style={{ fontSize: "7px", color: "var(--accent-primary)", textDecoration: "none", letterSpacing: "0.04em" }}
+                  style={{ fontSize: "10px", color: "var(--accent-primary)", textDecoration: "none", letterSpacing: "0.04em" }}
                 >
                   ◉ {profile.social_link.replace(/^(https?:\/\/)?(www\.)?/, "")}
                 </a>
@@ -437,35 +437,35 @@ export default function VibeProfileView({
           {/* Social Friendship Buttons */}
           {isSelf ? (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", width: "100%" }}>
-              <Link href="/profile/edit" className="nokia-btn nokia-btn-primary" style={{ fontSize: "8px", textDecoration: "none", justifyContent: "center" }}>
+              <Link href="/profile/edit" className="nokia-btn nokia-btn-primary" style={{ fontSize: "11px", textDecoration: "none", justifyContent: "center" }}>
                 ✎ EDIT PROFILE
               </Link>
               <SignOutButton />
             </div>
           ) : isLoading ? (
-            <div className="nokia-btn" style={{ width: "100%", fontSize: "8px", opacity: 0.6, justifyContent: "center" }}>
+            <div className="nokia-btn" style={{ width: "100%", fontSize: "11px", opacity: 0.6, justifyContent: "center" }}>
               <span className="pixel-blink">▌ UPDATING...</span>
             </div>
           ) : !friendship ? (
-            <button onClick={handleAddFriend} className="nokia-btn nokia-btn-primary" style={{ width: "100%", fontSize: "8px" }}>
+            <button onClick={handleAddFriend} className="nokia-btn nokia-btn-primary" style={{ width: "100%", fontSize: "11px" }}>
               ♥ ADD FRIEND
             </button>
           ) : friendship.status === "accepted" ? (
             <div style={{ display: "flex", gap: "6px" }}>
               <div className="nokia-badge nokia-badge-success" style={{ flex: 1, textAlign: "center", padding: "8px" }}>✓ FRIENDS</div>
-              <button onClick={handleRemoveOrDecline} className="nokia-btn nokia-btn-danger" style={{ fontSize: "7px" }}>
+              <button onClick={handleRemoveOrDecline} className="nokia-btn nokia-btn-danger" style={{ fontSize: "10px" }}>
                 ✕ REMOVE
               </button>
             </div>
           ) : friendship.user_id_1 === currentUserId ? (
             <div style={{ display: "flex", gap: "6px" }}>
-              <div className="nokia-btn" style={{ flex: 1, fontSize: "7px", justifyContent: "center" }}>▌ REQUEST PENDING</div>
-              <button onClick={handleRemoveOrDecline} className="nokia-btn" style={{ fontSize: "7px" }}>✕ CANCEL</button>
+              <div className="nokia-btn" style={{ flex: 1, fontSize: "10px", justifyContent: "center" }}>▌ REQUEST PENDING</div>
+              <button onClick={handleRemoveOrDecline} className="nokia-btn" style={{ fontSize: "10px" }}>✕ CANCEL</button>
             </div>
           ) : (
             <div style={{ display: "flex", gap: "6px" }}>
-              <button onClick={handleRemoveOrDecline} className="nokia-btn nokia-btn-danger" style={{ fontSize: "7px", flex: 1 }}>✕ DECLINE</button>
-              <button onClick={handleAcceptRequest} className="nokia-btn nokia-btn-primary" style={{ fontSize: "7px", flex: 1 }}>✓ ACCEPT</button>
+              <button onClick={handleRemoveOrDecline} className="nokia-btn nokia-btn-danger" style={{ fontSize: "10px", flex: 1 }}>✕ DECLINE</button>
+              <button onClick={handleAcceptRequest} className="nokia-btn nokia-btn-primary" style={{ fontSize: "10px", flex: 1 }}>✓ ACCEPT</button>
             </div>
           )}
         </div>
@@ -475,21 +475,21 @@ export default function VibeProfileView({
       <div style={{ display: "flex", gap: "4px", marginBottom: "12px", overflowX: "auto", paddingBottom: "4px" }}>
         <button
           className={activeTab === "overview" ? "nokia-btn nokia-btn-primary" : "nokia-btn"}
-          style={{ fontSize: "7px", flex: 1, padding: "8px 4px", whiteSpace: "nowrap", justifyContent: "center" }}
+          style={{ fontSize: "10px", flex: 1, padding: "8px 4px", whiteSpace: "nowrap", justifyContent: "center" }}
           onClick={() => setActiveTab("overview")}
         >
           ● OVERVIEW
         </button>
         <button
           className={activeTab === "memories" ? "nokia-btn nokia-btn-primary" : "nokia-btn"}
-          style={{ fontSize: "7px", flex: 1, padding: "8px 4px", whiteSpace: "nowrap", justifyContent: "center" }}
+          style={{ fontSize: "10px", flex: 1, padding: "8px 4px", whiteSpace: "nowrap", justifyContent: "center" }}
           onClick={() => setActiveTab("memories")}
         >
           📷 MEMORIES ({memories.length})
         </button>
         <button
           className={activeTab === "timeline" ? "nokia-btn nokia-btn-primary" : "nokia-btn"}
-          style={{ fontSize: "7px", flex: 1, padding: "8px 4px", whiteSpace: "nowrap", justifyContent: "center" }}
+          style={{ fontSize: "10px", flex: 1, padding: "8px 4px", whiteSpace: "nowrap", justifyContent: "center" }}
           onClick={() => setActiveTab("timeline")}
         >
           ★ TIMELINE
@@ -497,7 +497,7 @@ export default function VibeProfileView({
         {isSelf && (
           <button
             className={activeTab === "activity" ? "nokia-btn nokia-btn-primary" : "nokia-btn"}
-            style={{ fontSize: "7px", flex: 1, padding: "8px 4px", whiteSpace: "nowrap", justifyContent: "center" }}
+            style={{ fontSize: "10px", flex: 1, padding: "8px 4px", whiteSpace: "nowrap", justifyContent: "center" }}
             onClick={() => setActiveTab("activity")}
           >
             ▤ PRIVATE LEDGER
@@ -516,7 +516,7 @@ export default function VibeProfileView({
             
             {/* Nokia Vibe Score card */}
             <div className="nokia-panel" style={{ padding: "12px" }}>
-              <span className="font-pixel" style={{ fontSize: "7px", color: "var(--text-muted)", display: "block", marginBottom: "8px", letterSpacing: "0.08em" }}>
+              <span className="font-pixel" style={{ fontSize: "10px", color: "var(--text-muted)", display: "block", marginBottom: "8px", letterSpacing: "0.08em" }}>
                 📶 VIBE METER (TRUST)
               </span>
               <div style={{ display: "flex", alignItems: "center", gap: "12px", justifyContent: "space-between" }}>
@@ -527,7 +527,7 @@ export default function VibeProfileView({
                   <span className="font-lcd" style={{ fontSize: "24px", color: "var(--text-primary)", display: "block", lineHeight: "1" }}>
                     {vibeScore}%
                   </span>
-                  <span style={{ fontSize: "8px", color: "var(--text-muted)" }}>
+                  <span style={{ fontSize: "10px", color: "var(--text-muted)" }}>
                     {totalFeedback} RATINGS
                   </span>
                 </div>
@@ -542,13 +542,13 @@ export default function VibeProfileView({
 
             {/* Quick Stats list */}
             <div className="nokia-panel" style={{ padding: "12px" }}>
-              <span className="font-pixel" style={{ fontSize: "7px", color: "var(--text-muted)", display: "block", marginBottom: "8px", letterSpacing: "0.08em" }}>
+              <span className="font-pixel" style={{ fontSize: "10px", color: "var(--text-muted)", display: "block", marginBottom: "8px", letterSpacing: "0.08em" }}>
                 ★ ACTIVITY METRICS
               </span>
               <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px" }}>
                   <span style={{ color: "var(--text-muted)" }}>🔥 EVENT STREAK:</span>
-                  <span className="font-pixel" style={{ color: "var(--accent-warning)", fontSize: "8px" }}>
+                  <span className="font-pixel" style={{ color: "var(--accent-warning)", fontSize: "10px" }}>
                     {strikes === 0 && totalAttended > 0 ? `🔥 ${totalAttended} STREAK` : "0 STREAK"}
                   </span>
                 </div>
@@ -572,7 +572,7 @@ export default function VibeProfileView({
                 {!isSelf && (
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "6px", fontSize: "11px" }}>
                     <span style={{ color: "var(--text-muted)" }}>👥 MUTUAL CONNECTIONS:</span>
-                    <span className="font-pixel" style={{ fontSize: "7px", color: "var(--accent-primary)" }}>{mutualFriendsCount} MUTUAL</span>
+                    <span className="font-pixel" style={{ fontSize: "10px", color: "var(--accent-primary)" }}>{mutualFriendsCount} MUTUAL</span>
                   </div>
                 )}
               </div>
@@ -583,20 +583,20 @@ export default function VibeProfileView({
           {/* Mutual Friends Avatar Panel (Showcase) */}
           {!isSelf && mutualFriends.length > 0 && (
             <div className="nokia-panel-sunken" style={{ padding: "10px 14px", display: "flex", alignItems: "center", gap: "10px", background: "var(--bg-sunken)", border: "2px solid var(--border-strong)", borderRadius: "2px" }}>
-              <span className="font-pixel" style={{ fontSize: "7px", color: "var(--text-muted)", letterSpacing: "0.08em" }}>
+              <span className="font-pixel" style={{ fontSize: "10px", color: "var(--text-muted)", letterSpacing: "0.08em" }}>
                 MUTUAL FRIENDS:
               </span>
               <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                 {mutualFriends.map(friend => (
                   <Link key={friend.id} href={`/profile/${friend.id}`} className="nokia-btn" style={{
-                    fontSize: "7px", padding: "2px 6px", display: "inline-flex", gap: "4px", textDecoration: "none", alignItems: "center"
+                    fontSize: "10px", padding: "2px 6px", display: "inline-flex", gap: "4px", textDecoration: "none", alignItems: "center"
                   }}>
                     <span>{friend.avatar_icon || "👾"}</span>
                     <span>{(friend.full_name || "").split(" ")[0].toUpperCase()}</span>
                   </Link>
                 ))}
                 {mutualFriendsCount > 3 && (
-                  <span style={{ fontSize: "9px", color: "var(--text-muted)", marginLeft: "4px" }}>+{mutualFriendsCount - 3} MORE</span>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)", marginLeft: "4px" }}>+{mutualFriendsCount - 3} MORE</span>
                 )}
               </div>
             </div>
@@ -609,10 +609,10 @@ export default function VibeProfileView({
               display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px"
             }}>
               <div>
-                <span className="font-pixel" style={{ display: "block", fontSize: "7px", color: "var(--accent-warning)", letterSpacing: "0.08em" }}>
+                <span className="font-pixel" style={{ display: "block", fontSize: "10px", color: "var(--accent-warning)", letterSpacing: "0.08em" }}>
                   📶 COMPLETE YOUR VIBE PROFILE ({completeness}%)
                 </span>
-                <span style={{ fontSize: "10px", color: "var(--text-muted)" }}>
+                <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
                   Add avatar, bio, city, social link, and tags to unlock the TRUSTED badges room!
                 </span>
               </div>
@@ -624,7 +624,7 @@ export default function VibeProfileView({
 
           {/* Earned Badges Case (Neon retro pixel grids) */}
           <div>
-            <div className="font-pixel" style={{ fontSize: "7px", color: "var(--text-muted)", letterSpacing: "0.1em", marginBottom: "8px", display: "flex", alignItems: "center", gap: "8px" }}>
+            <div className="font-pixel" style={{ fontSize: "11px", color: "var(--text-muted)", letterSpacing: "0.1em", marginBottom: "8px", display: "flex", alignItems: "center", gap: "8px" }}>
               <div style={{ flex: 1, height: "1px", background: "var(--border-mid)" }} />
               ★ EARNED BADGES ROOM
               <div style={{ flex: 1, height: "1px", background: "var(--border-mid)" }} />
@@ -655,19 +655,19 @@ export default function VibeProfileView({
                         textShadow: earned ? "0 0 6px var(--accent-primary)" : "none"
                       }}>{icon}</span>
                       <span className="font-pixel" style={{
-                        fontSize: "6.5px",
+                        fontSize: "10px",
                         color: earned ? "var(--text-primary)" : "var(--text-muted)",
                         fontWeight: "bold"
                       }}>{label}</span>
                     </div>
-                    <p style={{ fontSize: "9.5px", color: "var(--text-muted)", lineHeight: "1.2", marginBottom: "6px" }}>
+                    <p style={{ fontSize: "12px", color: "var(--text-muted)", lineHeight: "1.2", marginBottom: "6px" }}>
                       {desc}
                     </p>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "auto" }}>
-                    <span className="font-pixel" style={{ fontSize: "5.5px", color: "var(--text-muted)" }}>{progress}</span>
+                    <span className="font-pixel" style={{ fontSize: "9px", color: "var(--text-muted)" }}>{progress}</span>
                     <span className="font-pixel" style={{
-                      fontSize: "5.5px",
+                      fontSize: "9px",
                       color: earned ? "var(--accent-success)" : "var(--text-muted)",
                       fontWeight: "bold"
                     }}>
@@ -753,7 +753,7 @@ export default function VibeProfileView({
                         type="button"
                         disabled={isUploading}
                         className="nokia-btn nokia-btn-primary"
-                        style={{ width: "100%", fontSize: "8px", justifyContent: "center" }}
+                        style={{ width: "100%", fontSize: "11px", justifyContent: "center" }}
                         onClick={() => fileInputRef.current?.click()}
                       >
                         {isUploading ? <span className="pixel-blink">COMPRESSING & UPLOADING...</span> : "✓ SELECT & COMPRESS PHOTO"}
