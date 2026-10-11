@@ -20,6 +20,16 @@ export default function AdminSidebarClient() {
       icon: "◈",
     },
     {
+      label: "PAYMENTS & BILLING",
+      href: "/admin/payments",
+      icon: "💳",
+    },
+    {
+      label: "BEACONS CONTROL",
+      href: "/admin/beacons",
+      icon: "📡",
+    },
+    {
       label: "OFFICIAL EVENTS",
       href: "/admin/events",
       icon: "★",

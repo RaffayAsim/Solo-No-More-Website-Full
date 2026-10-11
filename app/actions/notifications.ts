@@ -51,7 +51,12 @@ export async function getUnreadCount(): Promise<NotificationResult<number>> {
     .eq("user_id", authCheck.userId)
     .eq("is_read", false);
 
-  if (error) return { success: false, error: "Failed to fetch count." };
+  if (error) {
+    if (error.message?.includes("schema cache") || error.message?.includes("does not exist")) {
+      return { success: true, data: 0 };
+    }
+    return { success: false, error: "Failed to fetch count." };
+  }
   return { success: true, data: count ?? 0 };
 }
 
@@ -67,7 +72,12 @@ export async function getNotifications(): Promise<NotificationResult<Notificatio
     .order("created_at", { ascending: false })
     .limit(30);
 
-  if (error) return { success: false, error: "Failed to fetch notifications." };
+  if (error) {
+    if (error.message?.includes("schema cache") || error.message?.includes("does not exist")) {
+      return { success: true, data: [] };
+    }
+    return { success: false, error: "Failed to fetch notifications." };
+  }
   return { success: true, data: data ?? [] };
 }
 

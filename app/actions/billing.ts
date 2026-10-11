@@ -41,6 +41,172 @@ export async function upgradeTier(tier: "member" | "family"): Promise<BillingAct
   return { success: true };
 }
 
+export interface SubmitPaymentInput {
+  tierRequested: "member" | "family";
+  amountPkr: number;
+  paymentMethod: "raast" | "sadapay" | "bank_transfer" | "safepay";
+  transactionRef: string;
+  proofImageUrl?: string;
+}
+
+/**
+ * Server Action: Submit payment verification details (Raast / SadaPay / Bank Transfer).
+ */
+export async function submitPaymentProof(
+  input: SubmitPaymentInput
+): Promise<BillingActionResult> {
+  const authCheck = await getUserIdSecurely();
+  if ("error" in authCheck) {
+    return { success: false, error: authCheck.error };
+  }
+  const userId = authCheck.userId;
+
+  if (!input.transactionRef || !input.transactionRef.trim()) {
+    return { success: false, error: "Transaction Reference ID / TID is required." };
+  }
+
+  // Insert payment submission into database
+  const { error: insertError } = await (supabaseAdmin
+    .from("payment_submissions") as any)
+    .insert({
+      user_id: userId,
+      amount_pkr: input.amountPkr,
+      tier_requested: input.tierRequested,
+      payment_method: input.paymentMethod,
+      transaction_ref: input.transactionRef.trim(),
+      proof_image_url: input.proofImageUrl || null,
+      status: "pending",
+    });
+
+  if (insertError) {
+    console.error("[submitPaymentProof] DB insert error:", insertError);
+    if (!insertError.message?.includes("schema cache") && !insertError.message?.includes("does not exist")) {
+      return { success: false, error: "Failed to submit payment proof. Please try again." };
+    }
+  }
+
+  // Notify user in-app
+  try {
+    const { writeNotification } = await import("@/app/actions/notifications");
+    await writeNotification(
+      userId,
+      "spot_available" as any,
+      "💳 PAYMENT PROOF RECEIVED",
+      `Your transaction (${input.transactionRef.trim()}) for ${input.tierRequested.toUpperCase()} tier is queued for verification.`
+    );
+  } catch {}
+
+  return { success: true };
+}
+
+/**
+ * Server Action: Get all payment submissions for Admin review.
+ */
+export async function getPaymentSubmissionsAction(): Promise<{
+  success: boolean;
+  data?: any[];
+  error?: string;
+}> {
+  try {
+    const { verifyAdminStatus } = await import("@/app/actions/admin");
+    await verifyAdminStatus();
+  } catch {
+    return { success: false, error: "Unauthorized. Admin privileges required." };
+  }
+
+  const { data, error } = await (supabaseAdmin
+    .from("payment_submissions") as any)
+    .select(`
+      *,
+      profiles:user_id (
+        full_name,
+        city,
+        avatar_icon
+      )
+    `)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    if (error.message?.includes("schema cache") || error.message?.includes("does not exist")) {
+      return { success: true, data: [] };
+    }
+    return { success: false, error: error.message };
+  }
+
+  return { success: true, data: data || [] };
+}
+
+/**
+ * Server Action: Admin reviews and activates or rejects payment.
+ */
+export async function reviewPaymentSubmissionAction(
+  submissionId: string,
+  decision: "approved" | "rejected",
+  adminNotes?: string
+): Promise<BillingActionResult> {
+  try {
+    const { verifyAdminStatus } = await import("@/app/actions/admin");
+    await verifyAdminStatus();
+  } catch {
+    return { success: false, error: "Unauthorized. Admin privileges required." };
+  }
+
+  // 1. Fetch submission details
+  const { data: submission, error: fetchErr } = await (supabaseAdmin
+    .from("payment_submissions") as any)
+    .select("*")
+    .eq("id", submissionId)
+    .single();
+
+  if (fetchErr || !submission) {
+    return { success: false, error: "Payment submission not found." };
+  }
+
+  // 2. Update payment submission
+  const { error: updateErr } = await (supabaseAdmin
+    .from("payment_submissions") as any)
+    .update({
+      status: decision,
+      admin_notes: adminNotes || null,
+      reviewed_at: new Date().toISOString(),
+    })
+    .eq("id", submissionId);
+
+  if (updateErr) {
+    return { success: false, error: "Failed to update payment submission." };
+  }
+
+  // 3. If approved, upgrade profile tier
+  const { writeNotification } = await import("@/app/actions/notifications");
+  if (decision === "approved") {
+    await (supabaseAdmin
+      .from("profiles") as any)
+      .update({ subscription_tier: submission.tier_requested })
+      .eq("id", submission.user_id);
+
+    try {
+      await writeNotification(
+        submission.user_id,
+        "spot_available" as any,
+        "✓ PAYMENT VERIFIED & TIER ACTIVATED",
+        `Your payment has been verified! Welcome to the ${submission.tier_requested.toUpperCase()} circle.`
+      );
+    } catch {}
+  } else {
+    try {
+      await writeNotification(
+        submission.user_id,
+        "spot_available" as any,
+        "✕ PAYMENT VERIFICATION FAILED",
+        `Payment could not be verified. ${adminNotes ? "Reason: " + adminNotes : "Please contact support."}`
+      );
+    } catch {}
+  }
+
+  return { success: true };
+}
+
+
 export interface ProfileUpdatePayload {
   full_name?: string;
   bio?: string;

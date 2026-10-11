@@ -4,6 +4,7 @@ import type { AccountStatus } from "@/lib/supabase/types";
 import SignOutButton from "./SignOutButton";
 import ApprovedScreen from "./ApprovedScreen";
 import { writeLazyTimeAlerts } from "@/app/actions/notifications";
+import { autoExpireStaleBeacons } from "@/app/actions/beacons";
 import { getSessionUserSecurely } from "@/lib/supabase/session";
 
 export const metadata = {
@@ -189,8 +190,9 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         application_status: appsMap.get(beacon.id) || "none",
       }));
 
-    // Fire lazy time-based alerts (non-blocking — best-effort)
+    // Fire lazy time-based alerts & auto-expire stale beacons (non-blocking — best-effort)
     writeLazyTimeAlerts(user.id).catch(() => {});
+    autoExpireStaleBeacons().catch(() => {});
 
     return (
       <ApprovedScreen

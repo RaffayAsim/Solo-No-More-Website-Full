@@ -231,3 +231,22 @@ export async function updateLiveBeacon(
 
   return { success: true };
 }
+
+/**
+ * Auto-expires past beacons by updating status from "active" to "completed"
+ * if their scheduled time was more than 3 hours ago.
+ */
+export async function autoExpireStaleBeacons(): Promise<void> {
+  try {
+    const cutoff = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
+    await (supabaseAdmin
+      .from("beacons") as any)
+      .update({ status: "completed" })
+      .eq("status", "active")
+      .not("scheduled_at", "is", null)
+      .lt("scheduled_at", cutoff);
+  } catch {
+    // Best-effort cleanup
+  }
+}
+

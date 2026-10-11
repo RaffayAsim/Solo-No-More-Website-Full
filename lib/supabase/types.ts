@@ -302,3 +302,23 @@ export interface EventTicket {
   updated_at: string;
 }
 
+export interface PaymentSubmission {
+  id: string;
+  user_id: string;
+  amount_pkr: number;
+  tier_requested: string;
+  payment_method: "raast" | "sadapay" | "bank_transfer" | "safepay";
+  transaction_ref: string;
+  proof_image_url: string | null;
+  status: "pending" | "approved" | "rejected";
+  admin_notes: string | null;
+  created_at: string;
+  reviewed_at: string | null;
+  profiles?: {
+    full_name: string | null;
+    city: string | null;
+    avatar_icon: string | null;
+  };
+}
+
+

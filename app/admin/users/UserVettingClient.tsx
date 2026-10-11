@@ -7,6 +7,7 @@ import {
   suspendUserAction,
   resetStrikesAction,
   upgradeToPartnerAction,
+  changeUserTierAction,
 } from "@/app/actions/admin";
 
 interface MappedUser {
@@ -111,6 +112,28 @@ export default function UserVettingClient({ initialUsers }: UserVettingClientPro
       }
     } catch {
       setErrorMsg("Failed to reset warnings. Connection error.");
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handleTierChange = async (userId: string, newTier: "none" | "member" | "family" | "admin") => {
+    setActionLoadingId(userId + "-tier");
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    try {
+      const res = await changeUserTierAction(userId, newTier);
+      if (res.success) {
+        setSuccessMsg(`User subscription tier updated to ${newTier.toUpperCase()}`);
+        setUsers((prev) =>
+          prev.map((u) => (u.id === userId ? { ...u, subscription_tier: newTier } : u))
+        );
+        router.refresh();
+      } else {
+        setErrorMsg(res.error);
+      }
+    } catch {
+      setErrorMsg("Failed to update tier. Connection error.");
     } finally {
       setActionLoadingId(null);
     }
@@ -292,15 +315,35 @@ export default function UserVettingClient({ initialUsers }: UserVettingClientPro
 
                     {/* Tier */}
                     <td style={{ padding: "10px" }}>
-                      <span className={`nokia-badge ${
-                        user.subscription_tier === "family"
-                          ? "nokia-badge-warning"
-                          : user.subscription_tier === "admin"
-                          ? "nokia-badge-primary"
-                          : ""
-                      }`} style={{ fontSize: "6px" }}>
-                        {user.subscription_tier.toUpperCase()}
-                      </span>
+                      <select
+                        value={user.subscription_tier}
+                        disabled={actionLoadingId === user.id + "-tier"}
+                        onChange={(e) => handleTierChange(user.id, e.target.value as any)}
+                        className="nokia-input font-pixel"
+                        style={{
+                          fontSize: "7px",
+                          padding: "3px 4px",
+                          borderColor:
+                            user.subscription_tier === "admin"
+                              ? "var(--accent-primary)"
+                              : user.subscription_tier === "family"
+                              ? "var(--accent-warning)"
+                              : user.subscription_tier === "member"
+                              ? "var(--accent-success)"
+                              : "var(--border-light)",
+                          color:
+                            user.subscription_tier === "admin"
+                              ? "var(--accent-primary)"
+                              : user.subscription_tier === "family"
+                              ? "var(--accent-warning)"
+                              : "inherit",
+                        }}
+                      >
+                        <option value="none">NONE</option>
+                        <option value="member">MEMBER</option>
+                        <option value="family">FAMILY VIP</option>
+                        <option value="admin">★ ADMIN</option>
+                      </select>
                     </td>
 
                     {/* Bio */}

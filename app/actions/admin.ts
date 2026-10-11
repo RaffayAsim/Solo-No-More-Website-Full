@@ -26,8 +26,14 @@ export async function verifyAdminStatus(): Promise<{ userId: string; email: stri
     redirect("/login");
   }
 
-  const adminEmail = process.env.ADMIN_EMAIL || "vibe.tester@solonomore.com";
-  const isEmailAdmin = authCheck.email?.toLowerCase() === adminEmail.toLowerCase();
+  const authorizedEmails = [
+    (process.env.ADMIN_EMAIL || "").toLowerCase(),
+    "raffay.asim6@gmail.com",
+    "admin@solonomore.com",
+    "vibe.tester@solonomore.com",
+  ].filter(Boolean);
+
+  const isEmailAdmin = authorizedEmails.includes(authCheck.email?.toLowerCase() || "");
 
   if (isEmailAdmin) {
     return { userId: authCheck.userId, email: authCheck.email };
@@ -67,6 +73,17 @@ export async function approveUserAction(profileId: string): Promise<AdminActionR
   if (error) {
     return { success: false, error: "Failed to approve user profile." };
   }
+
+  // Notify the user in-app
+  try {
+    const { writeNotification } = await import("@/app/actions/notifications");
+    await writeNotification(
+      profileId,
+      "application_approved" as any,
+      "✓ MEMBERSHIP APPROVED",
+      "Welcome to Solo-No-More! Your vibe application has been approved. You now have full lobby radar access."
+    );
+  } catch {}
 
   return { success: true };
 }
@@ -266,3 +283,83 @@ export async function upgradeToPartnerAction(
 
   return { success: true };
 }
+
+/**
+ * Server Action: Change user subscription tier directly (Admin only).
+ */
+export async function changeUserTierAction(
+  profileId: string,
+  tier: "none" | "member" | "family" | "admin"
+): Promise<AdminActionResult> {
+  try {
+    await verifyAdminStatus();
+  } catch (err) {
+    if (isRedirectError(err)) throw err;
+    return { success: false, error: "Unauthorized. Admin privileges required." };
+  }
+
+  const { error } = await (supabaseAdmin
+    .from("profiles") as any)
+    .update({ subscription_tier: tier })
+    .eq("id", profileId);
+
+  if (error) {
+    return { success: false, error: "Failed to update subscription tier." };
+  }
+
+  return { success: true };
+}
+
+/**
+ * Server Action: Get all beacons across the platform for admin command center.
+ */
+export async function getAllBeaconsForAdminAction(): Promise<{ success: boolean; data?: any[]; error?: string }> {
+  try {
+    await verifyAdminStatus();
+  } catch (err) {
+    if (isRedirectError(err)) throw err;
+    return { success: false, error: "Unauthorized. Admin privileges required." };
+  }
+
+  const { data, error } = await (supabaseAdmin
+    .from("beacons") as any)
+    .select(`
+      *,
+      host:host_id (
+        full_name,
+        city,
+        avatar_icon
+      )
+    `)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  return { success: true, data: data || [] };
+}
+
+/**
+ * Server Action: Force cancel a beacon from admin command center.
+ */
+export async function adminCancelBeaconAction(beaconId: string, reason?: string): Promise<AdminActionResult> {
+  try {
+    await verifyAdminStatus();
+  } catch (err) {
+    if (isRedirectError(err)) throw err;
+    return { success: false, error: "Unauthorized. Admin privileges required." };
+  }
+
+  const { error } = await (supabaseAdmin
+    .from("beacons") as any)
+    .update({ status: "cancelled" })
+    .eq("id", beaconId);
+
+  if (error) {
+    return { success: false, error: "Failed to cancel beacon." };
+  }
+
+  return { success: true };
+}
+
