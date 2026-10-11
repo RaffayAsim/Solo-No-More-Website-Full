@@ -141,11 +141,14 @@ export default function EventsBoardClient({
               Curated club nights, touring DJ sessions, and partner tournaments across Karachi.
             </p>
           </div>
-          {!isFamily && (
-            <Link href="/dashboard/upgrade" className="nokia-btn font-pixel" style={{ fontSize: "7px", padding: "6px 12px" }}>
-              ★ UPGRADE TO FAMILY FOR FREE VIP PASSES
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+            <Link href="/dashboard/artist" className="nokia-btn nokia-btn-primary font-pixel" style={{ fontSize: "7px", padding: "6px 12px" }}>
+              🎤 ARTIST & TICKETING PORTAL
             </Link>
-          )}
+            <Link href="/dashboard/upgrade" className="nokia-btn font-pixel" style={{ fontSize: "7px", padding: "6px 12px" }}>
+              ⚡ MEMBERSHIP HUB
+            </Link>
+          </div>
         </div>
       </div>
 

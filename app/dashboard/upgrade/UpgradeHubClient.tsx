@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { submitPaymentProof, upgradeTier } from "@/app/actions/billing";
 
 interface UpgradeHubClientProps {
-  currentTier: "none" | "member" | "family" | "admin";
+  currentTier: "none" | "member" | "family" | "admin" | "partner";
 }
 
 export default function UpgradeHubClient({ currentTier: initialTier }: UpgradeHubClientProps) {
@@ -14,7 +14,7 @@ export default function UpgradeHubClient({ currentTier: initialTier }: UpgradeHu
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   // Payment Modal State
-  const [modalTier, setModalTier] = useState<"member" | "family" | null>(null);
+  const [modalTier, setModalTier] = useState<"member" | "partner" | "family" | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"raast" | "sadapay" | "bank_transfer">("raast");
   const [transactionRef, setTransactionRef] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -22,7 +22,7 @@ export default function UpgradeHubClient({ currentTier: initialTier }: UpgradeHu
 
   const router = useRouter();
 
-  const openPaymentModal = (selectedTier: "member" | "family") => {
+  const openPaymentModal = (selectedTier: "member" | "partner" | "family") => {
     setErrorMsg(null);
     setSuccessMsg(null);
     setTransactionRef("");
@@ -37,7 +37,7 @@ export default function UpgradeHubClient({ currentTier: initialTier }: UpgradeHu
     setSubmitting(true);
     setErrorMsg(null);
 
-    const amount = modalTier === "member" ? 1500 : 3500;
+    const amount = modalTier === "member" ? 2000 : 3500;
 
     try {
       const res = await submitPaymentProof({
@@ -50,7 +50,7 @@ export default function UpgradeHubClient({ currentTier: initialTier }: UpgradeHu
       if (res.success) {
         setModalSuccess(true);
         setSuccessMsg(
-          `Payment proof received! TID: ${transactionRef.trim()} submitted for ${modalTier.toUpperCase()} tier verification.`
+          `Payment proof received! TID: ${transactionRef.trim()} submitted for ${modalTier.toUpperCase()} verification.`
         );
         setTimeout(() => {
           setModalTier(null);
@@ -67,7 +67,7 @@ export default function UpgradeHubClient({ currentTier: initialTier }: UpgradeHu
   };
 
   // Instant simulator for test accounts
-  const handleDevInstantUpgrade = async (selectedTier: "member" | "family") => {
+  const handleDevInstantUpgrade = async (selectedTier: "member" | "partner" | "family") => {
     setSubmitting(true);
     try {
       const res = await upgradeTier(selectedTier);
@@ -87,13 +87,13 @@ export default function UpgradeHubClient({ currentTier: initialTier }: UpgradeHu
       {/* ── Header Bevel Panel ──────────────────────────────────────────────── */}
       <div className="nokia-panel-sunken text-center" style={{ padding: "16px", marginBottom: "20px" }}>
         <span className="nokia-badge nokia-badge-primary" style={{ fontSize: "7px", marginBottom: "8px" }}>
-          ◈ MONETIZATION & MEMBERSHIP HUB
+          ◈ MEMBERSHIP & BUSINESS PORTAL
         </span>
         <h1 className="font-pixel text-accent" style={{ fontSize: "14px", margin: "4px 0", letterSpacing: "0.08em" }}>
-          CHOOSE YOUR VIBE TIER
+          CHOOSE YOUR MEMBERSHIP TIER
         </h1>
         <p className="font-mono text-muted" style={{ fontSize: "11px", margin: "4px 0 0 0" }}>
-          Direct peer meetups, VIP ticket claims, and priority lobby broadcasting. Acceptable via Raast, SadaPay & Bank.
+          Explore hangouts, host unlimited squad beacons across Karachi, or promote your local venue.
         </p>
       </div>
 
@@ -113,9 +113,9 @@ export default function UpgradeHubClient({ currentTier: initialTier }: UpgradeHu
       )}
 
       {/* Pricing Cards Grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px", maxWidth: "800px", margin: "0 auto" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "16px", maxWidth: "960px", margin: "0 auto" }}>
         
-        {/* 1. MEMBER TIER */}
+        {/* 1. EXPLORER (FREE TRIAL) */}
         <div
           className="nokia-panel"
           style={{
@@ -123,58 +123,55 @@ export default function UpgradeHubClient({ currentTier: initialTier }: UpgradeHu
             display: "flex",
             flexDirection: "column",
             gap: "12px",
-            border: tier === "member" ? "2px solid var(--accent-primary)" : undefined,
+            border: tier === "none" ? "2px solid var(--accent-primary)" : undefined,
           }}
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
             <div>
-              <span className="font-pixel text-accent" style={{ fontSize: "8px" }}>STANDARD CIRCLE</span>
-              <h3 className="font-pixel" style={{ fontSize: "12px", margin: "4px 0 0 0" }}>MEMBER</h3>
+              <span className="font-pixel text-muted" style={{ fontSize: "8px" }}>STARTER PASS</span>
+              <h3 className="font-pixel" style={{ fontSize: "12px", margin: "4px 0 0 0" }}>EXPLORER</h3>
             </div>
-            {tier === "member" && (
+            {tier === "none" && (
               <span className="nokia-badge nokia-badge-primary">ACTIVE</span>
             )}
           </div>
 
           <p className="font-mono text-muted" style={{ fontSize: "11px", margin: 0 }}>
-            Full access to lobby broadcasting, squad chat channels, and community radars.
+            Ideal for newcomers discovering the solo scene and exploring local squads.
           </p>
 
-          {/* Price display in PKR */}
           <div className="nokia-panel-sunken" style={{ padding: "8px", display: "flex", alignItems: "baseline", gap: "6px", alignSelf: "flex-start" }}>
-            <span className="font-lcd text-accent" style={{ fontSize: "28px", lineHeight: 1 }}>PKR 1,500</span>
-            <span className="font-mono text-muted" style={{ fontSize: "10px" }}>/ mo</span>
+            <span className="font-lcd text-accent" style={{ fontSize: "28px", lineHeight: 1 }}>PKR 0</span>
+            <span className="font-mono text-muted" style={{ fontSize: "10px" }}>/ free</span>
           </div>
 
           <hr className="nokia-divider" />
 
-          {/* Perks list */}
           <ul style={{ listStyleType: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "8px", flexGrow: 1 }}>
             {[
-              "Broadcast & Host Hangouts across Karachi",
-              "Access Squad Chat Rooms with Attendees",
-              "View Vibe Matches & Trust Badges",
-              "Instant Notification Bell Alerts",
-              "Filter Meetups by Neighborhood"
+              "3 Free Approved Hangout Entries",
+              "Access to Karachi Live Radar Discovery",
+              "Squad Chat Room Access upon Acceptance",
+              "Browse Community Event Calendar",
+              "Option to Pay-As-You-Go after 3 Hangouts"
             ].map((perk) => (
               <li key={perk} className="font-mono" style={{ fontSize: "11px", display: "flex", alignItems: "flex-start", gap: "6px" }}>
-                <span className="text-accent" style={{ fontSize: "12px", lineHeight: "14px" }}>◈</span>
+                <span className="text-muted" style={{ fontSize: "12px", lineHeight: "14px" }}>●</span>
                 <span>{perk}</span>
               </li>
             ))}
           </ul>
 
           <button
-            onClick={() => openPaymentModal("member")}
-            disabled={tier === "member" || tier === "family" || tier === "admin"}
-            className="nokia-btn nokia-btn-primary"
-            style={{ width: "100%", marginTop: "12px" }}
+            disabled
+            className="nokia-btn"
+            style={{ width: "100%", marginTop: "12px", opacity: 0.6 }}
           >
-            {tier === "member" ? "SUBSCRIBED" : tier === "family" ? "INCLUDED IN VIP" : "UPGRADE TO MEMBER"}
+            {tier === "none" ? "CURRENT PLAN" : "FREE TIER"}
           </button>
         </div>
 
-        {/* 2. FAMILY / VIP TIER */}
+        {/* 2. MEMBER TIER */}
         <div
           className="nokia-panel"
           style={{
@@ -182,59 +179,126 @@ export default function UpgradeHubClient({ currentTier: initialTier }: UpgradeHu
             display: "flex",
             flexDirection: "column",
             gap: "12px",
-            border: "2px solid var(--border-strong)",
+            border: tier === "member" ? "2px solid var(--accent-primary)" : "2px solid var(--accent-primary)",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
           }}
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
             <div>
-              <span className="font-pixel text-warning" style={{ fontSize: "8px" }}>VIP INNER CIRCLE</span>
-              <h3 className="font-pixel" style={{ fontSize: "12px", margin: "4px 0 0 0" }}>FAMILY VIP</h3>
+              <span className="font-pixel text-accent" style={{ fontSize: "8px" }}>MOST POPULAR</span>
+              <h3 className="font-pixel" style={{ fontSize: "12px", margin: "4px 0 0 0" }}>MEMBER</h3>
             </div>
-            {tier === "family" ? (
-              <span className="nokia-badge nokia-badge-warning">ACTIVE</span>
+            {tier === "member" ? (
+              <span className="nokia-badge nokia-badge-primary">ACTIVE</span>
             ) : (
-              <span className="nokia-badge nokia-badge-warning">VIP</span>
+              <span className="nokia-badge nokia-badge-primary">RECOMMENDED</span>
             )}
           </div>
 
           <p className="font-mono text-muted" style={{ fontSize: "11px", margin: 0 }}>
-            Premium credentials, free passes to official DJ/Rave events, and VIP perks.
+            Full access to squad lobby broadcasting, chat rooms, and event discounts.
           </p>
 
-          {/* Price display in PKR */}
           <div className="nokia-panel-sunken" style={{ padding: "8px", display: "flex", alignItems: "baseline", gap: "6px", alignSelf: "flex-start" }}>
-            <span className="font-lcd text-warning" style={{ fontSize: "28px", lineHeight: 1 }}>PKR 3,500</span>
+            <span className="font-lcd text-accent" style={{ fontSize: "28px", lineHeight: 1 }}>PKR 2,000</span>
             <span className="font-mono text-muted" style={{ fontSize: "10px" }}>/ mo</span>
           </div>
 
           <hr className="nokia-divider" />
 
-          {/* Perks list */}
           <ul style={{ listStyleType: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "8px", flexGrow: 1 }}>
             {[
-              "All Member Perks & Vetting Privileges",
-              "Complimentary Tickets for Official Events",
-              "Priority Placement on City Feeds",
-              "Exclusive Amber Neon Profile Badge",
-              "Direct Concierge & Host Vetting Priority"
+              "15 Hangout Participations / Month",
+              "UNLIMITED Beacon Hosting Across Karachi",
+              "Verified Member Glow Badge on Profile & Squads",
+              "15%–20% Discount on Platform Official Events",
+              "Priority Queue in High-Demand Hangouts",
+              "Direct Squad Group Chat Access"
             ].map((perk) => (
               <li key={perk} className="font-mono" style={{ fontSize: "11px", display: "flex", alignItems: "flex-start", gap: "6px" }}>
-                <span className="text-warning" style={{ fontSize: "12px", lineHeight: "14px" }}>★</span>
-                <span style={{ fontWeight: perk.includes("Complimentary") ? "bold" : "normal" }}>{perk}</span>
+                <span className="text-accent" style={{ fontSize: "12px", lineHeight: "14px" }}>◈</span>
+                <span style={{ fontWeight: perk.includes("UNLIMITED") ? "bold" : "normal" }}>{perk}</span>
               </li>
             ))}
           </ul>
 
           <button
-            onClick={() => openPaymentModal("family")}
-            disabled={tier === "family" || tier === "admin"}
-            className="nokia-btn nokia-btn-warning"
+            onClick={() => openPaymentModal("member")}
+            disabled={tier === "member" || tier === "admin"}
+            className="nokia-btn nokia-btn-primary"
             style={{ width: "100%", marginTop: "12px" }}
           >
-            {tier === "family" ? "SUBSCRIBED" : "UPGRADE TO FAMILY"}
+            {tier === "member" ? "SUBSCRIBED" : "UPGRADE TO MEMBER"}
           </button>
         </div>
 
+        {/* 3. PARTNER BUSINESS TIER */}
+        <div
+          className="nokia-panel"
+          style={{
+            padding: "20px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "12px",
+            border: tier === "partner" ? "2px solid var(--accent-success)" : "2px solid var(--border-strong)",
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div>
+              <span className="font-pixel text-success" style={{ fontSize: "8px" }}>BUSINESS VENUES</span>
+              <h3 className="font-pixel" style={{ fontSize: "12px", margin: "4px 0 0 0" }}>PARTNER HUB</h3>
+            </div>
+            {tier === "partner" ? (
+              <span className="nokia-badge nokia-badge-success">ACTIVE</span>
+            ) : (
+              <span className="nokia-badge nokia-badge-success">BUSINESS</span>
+            )}
+          </div>
+
+          <p className="font-mono text-muted" style={{ fontSize: "11px", margin: 0 }}>
+            For cafes, padel courts, gaming lounges, and restaurants in Karachi.
+          </p>
+
+          <div className="nokia-panel-sunken" style={{ padding: "8px", display: "flex", alignItems: "baseline", gap: "6px", alignSelf: "flex-start" }}>
+            <span className="font-lcd text-success" style={{ fontSize: "28px", lineHeight: 1 }}>PKR 3,500</span>
+            <span className="font-mono text-muted" style={{ fontSize: "10px" }}>/ mo</span>
+          </div>
+
+          <hr className="nokia-divider" />
+
+          <ul style={{ listStyleType: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "8px", flexGrow: 1 }}>
+            {[
+              "Broadcast Daily Promo Offers & Vouchers",
+              "Auto-Promoted on Radar with Emerald Badge",
+              "Access to Dedicated Partner Command Center",
+              "Direct Squad Foot-Traffic Generation",
+              "Track Squad Check-ins & Redemptions",
+              "Verified Venue Checkmark on Map"
+            ].map((perk) => (
+              <li key={perk} className="font-mono" style={{ fontSize: "11px", display: "flex", alignItems: "flex-start", gap: "6px" }}>
+                <span className="text-success" style={{ fontSize: "12px", lineHeight: "14px" }}>▤</span>
+                <span>{perk}</span>
+              </li>
+            ))}
+          </ul>
+
+          <button
+            onClick={() => openPaymentModal("partner")}
+            disabled={tier === "partner" || tier === "admin"}
+            className="nokia-btn nokia-btn-success"
+            style={{ width: "100%", marginTop: "12px" }}
+          >
+            {tier === "partner" ? "ACTIVE PARTNER" : "ACTIVATE PARTNER HUB"}
+          </button>
+        </div>
+
+      </div>
+
+      {/* Paused Tier Note */}
+      <div className="text-center" style={{ marginTop: "24px" }}>
+        <span className="font-mono text-muted" style={{ fontSize: "10px" }}>
+          ◈ Note: Family VIP tier is currently paused for our initial community launch.
+        </span>
       </div>
 
       {/* ── PAYMENT MODAL: RAAST / SADAPAY / BANK TRANSFER ────────────────── */}
@@ -250,8 +314,8 @@ export default function UpgradeHubClient({ currentTier: initialTier }: UpgradeHu
             {/* Modal Title Bar */}
             <div
               style={{
-                background: modalTier === "family" ? "var(--accent-warning)" : "var(--accent-primary)",
-                color: modalTier === "family" ? "#111" : "#fff",
+                background: modalTier === "partner" ? "var(--accent-success)" : "var(--accent-primary)",
+                color: modalTier === "partner" ? "#000" : "#fff",
                 padding: "10px 16px",
                 display: "flex",
                 justifyContent: "space-between",
@@ -291,7 +355,7 @@ export default function UpgradeHubClient({ currentTier: initialTier }: UpgradeHu
                         TIER: {modalTier.toUpperCase()}
                       </span>
                       <span className="font-lcd text-accent" style={{ fontSize: "20px" }}>
-                        PKR {modalTier === "member" ? "1,500" : "3,500"}
+                        PKR {modalTier === "member" ? "2,000" : "3,500"}
                       </span>
                     </div>
                   </div>
@@ -348,7 +412,7 @@ export default function UpgradeHubClient({ currentTier: initialTier }: UpgradeHu
                       <div style={{ fontSize: "11px", lineHeight: "1.6" }}>
                         <div style={{ color: "var(--accent-primary)", fontWeight: "bold" }}>MEEZAN BANK IBFT:</div>
                         <div>Account Title: <span className="text-accent font-bold">Abdul Raffay</span></div>
-                        <div className="font-mono text-muted" style={{ fontSize: "10px" }}>IBAN: PK00MEZN0001020304050607</div>
+                        <div className="font-mono text-muted" style={{ fontSize: "10px" }}>IBAN: PK42MEZN0001234567890123</div>
                       </div>
                     )}
                   </div>

@@ -194,3 +194,72 @@ export async function buyTicketDevInstantAction(eventId: string): Promise<EventC
   return { success: true };
 }
 
+export interface CreateArtistEventInput {
+  title: string;
+  description?: string;
+  venue_name: string;
+  price: number;
+  max_capacity: number;
+  scheduled_at: string;
+}
+
+/**
+ * Server Action: Create an artist / promoter ticketed event (artist_split).
+ */
+export async function createArtistEventAction(
+  input: CreateArtistEventInput
+): Promise<{ success: boolean; eventId?: string; error?: string }> {
+  const authCheck = await getUserIdSecurely();
+  if ("error" in authCheck) {
+    return { success: false, error: authCheck.error };
+  }
+
+  if (!input.title?.trim()) {
+    return { success: false, error: "Event title is required." };
+  }
+
+  const { data, error } = await (supabaseAdmin
+    .from("official_events") as any)
+    .insert({
+      title: input.title.trim(),
+      description: input.description?.trim() || null,
+      venue_name: input.venue_name?.trim() || "Karachi Venue",
+      event_type: "artist_split",
+      price: Number(input.price) || 0,
+      max_capacity: Number(input.max_capacity) || 100,
+      scheduled_at: input.scheduled_at,
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    return { success: false, error: error.message || "Failed to list artist event." };
+  }
+
+  return { success: true, eventId: data?.id };
+}
+
+/**
+ * Server Action: Check in / admit a ticket holder at the event gate.
+ */
+export async function checkInAttendeeAction(
+  ticketId: string
+): Promise<{ success: boolean; error?: string }> {
+  const authCheck = await getUserIdSecurely();
+  if ("error" in authCheck) {
+    return { success: false, error: authCheck.error };
+  }
+
+  const { error } = await (supabaseAdmin
+    .from("event_tickets") as any)
+    .update({ ticket_status: "admitted" })
+    .eq("id", ticketId);
+
+  if (error) {
+    return { success: false, error: "Failed to admit attendee." };
+  }
+
+  return { success: true };
+}
+
+

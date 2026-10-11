@@ -132,6 +132,46 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   </Link>
                 );
               })}
+
+              <div style={{ margin: "10px 12px 6px", borderTop: "1px dashed var(--border-light)", paddingTop: "8px" }}>
+                <span className="font-pixel text-muted" style={{ fontSize: "7px", letterSpacing: "0.05em", display: "block", marginBottom: "4px" }}>
+                  ◈ PORTALS
+                </span>
+                <Link
+                  href="/dashboard/artist"
+                  className="nokia-menu-item"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    padding: "6px 8px",
+                    fontSize: "8px",
+                    fontFamily: "var(--font-pixel)",
+                    textDecoration: "none",
+                    color: pathname.startsWith("/dashboard/artist") ? "var(--accent-primary)" : "var(--text-muted)",
+                  }}
+                >
+                  <span>🎤</span>
+                  <span>ARTIST HUB</span>
+                </Link>
+                <Link
+                  href="/dashboard/partner"
+                  className="nokia-menu-item"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    padding: "6px 8px",
+                    fontSize: "8px",
+                    fontFamily: "var(--font-pixel)",
+                    textDecoration: "none",
+                    color: pathname.startsWith("/dashboard/partner") ? "var(--accent-success)" : "var(--text-muted)",
+                  }}
+                >
+                  <span>💼</span>
+                  <span>PARTNER HUB</span>
+                </Link>
+              </div>
             </nav>
           </div>
 

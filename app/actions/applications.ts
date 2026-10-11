@@ -52,6 +52,45 @@ export async function applyToBeacon(beaconId: string): Promise<ApplicationAction
     return { success: false, error: "This Beacon is already full." };
   }
 
+  // 1b. Check tier participation limits (Explorer: 3 free, Member: 15/mo)
+  const { data: applicantProfile } = await (supabaseAdmin
+    .from("profiles") as any)
+    .select("subscription_tier")
+    .eq("id", userId)
+    .single();
+
+  const applicantTier = applicantProfile?.subscription_tier || "none";
+
+  if (applicantTier === "none") {
+    const { count: approvedCount } = await (supabaseAdmin
+      .from("beacon_applications") as any)
+      .select("id", { count: "exact", head: true })
+      .eq("applicant_id", userId)
+      .eq("status", "approved");
+
+    if (approvedCount !== null && approvedCount !== undefined && approvedCount >= 3) {
+      return {
+        success: false,
+        error: "You have used your 3 free Explorer hangout passes! Upgrade to Member (PKR 2,000/mo) in the Upgrade Hub to unlock 15 hangouts and unlimited hosting.",
+      };
+    }
+  } else if (applicantTier === "member") {
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const { count: monthlyApprovedCount } = await (supabaseAdmin
+      .from("beacon_applications") as any)
+      .select("id", { count: "exact", head: true })
+      .eq("applicant_id", userId)
+      .eq("status", "approved")
+      .gte("created_at", thirtyDaysAgo);
+
+    if (monthlyApprovedCount !== null && monthlyApprovedCount !== undefined && monthlyApprovedCount >= 15) {
+      return {
+        success: false,
+        error: "You have reached your limit of 15 hangout participations for this 30-day cycle. Quota will reset on your next cycle.",
+      };
+    }
+  }
+
   // 2. Insert application row
   const { error: insertError } = await (supabaseAdmin
     .from("beacon_applications") as any)

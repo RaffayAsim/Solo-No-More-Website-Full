@@ -21,17 +21,22 @@ async function getUserIdSecurely(): Promise<{ userId: string } | { error: string
 /**
  * Server Action: Upgrade user's subscription tier.
  */
-export async function upgradeTier(tier: "member" | "family"): Promise<BillingActionResult> {
+export async function upgradeTier(tier: "member" | "family" | "partner"): Promise<BillingActionResult> {
   const authCheck = await getUserIdSecurely();
   if ("error" in authCheck) {
     return { success: false, error: authCheck.error };
   }
   const userId = authCheck.userId;
 
+  const updatePayload: any = { subscription_tier: tier };
+  if (tier === "partner") {
+    updatePayload.is_partner = true;
+  }
+
   // Update subscription_tier in profiles table
   const { error: updateError } = await (supabaseAdmin
     .from("profiles") as any)
-    .update({ subscription_tier: tier })
+    .update(updatePayload)
     .eq("id", userId);
 
   if (updateError) {
@@ -42,7 +47,7 @@ export async function upgradeTier(tier: "member" | "family"): Promise<BillingAct
 }
 
 export interface SubmitPaymentInput {
-  tierRequested: "member" | "family";
+  tierRequested: "member" | "family" | "partner";
   amountPkr: number;
   paymentMethod: "raast" | "sadapay" | "bank_transfer" | "safepay";
   transactionRef: string;
@@ -201,9 +206,14 @@ export async function reviewPaymentSubmissionAction(
         );
       } catch {}
     } else {
+      const updateData: any = { subscription_tier: submission.tier_requested };
+      if (submission.tier_requested === "partner") {
+        updateData.is_partner = true;
+      }
+
       await (supabaseAdmin
         .from("profiles") as any)
-        .update({ subscription_tier: submission.tier_requested })
+        .update(updateData)
         .eq("id", submission.user_id);
 
       try {
