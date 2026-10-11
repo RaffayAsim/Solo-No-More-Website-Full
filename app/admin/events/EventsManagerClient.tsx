@@ -257,7 +257,7 @@ export default function EventsManagerClient({ initialEvents }: EventsManagerClie
 
                     {/* Price */}
                     <td style={{ padding: "10px", fontWeight: "bold" }}>
-                      {evt.price > 0 ? `$${evt.price}` : "FREE / VIP"}
+                      {evt.price > 0 ? `PKR ${Number(evt.price).toLocaleString()}` : "FREE / VIP"}
                     </td>
 
                     {/* Capacity */}
@@ -393,7 +393,7 @@ export default function EventsManagerClient({ initialEvents }: EventsManagerClie
                 {/* Ticket Price */}
                 <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                   <label className="font-pixel text-muted" style={{ fontSize: "7px" }}>
-                    PRICE ($)
+                    PRICE (PKR)
                   </label>
                   <input
                     type="number"

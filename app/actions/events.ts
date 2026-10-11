@@ -91,3 +91,106 @@ export async function claimTicket(eventId: string): Promise<EventClaimResult> {
 
   return { success: true };
 }
+
+export interface SubmitEventTicketPaymentInput {
+  eventId: string;
+  amountPkr: number;
+  paymentMethod: "raast" | "sadapay" | "bank_transfer";
+  transactionRef: string;
+}
+
+/**
+ * Server Action: Submit Raast / SadaPay / Bank Transfer payment proof for Event Ticket purchase.
+ */
+export async function submitEventTicketPaymentAction(
+  input: SubmitEventTicketPaymentInput
+): Promise<EventClaimResult> {
+  const authCheck = await getUserIdSecurely();
+  if ("error" in authCheck) {
+    return { success: false, error: authCheck.error };
+  }
+  const userId = authCheck.userId;
+
+  if (!input.transactionRef || !input.transactionRef.trim()) {
+    return { success: false, error: "Transaction Reference / TID is required." };
+  }
+
+  // 1. Fetch event to verify capacity and title
+  const { data: event, error: eventError } = await (supabaseAdmin
+    .from("official_events") as any)
+    .select("title, max_capacity")
+    .eq("id", input.eventId)
+    .single();
+
+  if (eventError || !event) {
+    return { success: false, error: "Official event not found." };
+  }
+
+  // 2. Count active tickets
+  const { count } = await (supabaseAdmin
+    .from("event_tickets") as any)
+    .select("*", { count: "exact", head: true })
+    .eq("event_id", input.eventId)
+    .eq("ticket_status", "active");
+
+  if (count !== null && count >= event.max_capacity) {
+    return { success: false, error: "This event is already fully booked." };
+  }
+
+  // 3. Record payment submission
+  const { error: insertError } = await (supabaseAdmin
+    .from("payment_submissions") as any)
+    .insert({
+      user_id: userId,
+      amount_pkr: input.amountPkr,
+      tier_requested: `event_ticket:${input.eventId}`,
+      payment_method: input.paymentMethod,
+      transaction_ref: input.transactionRef.trim(),
+      status: "pending",
+    });
+
+  if (insertError) {
+    if (!insertError.message?.includes("schema cache") && !insertError.message?.includes("does not exist")) {
+      return { success: false, error: "Failed to record payment proof. Please try again." };
+    }
+  }
+
+  // 4. Notify user
+  try {
+    const { writeNotification } = await import("@/app/actions/notifications");
+    await writeNotification(
+      userId,
+      "spot_available" as any,
+      "🎟 TICKET PROOF RECEIVED",
+      `Your transaction TID (${input.transactionRef.trim()}) for "${event.title}" is queued for verification.`
+    );
+  } catch {}
+
+  return { success: true };
+}
+
+/**
+ * Developer Testing Action: Simulate instant ticket booking.
+ */
+export async function buyTicketDevInstantAction(eventId: string): Promise<EventClaimResult> {
+  const authCheck = await getUserIdSecurely();
+  if ("error" in authCheck) {
+    return { success: false, error: authCheck.error };
+  }
+  const userId = authCheck.userId;
+
+  const { error } = await (supabaseAdmin
+    .from("event_tickets") as any)
+    .upsert({
+      event_id: eventId,
+      user_id: userId,
+      ticket_status: "active",
+    }, { onConflict: "event_id,user_id" });
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
+

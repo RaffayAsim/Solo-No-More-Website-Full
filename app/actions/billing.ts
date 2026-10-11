@@ -176,22 +176,45 @@ export async function reviewPaymentSubmissionAction(
     return { success: false, error: "Failed to update payment submission." };
   }
 
-  // 3. If approved, upgrade profile tier
+  // 3. If approved, upgrade profile tier or activate event ticket
   const { writeNotification } = await import("@/app/actions/notifications");
   if (decision === "approved") {
-    await (supabaseAdmin
-      .from("profiles") as any)
-      .update({ subscription_tier: submission.tier_requested })
-      .eq("id", submission.user_id);
+    if (submission.tier_requested?.startsWith("event_ticket:")) {
+      const eventId = submission.tier_requested.replace("event_ticket:", "");
+      await (supabaseAdmin.from("event_tickets") as any).upsert({
+        event_id: eventId,
+        user_id: submission.user_id,
+        ticket_status: "active",
+      }, { onConflict: "event_id,user_id" });
 
-    try {
-      await writeNotification(
-        submission.user_id,
-        "spot_available" as any,
-        "✓ PAYMENT VERIFIED & TIER ACTIVATED",
-        `Your payment has been verified! Welcome to the ${submission.tier_requested.toUpperCase()} circle.`
-      );
-    } catch {}
+      const { data: eventData } = await (supabaseAdmin.from("official_events") as any)
+        .select("title")
+        .eq("id", eventId)
+        .single();
+
+      try {
+        await writeNotification(
+          submission.user_id,
+          "spot_available" as any,
+          "🎟 EVENT PASS CONFIRMED",
+          `Your ticket for "${eventData?.title || "Official Event"}" is active! Your digital pass is now confirmed.`
+        );
+      } catch {}
+    } else {
+      await (supabaseAdmin
+        .from("profiles") as any)
+        .update({ subscription_tier: submission.tier_requested })
+        .eq("id", submission.user_id);
+
+      try {
+        await writeNotification(
+          submission.user_id,
+          "spot_available" as any,
+          "✓ PAYMENT VERIFIED & TIER ACTIVATED",
+          `Your payment has been verified! Welcome to the ${submission.tier_requested.toUpperCase()} circle.`
+        );
+      } catch {}
+    }
   } else {
     try {
       await writeNotification(
