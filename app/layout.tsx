@@ -1,8 +1,22 @@
 import type { Metadata } from "next";
-import { Press_Start_2P, VT323, IBM_Plex_Mono } from "next/font/google";
+import { Press_Start_2P, VT323, IBM_Plex_Mono, Bricolage_Grotesque, DM_Sans } from "next/font/google";
 import "./globals.css";
+import "./skin-party.css";
 
-// ── Nokia Soul Fonts ─────────────────────────────────────────────────────────
+// ── Party Skin Fonts (default) ───────────────────────────────────────────────
+const bricolage = Bricolage_Grotesque({
+  subsets: ["latin"],
+  variable: "--font-display",
+  display: "swap",
+});
+
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  variable: "--font-body",
+  display: "swap",
+});
+
+// ── Nokia Soul Fonts (Nokia Classic + Synthwave skins) ───────────────────────
 const pressStart2P = Press_Start_2P({
   weight: "400",
   subsets: ["latin"],
@@ -25,10 +39,20 @@ const ibmPlexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Solo-No-More — Find Your Vibe IRL",
+  title: "Solo-No-More — Find Your People IRL in Karachi",
   description:
-    "An invite-only community for Gen Z who want genuine, real-world connection. Apply for membership today.",
+    "Never go out alone again. Join squads for padel, chai runs, gigs and rooftop hangs across Karachi — or host your own in seconds.",
 };
+
+// Applies the saved skin before first paint so there's no flash of the wrong theme.
+const skinBootScript = `
+  try {
+    var s = localStorage.getItem('snm-skin');
+    if (s === 'partiful' || s === 'light' || s === 'dark') {
+      document.documentElement.setAttribute('data-theme', s);
+    }
+  } catch (e) {}
+`;
 
 export default function RootLayout({
   children,
@@ -38,10 +62,13 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      data-theme="dark"
-      className={`${pressStart2P.variable} ${vt323.variable} ${ibmPlexMono.variable} h-full`}
+      data-theme="partiful"
+      className={`${bricolage.variable} ${dmSans.variable} ${pressStart2P.variable} ${vt323.variable} ${ibmPlexMono.variable} h-full`}
       suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: skinBootScript }} />
+      </head>
       <body className="min-h-full font-mono antialiased transition-colors duration-300" suppressHydrationWarning>
         {children}
         <script

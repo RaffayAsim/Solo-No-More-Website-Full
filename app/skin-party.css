@@ -1,0 +1,595 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   SOLO-NO-MORE — "PARTY" SKIN (DEFAULT)
+   Modern, warm, invite-card aesthetic. Activated by <html data-theme="partiful">.
+
+   Strategy: every shared component class used across the app (nokia-panel,
+   nokia-btn, nokia-input, nokia-badge, nokia-statusbar, nokia-menu-item, …)
+   is restyled here, so the lobby, dashboards, partner/artist hubs and admin
+   command center all inherit the new look without touching their markup.
+   The Nokia Classic ("light") and Synthwave ("dark") skins stay untouched.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+[data-theme="partiful"] {
+  /* Surface layers */
+  --bg-base:        #0F0B15;
+  --bg-surface:     #1A1423;
+  --bg-raised:      #231B2E;
+  --bg-sunken:      #140F1B;
+  --bg-overlay:     rgba(15, 11, 21, 0.92);
+
+  /* Borders */
+  --border-strong:  rgba(255, 255, 255, 0.12);
+  --border-mid:     rgba(255, 255, 255, 0.2);
+  --border-light:   rgba(255, 255, 255, 0.08);
+
+  /* Accent — warm coral → hot pink */
+  --accent-primary: #FF6A4D;
+  --accent-hover:   #FF8366;
+  --accent-glow:    rgba(255, 106, 77, 0.25);
+  --accent-text:    #FF8A6E;
+  --accent-pink:    #FF4FA3;
+  --accent-violet:  #9B7BFF;
+  --grad-primary:   linear-gradient(135deg, #FF8A3D 0%, #FF5A5F 45%, #FF4FA3 100%);
+  --grad-soft:      linear-gradient(135deg, rgba(255,138,61,0.16), rgba(255,79,163,0.16));
+
+  --accent-danger:  #FF5470;
+  --accent-warning: #FFC53D;
+  --accent-success: #3DDC97;
+
+  /* Typography */
+  --text-primary:   #FFF7F0;
+  --text-secondary: #E9DDF0;
+  --text-muted:     #A99CB8;
+  --text-inverse:   #FFFFFF;
+
+  /* Bevel tokens neutralised */
+  --bevel-light:    transparent;
+  --bevel-mid:      transparent;
+  --bevel-dark:     transparent;
+  --bevel-darkest:  transparent;
+
+  /* Status bar */
+  --statusbar-bg:   rgba(15, 11, 21, 0.72);
+  --statusbar-text: #FFF7F0;
+
+  /* LCD */
+  --lcd-bg:         transparent;
+  --lcd-bg-glow:    transparent;
+  --lcd-text:       #FFF7F0;
+
+  --radius-lg: 22px;
+  --radius-md: 16px;
+  --radius-sm: 12px;
+  --shadow-card: 0 1px 0 rgba(255,255,255,0.04) inset, 0 12px 40px -12px rgba(0,0,0,0.6);
+
+  color-scheme: dark;
+}
+
+/* ── Base canvas: soft aurora blobs behind everything ───────────────────── */
+[data-theme="partiful"] body {
+  font-family: var(--font-body), system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+  background-color: var(--bg-base);
+  background-image:
+    radial-gradient(900px 600px at 8% -10%, rgba(255, 106, 77, 0.22), transparent 60%),
+    radial-gradient(800px 600px at 100% 0%, rgba(155, 123, 255, 0.20), transparent 60%),
+    radial-gradient(900px 700px at 50% 110%, rgba(255, 79, 163, 0.14), transparent 60%);
+  background-attachment: fixed;
+}
+
+[data-theme="partiful"] body::before { display: none !important; }
+
+/* ── Typography remap ───────────────────────────────────────────────────── */
+[data-theme="partiful"] .font-pixel {
+  font-family: var(--font-display), var(--font-body), system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  text-rendering: optimizeLegibility;
+  image-rendering: auto;
+}
+
+[data-theme="partiful"] .font-lcd {
+  font-family: var(--font-display), var(--font-body), system-ui, sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+[data-theme="partiful"] .font-mono {
+  font-family: var(--font-body), system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+[data-theme="partiful"] h1,
+[data-theme="partiful"] h2,
+[data-theme="partiful"] h3 {
+  font-family: var(--font-display), var(--font-body), system-ui, sans-serif;
+  letter-spacing: -0.015em;
+}
+
+/*
+  Readability fix: the retro skins used a wide pixel font, so many inline
+  styles set tiny sizes (6–10px). In the Party skin we lift those to modern,
+  legible sizes. React may serialise inline styles with or without a space,
+  so both forms are matched.
+*/
+[data-theme="partiful"] [style*="font-size:5px"],  [data-theme="partiful"] [style*="font-size: 5px"],
+[data-theme="partiful"] [style*="font-size:6px"],  [data-theme="partiful"] [style*="font-size: 6px"],
+[data-theme="partiful"] [style*="font-size:7px"],  [data-theme="partiful"] [style*="font-size: 7px"] { font-size: 11.5px !important; }
+[data-theme="partiful"] [style*="font-size:8px"],  [data-theme="partiful"] [style*="font-size: 8px"] { font-size: 12.5px !important; }
+[data-theme="partiful"] [style*="font-size:9px"],  [data-theme="partiful"] [style*="font-size: 9px"] { font-size: 13px !important; }
+[data-theme="partiful"] [style*="font-size:10px"], [data-theme="partiful"] [style*="font-size: 10px"] { font-size: 13.5px !important; }
+[data-theme="partiful"] [style*="font-size:11px"], [data-theme="partiful"] [style*="font-size: 11px"] { font-size: 14px !important; }
+[data-theme="partiful"] [style*="font-size:12px"], [data-theme="partiful"] [style*="font-size: 12px"] { font-size: 14.5px !important; }
+
+/* Pixel-font headings were deliberately small; scale them into real headings */
+[data-theme="partiful"] .font-pixel[style*="font-size:11px"], [data-theme="partiful"] .font-pixel[style*="font-size: 11px"] { font-size: 16px !important; }
+[data-theme="partiful"] .font-pixel[style*="font-size:12px"], [data-theme="partiful"] .font-pixel[style*="font-size: 12px"] { font-size: 19px !important; }
+[data-theme="partiful"] .font-pixel[style*="font-size:13px"], [data-theme="partiful"] .font-pixel[style*="font-size: 13px"] { font-size: 21px !important; }
+[data-theme="partiful"] .font-pixel[style*="font-size:14px"], [data-theme="partiful"] .font-pixel[style*="font-size: 14px"] { font-size: 26px !important; line-height: 1.15 !important; }
+[data-theme="partiful"] .font-pixel[style*="font-size:16px"], [data-theme="partiful"] .font-pixel[style*="font-size: 16px"] { font-size: 28px !important; line-height: 1.15 !important; }
+[data-theme="partiful"] .font-pixel[style*="font-size:18px"], [data-theme="partiful"] .font-pixel[style*="font-size: 18px"],
+[data-theme="partiful"] .font-pixel[style*="font-size:20px"], [data-theme="partiful"] .font-pixel[style*="font-size: 20px"] { font-size: 32px !important; line-height: 1.1 !important; }
+
+/* LCD numerals (VT323 is narrow) — tame them in a wide display face */
+[data-theme="partiful"] .font-lcd[style*="font-size:28px"], [data-theme="partiful"] .font-lcd[style*="font-size: 28px"],
+[data-theme="partiful"] .font-lcd[style*="font-size:32px"], [data-theme="partiful"] .font-lcd[style*="font-size: 32px"] { font-size: 26px !important; }
+[data-theme="partiful"] .font-lcd[style*="font-size:24px"], [data-theme="partiful"] .font-lcd[style*="font-size: 24px"] { font-size: 22px !important; }
+
+/* ── Panels / cards ─────────────────────────────────────────────────────── */
+[data-theme="partiful"] .nokia-panel,
+[data-theme="partiful"] .nokia-panel-raised {
+  background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015)), var(--bg-surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+[data-theme="partiful"] .nokia-panel-raised {
+  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02)), var(--bg-raised);
+}
+
+[data-theme="partiful"] .nokia-panel-sunken {
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  box-shadow: none;
+}
+
+[data-theme="partiful"] .nokia-panel { overflow: hidden; }
+[data-theme="partiful"] .nokia-panel > div:first-child[style*="background: var(--accent"],
+[data-theme="partiful"] .nokia-panel > div:first-child[style*="background:var(--accent"] {
+  background: var(--grad-primary) !important;
+  border-bottom: none !important;
+}
+
+[data-theme="partiful"] .nokia-panel-interactive {
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.25s ease, box-shadow 0.25s ease;
+}
+[data-theme="partiful"] .nokia-panel-interactive:hover {
+  transform: translateY(-3px);
+  border-color: rgba(255, 106, 77, 0.45);
+  box-shadow: 0 18px 50px -18px rgba(255, 90, 95, 0.45);
+}
+
+/* ── Buttons — friendly pills ───────────────────────────────────────────── */
+[data-theme="partiful"] .nokia-btn {
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  padding: 11px 20px;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--border-mid);
+  border-radius: 999px;
+  box-shadow: none;
+  transition: transform 0.18s ease, background 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+[data-theme="partiful"] .nokia-btn:hover:not(:disabled) {
+  animation: none;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.32);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px -10px rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="partiful"] .nokia-btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+  box-shadow: none;
+}
+
+[data-theme="partiful"] .nokia-btn-primary {
+  background: var(--grad-primary);
+  color: #fff;
+  border: 1px solid transparent;
+  box-shadow: 0 10px 30px -10px rgba(255, 90, 95, 0.7);
+}
+
+[data-theme="partiful"] .nokia-btn-primary:hover:not(:disabled) {
+  background: var(--grad-primary);
+  color: #fff;
+  border-color: transparent;
+  filter: brightness(1.08);
+  box-shadow: 0 14px 34px -10px rgba(255, 90, 95, 0.85);
+}
+
+[data-theme="partiful"] .nokia-btn-success,
+.nokia-btn-success {
+  background: var(--accent-success);
+  color: #06281A;
+  border-color: transparent;
+}
+[data-theme="partiful"] .nokia-btn-success:hover:not(:disabled) {
+  background: #5BE7AB;
+  color: #06281A;
+}
+
+[data-theme="partiful"] .nokia-btn-warning {
+  background: var(--accent-warning);
+  color: #2A1C00;
+  border-color: transparent;
+  box-shadow: none;
+}
+[data-theme="partiful"] .nokia-btn-warning:hover:not(:disabled) {
+  background: #FFD366;
+  color: #2A1C00;
+}
+
+[data-theme="partiful"] .nokia-btn-danger {
+  background: rgba(255, 84, 112, 0.14);
+  color: #FF8DA1;
+  border-color: rgba(255, 84, 112, 0.4);
+}
+[data-theme="partiful"] .nokia-btn-danger:hover:not(:disabled) {
+  background: var(--accent-danger);
+  color: #fff;
+}
+
+[data-theme="partiful"] .nokia-btn-ghost {
+  background: transparent;
+  color: var(--accent-text);
+  border-color: rgba(255, 106, 77, 0.45);
+}
+
+[data-theme="partiful"] .nokia-btn:disabled { opacity: 0.45; }
+
+/* ── Inputs ─────────────────────────────────────────────────────────────── */
+[data-theme="partiful"] .nokia-input,
+[data-theme="partiful"] select.nokia-input,
+[data-theme="partiful"] textarea.nokia-input {
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: 15px;
+  padding: 12px 14px;
+  color: var(--text-primary) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid var(--border-mid) !important;
+  border-radius: var(--radius-sm);
+  box-shadow: none;
+}
+
+[data-theme="partiful"] .nokia-input::placeholder { color: #7D7089; font-style: normal; }
+
+[data-theme="partiful"] .nokia-input:focus {
+  border-color: var(--accent-primary) !important;
+  box-shadow: 0 0 0 4px var(--accent-glow);
+  background: rgba(255, 255, 255, 0.07) !important;
+}
+
+[data-theme="partiful"] select.nokia-input option { background: #1A1423; color: #FFF7F0; }
+
+/* ── Top status bar → glass app header ──────────────────────────────────── */
+[data-theme="partiful"] .nokia-statusbar {
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: 14px;
+  letter-spacing: 0;
+  min-height: 60px;
+  padding: 10px 20px;
+  background: var(--statusbar-bg);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border-bottom: 1px solid var(--border-light);
+  position: sticky;
+  top: 0;
+  z-index: 45;
+}
+
+[data-theme="partiful"] .nokia-statusbar .font-pixel {
+  font-size: 18px !important;
+  background: var(--grad-primary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent !important;
+}
+
+/* ── Badges → soft pills ────────────────────────────────────────────────── */
+[data-theme="partiful"] .nokia-badge {
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 11.5px;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  padding: 4px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+  box-shadow: none;
+}
+
+[data-theme="partiful"] .nokia-badge-primary { background: rgba(255, 106, 77, 0.16); color: #FFA48F; border-color: rgba(255, 106, 77, 0.35); }
+[data-theme="partiful"] .nokia-badge-success { background: rgba(61, 220, 151, 0.14); color: #7EF0BE; border-color: rgba(61, 220, 151, 0.35); }
+[data-theme="partiful"] .nokia-badge-warning { background: rgba(255, 197, 61, 0.14); color: #FFD979; border-color: rgba(255, 197, 61, 0.35); }
+[data-theme="partiful"] .nokia-badge-danger  { background: rgba(255, 84, 112, 0.14); color: #FF9AAD; border-color: rgba(255, 84, 112, 0.35); }
+
+/* ── LCD display → big friendly stat ────────────────────────────────────── */
+[data-theme="partiful"] .nokia-lcd {
+  background: var(--grad-soft);
+  border: 1px solid rgba(255, 106, 77, 0.25);
+  border-radius: var(--radius-md);
+  box-shadow: none;
+  text-shadow: none;
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+/* ── Divider ────────────────────────────────────────────────────────────── */
+[data-theme="partiful"] .nokia-divider { height: 1px; background: var(--border-light); }
+
+/* ── Sidebar menu items ─────────────────────────────────────────────────── */
+[data-theme="partiful"] .nokia-menu-item {
+  font-family: var(--font-body), system-ui, sans-serif !important;
+  font-weight: 600;
+  font-size: 14px !important;
+  letter-spacing: 0 !important;
+  margin: 2px 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border-bottom: none;
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+[data-theme="partiful"] .nokia-menu-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+}
+
+[data-theme="partiful"] .nokia-menu-item[style*="var(--accent-primary)"],
+[data-theme="partiful"] .nokia-menu-item.active {
+  background: var(--grad-soft) !important;
+  color: var(--text-primary) !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 106, 77, 0.35);
+}
+
+[data-theme="partiful"] #desktop-sidebar {
+  background: rgba(15, 11, 21, 0.6) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: none !important;
+  border-right: 1px solid var(--border-light) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* ── Mobile bottom nav → floating glass dock ────────────────────────────── */
+[data-theme="partiful"] #mobile-bottom-nav {
+  left: 12px !important;
+  right: 12px !important;
+  bottom: 12px !important;
+  padding: 6px !important;
+  border-radius: 22px !important;
+  border: 1px solid var(--border-strong) !important;
+  background: rgba(26, 20, 35, 0.82) !important;
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: 0 18px 40px -12px rgba(0, 0, 0, 0.7) !important;
+}
+
+[data-theme="partiful"] .nokia-icon-cell {
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 10.5px !important;
+  letter-spacing: 0;
+  text-transform: none;
+  padding: 8px 2px;
+  border: none;
+  border-radius: 16px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-muted);
+}
+
+[data-theme="partiful"] .nokia-icon-cell:hover,
+[data-theme="partiful"] .nokia-icon-cell.active,
+[data-theme="partiful"] .nokia-icon-cell[style*="var(--accent-primary)"] {
+  background: var(--grad-soft) !important;
+  color: var(--text-primary) !important;
+  box-shadow: none;
+}
+
+/* ── Utility colour helpers ─────────────────────────────────────────────── */
+[data-theme="partiful"] .text-accent  { color: var(--accent-text); }
+[data-theme="partiful"] .text-success { color: var(--accent-success); }
+
+[data-theme="partiful"] .text-gradient {
+  background: var(--grad-primary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ── Restore normal cursors (retro skins use a pixel cursor) ────────────── */
+[data-theme="partiful"] .font-pixel { cursor: inherit; }
+[data-theme="partiful"] button,
+[data-theme="partiful"] a,
+[data-theme="partiful"] .nokia-btn,
+[data-theme="partiful"] .nokia-icon-cell,
+[data-theme="partiful"] .theme-toggle { cursor: pointer; }
+[data-theme="partiful"] .nokia-btn:hover,
+[data-theme="partiful"] .nokia-icon-cell:hover,
+[data-theme="partiful"] .theme-toggle:hover,
+[data-theme="partiful"] a:hover,
+[data-theme="partiful"] button:hover { cursor: pointer !important; }
+[data-theme="partiful"] button:disabled:hover { cursor: not-allowed !important; }
+
+/* ── Partner promo cards → gradient invite cards ────────────────────────── */
+[data-theme="partiful"] .partner-offer-card {
+  background: linear-gradient(135deg, #2A1530 0%, #3A1A2A 50%, #3B2216 100%) !important;
+  border: 1px solid rgba(255, 106, 77, 0.4) !important;
+  color: var(--text-primary) !important;
+}
+[data-theme="partiful"] .partner-offer-card * {
+  color: inherit !important;
+  --accent-primary: #FF6A4D;
+}
+[data-theme="partiful"] .partner-offer-card .nokia-badge {
+  background: var(--grad-primary) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+}
+[data-theme="partiful"] .partner-offer-card .nokia-panel-sunken {
+  background: rgba(0, 0, 0, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+[data-theme="partiful"] .partner-offer-card .nokia-btn {
+  background: #fff !important;
+  color: #1A1423 !important;
+  border-color: transparent !important;
+}
+
+/* ── Glass panel / radar adaptations ────────────────────────────────────── */
+[data-theme="partiful"] .glass-panel {
+  background: rgba(26, 20, 35, 0.6);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+}
+
+[data-theme="partiful"] .radar-container {
+  background: radial-gradient(circle, rgba(42, 26, 52, 0.95) 0%, rgba(15, 11, 21, 0.98) 100%);
+  border: 1px solid var(--border-strong);
+  box-shadow: inset 0 0 40px rgba(255, 106, 77, 0.18), 0 20px 50px -20px rgba(255, 79, 163, 0.35);
+}
+[data-theme="partiful"] .radar-grid {
+  background-image:
+    radial-gradient(circle, transparent 30%, rgba(255, 138, 110, 0.18) 30.5%, rgba(255, 138, 110, 0.18) 31%, transparent 31.5%, transparent 60%, rgba(255, 138, 110, 0.18) 60.5%, rgba(255, 138, 110, 0.18) 61%, transparent 61.5%),
+    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+}
+[data-theme="partiful"] .radar-sweep {
+  background: linear-gradient(45deg, rgba(255, 106, 77, 0.32) 0%, transparent 70%);
+  border-left: 1px solid rgba(255, 138, 110, 0.7);
+}
+[data-theme="partiful"] .radar-blip { background: #FF8A6E; box-shadow: 0 0 12px #FF6A4D, 0 0 24px #FF4FA3; }
+[data-theme="partiful"] .radar-blip-pulse { background: rgba(255, 106, 77, 0.4); }
+
+[data-theme="partiful"] .retro-sun,
+[data-theme="partiful"] .neon-grid-perspective::before,
+[data-theme="partiful"] .retro-corners::before,
+[data-theme="partiful"] .retro-corners::after { display: none; }
+
+[data-theme="partiful"] .pixel-blink { animation: none; opacity: 0.7; }
+[data-theme="partiful"] .page-swipe { animation: pf-rise 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+@keyframes pf-rise {
+  from { opacity: 0; transform: translateY(10px) scale(0.99); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ── Scrollbar & selection ──────────────────────────────────────────────── */
+[data-theme="partiful"] ::-webkit-scrollbar-track { background: transparent; }
+[data-theme="partiful"] ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.14); border: none; border-radius: 999px; }
+[data-theme="partiful"] ::-webkit-scrollbar-thumb:hover { background: rgba(255, 106, 77, 0.6); }
+[data-theme="partiful"] ::selection { background: rgba(255, 106, 77, 0.45); color: #fff; }
+
+/* Modal overlays: richer blur */
+[data-theme="partiful"] .fixed.inset-0[style*="rgba(0,0,0"] ,
+[data-theme="partiful"] .fixed.inset-0[style*="rgba(0, 0, 0"] {
+  background: rgba(10, 7, 14, 0.7) !important;
+  backdrop-filter: blur(10px) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SKIN SWITCHER (works in every skin)
+   ═══════════════════════════════════════════════════════════════════════════ */
+.skin-switcher { position: relative; display: inline-flex; }
+
+.skin-switcher-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 200;
+  width: 250px;
+  padding: 8px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
+  box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.6);
+  animation: pf-rise 0.2s ease both;
+}
+
+.skin-switcher-title {
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 6px 8px 8px;
+}
+
+.skin-switcher-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+.skin-switcher-option:hover,
+.skin-switcher-option.is-active { background: rgba(127, 127, 127, 0.14); }
+
+.skin-swatch {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  font-size: 16px;
+}
+.skin-swatch-partiful { background: linear-gradient(135deg, #FF8A3D, #FF4FA3); }
+.skin-swatch-light    { background: #E8E3D5; border: 2px solid #0033CC; }
+.skin-swatch-dark     { background: #0B0816; border: 2px solid #FF007F; }
+
+.skin-switcher-text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.skin-switcher-label { font-family: var(--font-body), system-ui, sans-serif; font-size: 14px; font-weight: 700; }
+.skin-switcher-desc  { font-family: var(--font-body), system-ui, sans-serif; font-size: 12px; color: var(--text-muted); }
+.skin-switcher-check { color: var(--accent-primary); font-weight: 800; }
+
+[data-theme="partiful"] .theme-toggle {
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: none;
+  padding: 7px 14px;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--border-mid);
+  border-radius: 999px;
+  box-shadow: none;
+}
+[data-theme="partiful"] .theme-toggle:hover {
+  animation: none;
+  transform: none;
+  background: rgba(255, 255, 255, 0.12);
+}
