@@ -40,3 +40,8 @@ pnpm-debug.log*
 *.sw?
 
 .vercel
+.agent/
+.agents/
+design-system/
+Hero Image.jpg
+

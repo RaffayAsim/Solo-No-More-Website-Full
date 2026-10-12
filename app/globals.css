@@ -7,124 +7,111 @@
 
 /* ── Google Font Variables ────────────────────────────────────────────────── */
 @theme inline {
+  --font-sans:   var(--font-body), var(--font-display), "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  --font-display: var(--font-display), "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  --font-body:   var(--font-body), "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
   --font-pixel:  var(--font-pixel), "Courier New", monospace;   /* Press Start 2P */
   --font-lcd:    var(--font-lcd), "Courier New", monospace;     /* VT323 */
   --font-mono:   var(--font-mono), "Courier New", monospace;    /* IBM Plex Mono */
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   LIGHT THEME — Warm Nokia Beige
+   LIGHT THEME — Crisp White & Sunset Orange
    ═══════════════════════════════════════════════════════════════════════════ */
 :root,
 [data-theme="light"] {
   /* Surface layers */
-  --bg-base:        #E8E3D5;   /* warm Nokia beige */
-  --bg-surface:     #D4CFC6;   /* slightly darker panel */
-  --bg-raised:      #F0EDE6;   /* lighter card surface */
-  --bg-sunken:      #C4BFB7;   /* inset / recessed area */
-  --bg-overlay:     rgba(200,195,188,0.95);
+  --bg-base:        #FAF8F5;   /* warm crisp ivory */
+  --bg-surface:     #FFFFFF;   /* clean pure white surface */
+  --bg-raised:      #F4EFEA;   /* soft warm card layer */
+  --bg-sunken:      #EBE5DC;   /* subtle recessed tone */
+  --bg-overlay:     rgba(250, 248, 245, 0.96);
 
   /* Borders */
-  --border-strong:  #3A3835;   /* near-black outer border */
-  --border-mid:     #8A8580;   /* mid border */
-  --border-light:   #B8B4AD;   /* subtle separator */
+  --border-strong:  #FF5A1F;   /* sunset orange border */
+  --border-mid:     rgba(255, 90, 31, 0.25);
+  --border-light:   rgba(0, 0, 0, 0.08);
 
-  /* Nokia Blue accent system */
-  --accent-primary: #0033CC;   /* Nokia Royal Blue */
-  --accent-hover:   #0025A0;
-  --accent-glow:    rgba(0,51,204,0.18);
-  --accent-text:    #0033CC;
+  /* Orange Accent system */
+  --accent-primary: #FF5A1F;   /* Solo Sunset Orange */
+  --accent-hover:   #E64A19;
+  --accent-glow:    rgba(255, 90, 31, 0.22);
+  --accent-text:    #FF5A1F;
 
-  /* Secondary: Nokia Red */
-  --accent-danger:  #CC3300;
-  --accent-warning: #FF8800;
-  --accent-success: #006600;
+  /* Secondary */
+  --accent-danger:  #DC2626;
+  --accent-warning: #EA580C;
+  --accent-success: #16A34A;
 
   /* Typography */
-  --text-primary:   #111111;
-  --text-secondary: #3A3835;
-  --text-muted:     #6A6560;
-  --text-inverse:   #F0EDE6;
+  --text-primary:   #110E15;
+  --text-secondary: #4A4452;
+  --text-muted:     #7C7486;
+  --text-inverse:   #FFFFFF;
 
   /* 3D Bevel effect tokens */
   --bevel-light:    #FFFFFF;
-  --bevel-mid:      #E0DDD8;
-  --bevel-dark:     #888480;
-  --bevel-darkest:  #3A3835;
+  --bevel-mid:      #F0ECE4;
+  --bevel-dark:     #D8D1C5;
+  --bevel-darkest:  #110E15;
 
   /* Status bar */
-  --statusbar-bg:   #0033CC;
+  --statusbar-bg:   #FF5A1F;
   --statusbar-text: #FFFFFF;
 
   /* LCD/Display element */
-  --lcd-bg:         #9BB065;   /* classic Nokia green LCD */
-  --lcd-bg-glow:    #B2C981;   /* illuminated LCD center glow */
-  --lcd-text:       #1A2800;
+  --lcd-bg:         #FFF3ED;
+  --lcd-bg-glow:    #FFE6D9;
+  --lcd-text:       #C2410C;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   DARK THEME — Phosphor Green / Amber CRT
+   DARK THEME — Deep Obsidian Black & Electric Sunset Orange
    ═══════════════════════════════════════════════════════════════════════════ */
 [data-theme="dark"] {
   /* Surface layers */
-  --bg-base:        #0B0816;   /* deep cosmic midnight */
-  --bg-surface:     #120E26;   /* dark purple panel */
-  --bg-raised:      #1A1435;   /* raised purple card */
-  --bg-sunken:      #05030B;   /* inset deep space */
-  --bg-overlay:     rgba(11,8,22,0.96);
+  --bg-base:        #060408;   /* deep obsidian black */
+  --bg-surface:     #0F0B13;   /* dark party card surface */
+  --bg-raised:      #181220;   /* raised party surface */
+  --bg-sunken:      #030204;   /* deep black recessed */
+  --bg-overlay:     rgba(6, 4, 8, 0.96);
 
   /* Borders */
-  --border-strong:  #FF007F;   /* neon pink/magenta */
-  --border-mid:     #8B00FF;   /* cosmic violet */
-  --border-light:   #2E1B4E;   /* subtle dark separator */
+  --border-strong:  #FF5A1F;   /* fiery orange */
+  --border-mid:     rgba(255, 90, 31, 0.3);
+  --border-light:   rgba(255, 255, 255, 0.1);
 
-  /* Synthwave Accent system */
-  --accent-primary: #FF007F;   /* neon pink */
-  --accent-hover:   #FF3399;
-  --accent-glow:    rgba(255,0,127,0.22);
-  --accent-text:    #FF007F;
+  /* Orange Accent system */
+  --accent-primary: #FF5A1F;   /* Solo Sunset Orange */
+  --accent-hover:   #FF753A;
+  --accent-glow:    rgba(255, 90, 31, 0.35);
+  --accent-text:    #FF753A;
 
   /* Secondary colors */
-  --accent-danger:  #FF3366;
-  --accent-warning: #FFCC00;   /* neon yellow/gold */
-  --accent-success: #00F0FF;   /* electric cyan */
+  --accent-danger:  #FF3B30;
+  --accent-warning: #FF9500;
+  --accent-success: #27C93F;
 
   /* Typography */
-  --text-primary:   #F4EFFF;   /* off-white lilac */
-  --text-secondary: #CBB4FF;   /* soft violet */
-  --text-muted:     #7E6C9E;   /* muted purple-gray */
-  --text-inverse:   #0B0816;
+  --text-primary:   #FFFFFF;
+  --text-secondary: #D4CED9;
+  --text-muted:     #8E8796;
+  --text-inverse:   #060408;
 
-  /* 3D Bevel effect tokens (adapted to synthwave glowing edges) */
-  --bevel-light:    #FF3399;
-  --bevel-mid:      #8B00FF;
-  --bevel-dark:     #120E26;
-  --bevel-darkest:  #0B0816;
+  /* 3D Bevel effect tokens */
+  --bevel-light:    #FF753A;
+  --bevel-mid:      #FF5A1F;
+  --bevel-dark:     #181220;
+  --bevel-darkest:  #060408;
 
   /* Status bar */
-  --statusbar-bg:   #120E26;
-  --statusbar-text: #00F0FF;   /* electric cyan status text */
+  --statusbar-bg:   #060408;
+  --statusbar-text: #FF753A;
 
   /* LCD/Display element */
-  --lcd-bg:         #05030B;
-  --lcd-bg-glow:    #32004A;   /* deep violet LCD background glow */
-  --lcd-text:       #00F0FF;   /* neon cyan numbers/text */
-}
-
-/* Global viewport CRT scanlines overlay in dark mode */
-[data-theme="dark"] body::before {
-  content: "";
-  pointer-events: none;
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  background: repeating-linear-gradient(
-    to bottom,
-    transparent 0px,
-    transparent 2px,
-    rgba(255, 0, 127, 0.02) 2px,
-    rgba(255, 0, 127, 0.02) 3px
-  );
+  --lcd-bg:         #0E0804;
+  --lcd-bg-glow:    #241005;
+  --lcd-text:       #FF8A3D;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -142,8 +129,8 @@ html {
 body {
   background-color: var(--bg-base);
   color: var(--text-primary);
-  font-family: var(--font-mono), "Courier New", monospace;
-  font-size: 13px;
+  font-family: var(--font-body), var(--font-display), "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  font-size: 14px;
   line-height: 1.6;
   min-height: 100%;
   transition: background-color 0.3s ease, color 0.3s ease;

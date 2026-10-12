@@ -10,100 +10,104 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 [data-theme="partiful"] {
-  /* Surface layers */
-  --bg-base:        #0F0B15;
-  --bg-surface:     #1A1423;
-  --bg-raised:      #231B2E;
-  --bg-sunken:      #140F1B;
-  --bg-overlay:     rgba(15, 11, 21, 0.92);
+  /* UI/UX Pro Max Tokens: Electric Nightlife Editorial (Black & Orange Party Aura) */
+  --bg-base:        #060408;
+  --bg-surface:     #0F0B13;
+  --bg-raised:      #181220;
+  --bg-sunken:      #030204;
+  --bg-overlay:     rgba(6, 4, 8, 0.96);
 
-  /* Borders */
-  --border-strong:  rgba(255, 255, 255, 0.12);
-  --border-mid:     rgba(255, 255, 255, 0.2);
+  /* Borders & Dividers */
+  --border-strong:  rgba(255, 90, 31, 0.28);
+  --border-mid:     rgba(255, 255, 255, 0.16);
   --border-light:   rgba(255, 255, 255, 0.08);
 
-  /* Accent — warm coral → hot pink */
-  --accent-primary: #FF6A4D;
-  --accent-hover:   #FF8366;
-  --accent-glow:    rgba(255, 106, 77, 0.25);
-  --accent-text:    #FF8A6E;
-  --accent-pink:    #FF4FA3;
-  --accent-violet:  #9B7BFF;
-  --grad-primary:   linear-gradient(135deg, #FF8A3D 0%, #FF5A5F 45%, #FF4FA3 100%);
-  --grad-soft:      linear-gradient(135deg, rgba(255,138,61,0.16), rgba(255,79,163,0.16));
+  /* Accents — Pure Sunset Orange & Fiery Amber */
+  --accent-primary: #FF5A1F;
+  --accent-hover:   #FF753A;
+  --accent-glow:    rgba(255, 90, 31, 0.35);
+  --accent-text:    #FF753A;
+  --accent-volt:    #FFA05C;
+  --accent-cyan:    #FF8A3D;
+  --accent-pink:    #FF5A1F;
+  --grad-primary:   linear-gradient(135deg, #FF6B35 0%, #FF5A1F 55%, #E64A19 100%);
+  --grad-volt:      linear-gradient(135deg, #FF8A3D 0%, #FF5A1F 100%);
+  --grad-soft:      linear-gradient(135deg, rgba(255, 90, 31, 0.16), rgba(255, 138, 61, 0.08));
 
-  --accent-danger:  #FF5470;
-  --accent-warning: #FFC53D;
-  --accent-success: #3DDC97;
+  --accent-danger:  #FF3B30;
+  --accent-warning: #FF9500;
+  --accent-success: #27C93F;
 
-  /* Typography */
-  --text-primary:   #FFF7F0;
-  --text-secondary: #E9DDF0;
-  --text-muted:     #A99CB8;
-  --text-inverse:   #FFFFFF;
+  /* High-Contrast Typography */
+  --text-primary:   #FFFFFF;
+  --text-secondary: #D4CED9;
+  --text-muted:     #8E8796;
+  --text-inverse:   #060408;
 
-  /* Bevel tokens neutralised */
+  /* Neutralized legacy tokens */
   --bevel-light:    transparent;
   --bevel-mid:      transparent;
   --bevel-dark:     transparent;
   --bevel-darkest:  transparent;
 
   /* Status bar */
-  --statusbar-bg:   rgba(15, 11, 21, 0.72);
-  --statusbar-text: #FFF7F0;
+  --statusbar-bg:   rgba(6, 4, 8, 0.92);
+  --statusbar-text: #FFFFFF;
 
   /* LCD */
   --lcd-bg:         transparent;
   --lcd-bg-glow:    transparent;
-  --lcd-text:       #FFF7F0;
+  --lcd-text:       #FFFFFF;
 
-  --radius-lg: 22px;
-  --radius-md: 16px;
-  --radius-sm: 12px;
-  --shadow-card: 0 1px 0 rgba(255,255,255,0.04) inset, 0 12px 40px -12px rgba(0,0,0,0.6);
+  --radius-lg: 20px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+  --shadow-card: 0 1px 0 rgba(255,255,255,0.06) inset, 0 20px 50px -12px rgba(0,0,0,0.85);
 
   color-scheme: dark;
 }
 
-/* ── Base canvas: soft aurora blobs behind everything ───────────────────── */
+/* ── Base canvas: atmospheric warm party glow on deep obsidian black ─────── */
+[data-theme="partiful"],
 [data-theme="partiful"] body {
-  font-family: var(--font-body), system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--font-body), var(--font-display), "Plus Jakarta Sans", system-ui, -apple-system, sans-serif !important;
   font-size: 15px;
   line-height: 1.55;
-  background-color: var(--bg-base);
+  background-color: #060408;
   background-image:
-    radial-gradient(900px 600px at 8% -10%, rgba(255, 106, 77, 0.22), transparent 60%),
-    radial-gradient(800px 600px at 100% 0%, rgba(155, 123, 255, 0.20), transparent 60%),
-    radial-gradient(900px 700px at 50% 110%, rgba(255, 79, 163, 0.14), transparent 60%);
+    radial-gradient(1100px 750px at 15% 0%, rgba(255, 90, 31, 0.18), transparent 60%),
+    radial-gradient(1000px 800px at 85% 25%, rgba(255, 110, 50, 0.12), transparent 65%),
+    radial-gradient(1200px 800px at 20% 60%, rgba(255, 90, 31, 0.14), transparent 60%),
+    radial-gradient(1100px 900px at 80% 95%, rgba(255, 90, 31, 0.16), transparent 65%);
   background-attachment: fixed;
+  color: #FFFFFF;
 }
 
 [data-theme="partiful"] body::before { display: none !important; }
 
-/* ── Typography remap ───────────────────────────────────────────────────── */
-[data-theme="partiful"] .font-pixel {
-  font-family: var(--font-display), var(--font-body), system-ui, sans-serif;
-  font-weight: 700;
-  letter-spacing: -0.005em;
-  text-rendering: optimizeLegibility;
-  image-rendering: auto;
-}
-
-[data-theme="partiful"] .font-lcd {
-  font-family: var(--font-display), var(--font-body), system-ui, sans-serif;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-}
-
+/* ── Typography remap (Plus Jakarta Sans site-wide) ───────────────────────── */
+[data-theme="partiful"] button,
+[data-theme="partiful"] input,
+[data-theme="partiful"] select,
+[data-theme="partiful"] textarea,
+[data-theme="partiful"] a,
+[data-theme="partiful"] p,
+[data-theme="partiful"] span,
+[data-theme="partiful"] .font-pixel,
+[data-theme="partiful"] .font-lcd,
 [data-theme="partiful"] .font-mono {
-  font-family: var(--font-body), system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--font-body), var(--font-display), "Plus Jakarta Sans", system-ui, -apple-system, sans-serif !important;
 }
 
 [data-theme="partiful"] h1,
 [data-theme="partiful"] h2,
-[data-theme="partiful"] h3 {
-  font-family: var(--font-display), var(--font-body), system-ui, sans-serif;
-  letter-spacing: -0.015em;
+[data-theme="partiful"] h3,
+[data-theme="partiful"] h4,
+[data-theme="partiful"] h5,
+[data-theme="partiful"] h6 {
+  font-family: var(--font-display), var(--font-body), "Plus Jakarta Sans", system-ui, sans-serif !important;
+  letter-spacing: -0.025em;
+  font-weight: 800;
 }
 
 /*
@@ -171,49 +175,56 @@
   box-shadow: 0 18px 50px -18px rgba(255, 90, 95, 0.45);
 }
 
-/* ── Buttons — friendly pills ───────────────────────────────────────────── */
-[data-theme="partiful"] .nokia-btn {
-  font-family: var(--font-body), system-ui, sans-serif;
-  font-weight: 600;
+/* ── Buttons — exact Partiful rounded rectangle style (8px radius) ───────── */
+[data-theme="partiful"] .nokia-btn,
+[data-theme="partiful"] button:not(.rounded-full-icon) {
+  font-family: var(--font-display), var(--font-body), "Plus Jakarta Sans", system-ui, sans-serif !important;
+  font-weight: 800;
   font-size: 14px;
-  letter-spacing: 0.01em;
+  letter-spacing: -0.01em;
   text-transform: none;
-  padding: 11px 20px;
+  padding: 10px 20px;
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.08);
   border: 1px solid var(--border-mid);
-  border-radius: 999px;
-  box-shadow: none;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   transition: transform 0.18s ease, background 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
 
-[data-theme="partiful"] .nokia-btn:hover:not(:disabled) {
+[data-theme="partiful"] .nokia-btn:hover:not(:disabled),
+[data-theme="partiful"] button:not(.rounded-full-icon):hover:not(:disabled) {
   animation: none;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.15);
   color: var(--text-primary);
-  border-color: rgba(255, 255, 255, 0.32);
+  border-color: rgba(255, 255, 255, 0.35);
   transform: translateY(-1px);
-  box-shadow: 0 8px 24px -10px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 6px 18px -4px rgba(0, 0, 0, 0.4);
 }
 
-[data-theme="partiful"] .nokia-btn:active:not(:disabled) {
+[data-theme="partiful"] .nokia-btn:active:not(:disabled),
+[data-theme="partiful"] button:not(.rounded-full-icon):active:not(:disabled) {
   transform: translateY(0) scale(0.98);
   box-shadow: none;
 }
 
-[data-theme="partiful"] .nokia-btn-primary {
-  background: var(--grad-primary);
-  color: #fff;
-  border: 1px solid transparent;
-  box-shadow: 0 10px 30px -10px rgba(255, 90, 95, 0.7);
+[data-theme="partiful"] .nokia-btn-primary,
+[data-theme="partiful"] .btn-partiful-primary {
+  background: #FFFFFF !important;
+  color: #000000 !important;
+  font-weight: 800 !important;
+  border: 1px solid #FFFFFF !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
 }
 
-[data-theme="partiful"] .nokia-btn-primary:hover:not(:disabled) {
-  background: var(--grad-primary);
-  color: #fff;
-  border-color: transparent;
-  filter: brightness(1.08);
-  box-shadow: 0 14px 34px -10px rgba(255, 90, 95, 0.85);
+[data-theme="partiful"] .nokia-btn-primary:hover:not(:disabled),
+[data-theme="partiful"] .btn-partiful-primary:hover:not(:disabled) {
+  background: #F3F4F6 !important;
+  color: #000000 !important;
+  border-color: #FFFFFF !important;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.3) !important;
 }
 
 [data-theme="partiful"] .nokia-btn-success,
@@ -593,3 +604,525 @@
   transform: none;
   background: rgba(255, 255, 255, 0.12);
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PARTIFUL LANDING PAGE CLONE UTILITIES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Top Announcement Ticker Strip (Pure Orange & Black Theme) ── */
+.pf-marquee-wrap {
+  width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  display: flex;
+  user-select: none;
+  background: linear-gradient(90deg, #FF6B35 0%, #FF5A1F 45%, #EA580C 85%, #FF5A1F 100%);
+  color: #000000;
+  font-weight: 900;
+  font-size: 13px;
+  line-height: 1.2;
+  padding: 10px 0;
+  letter-spacing: 0.05em;
+  border-top: 2.5px solid #000000;
+  border-bottom: 2.5px solid #000000;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  position: relative;
+  z-index: 20;
+}
+
+.pf-marquee-content {
+  display: flex;
+  align-items: center;
+  gap: 36px;
+  padding-right: 36px;
+  flex-shrink: 0;
+  min-width: 100%;
+  animation: pf-ticker-scroll 24s linear infinite;
+  -webkit-animation: pf-ticker-scroll 24s linear infinite;
+  will-change: transform;
+}
+
+@keyframes pf-ticker-scroll {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-100%, 0, 0);
+  }
+}
+
+@-webkit-keyframes pf-ticker-scroll {
+  0% {
+    -webkit-transform: translate3d(0, 0, 0);
+  }
+  100% {
+    -webkit-transform: translate3d(-100%, 0, 0);
+  }
+}
+
+/* ── Ticker Badge & Pulsing Indicator ── */
+.pf-ticker-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #000000;
+  color: #FF5A1F;
+  font-weight: 900;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+.pf-ticker-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #FF5A1F;
+  box-shadow: 0 0 6px #FF5A1F;
+  display: inline-block;
+  animation: pf-ticker-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pf-ticker-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.3;
+    transform: scale(0.7);
+  }
+}
+
+/* ── Floating Hero Party Ticket / Card ── */
+.pf-hero-ticket {
+  transform: perspective(1000px) rotateY(-6deg) rotateX(3deg) rotate(-1.5deg);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+  box-shadow: 0 30px 70px -15px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.15);
+}
+.pf-hero-ticket:hover {
+  transform: perspective(1000px) rotateY(0deg) rotateX(0deg) rotate(0deg) translateY(-4px);
+  box-shadow: 0 32px 75px -10px rgba(255, 77, 45, 0.45), 0 0 0 1px rgba(200, 255, 0, 0.4);
+}
+
+/* ── Template Cards Carousel ── */
+.pf-template-scroll {
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+  padding: 12px 4px 24px;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+.pf-template-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+.pf-template-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+}
+
+.pf-template-card {
+  scroll-snap-align: start;
+  flex: 0 0 250px;
+  height: 250px;
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.6);
+}
+.pf-template-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px -10px rgba(255, 77, 45, 0.4);
+}
+
+/* ── Chat Mockup Bubbles ── */
+.pf-chat-bubble-received {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #FFFFFF;
+  padding: 12px 16px;
+  border-radius: 18px 18px 18px 4px;
+  max-width: 80%;
+  font-size: 14px;
+  line-height: 1.45;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+
+.pf-chat-bubble-sent {
+  background: linear-gradient(135deg, #FF6B35, #FF4D2D);
+  color: #FFFFFF;
+  padding: 12px 16px;
+  border-radius: 18px 18px 4px 18px;
+  max-width: 80%;
+  margin-left: auto;
+  font-size: 14px;
+  line-height: 1.45;
+  box-shadow: 0 4px 18px rgba(255, 77, 45, 0.4);
+}
+
+/* ── 1-Click Customizer & Partiful Card Elements ── */
+.pf-customizer-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.75);
+}
+.pf-customizer-tab:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #FFFFFF;
+  transform: translateY(-1px);
+}
+.pf-customizer-tab.active {
+  background: #FFFFFF;
+  color: #09080E;
+  font-weight: 800;
+  border-color: #FFFFFF;
+  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+/* ── 3 Big Circular RSVP Reaction Buttons (Exact Partiful Design) ── */
+.pf-rsvp-circle-btn {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 10px 25px -4px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.2);
+  user-select: none;
+  flex-shrink: 0;
+}
+.pf-rsvp-circle-btn:hover {
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 0 16px 32px -4px rgba(0, 0, 0, 0.6);
+}
+.pf-rsvp-circle-btn:active {
+  transform: scale(0.96);
+}
+
+.pf-rsvp-circle-btn.selected-going {
+  background: #FFFFFF;
+  outline: 3.5px solid #FF5A1F;
+  outline-offset: 2px;
+  box-shadow: 0 0 24px rgba(255, 90, 31, 0.65), 0 12px 28px rgba(0, 0, 0, 0.6);
+  transform: translateY(-3px) scale(1.06);
+}
+
+.pf-rsvp-circle-btn.selected-maybe {
+  background: #FFFFFF;
+  outline: 3.5px solid #FFB800;
+  outline-offset: 2px;
+  box-shadow: 0 0 24px rgba(255, 184, 0, 0.55), 0 12px 28px rgba(0, 0, 0, 0.6);
+  transform: translateY(-3px) scale(1.06);
+}
+
+.pf-rsvp-circle-btn.selected-cantgo {
+  background: #FFFFFF;
+  outline: 3.5px solid #94A3B8;
+  outline-offset: 2px;
+  box-shadow: 0 0 20px rgba(148, 163, 184, 0.4), 0 12px 28px rgba(0, 0, 0, 0.6);
+  transform: translateY(-3px) scale(1.06);
+}
+
+/* ── Mobile Phone Chassis Mockup ── */
+.pf-phone-mockup {
+  max-width: 375px;
+  margin: 0 auto;
+  border-radius: 46px;
+  border: 11px solid #1C1924;
+  background: #09080E;
+  box-shadow: 0 35px 85px -15px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.16);
+  overflow: hidden;
+  position: relative;
+  transition: transform 0.3s ease;
+}
+
+/* ── Realistic Desktop Browser Mockup Window ── */
+.pf-desktop-window {
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+  border-radius: 20px;
+  background: #0E0C15;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  position: relative;
+  text-align: left;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pf-window-titlebar {
+  background: #15131E;
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  user-select: none;
+}
+
+.pf-window-dots {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.pf-window-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.pf-window-dot.red { background: #FF5F56; }
+.pf-window-dot.yellow { background: #FFBD2E; }
+.pf-window-dot.green { background: #27C93F; }
+
+.pf-window-url {
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 4px 18px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: monospace;
+}
+
+/* ── Radar Wave Pulse ── */
+@keyframes pf-radar-expand {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+.pf-radar-wave {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid #FF5A1F;
+  animation: pf-radar-expand 2s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+}
+
+/* ── PLAIN ANIMATED REVIEWS & PRESS TICKER (EXACT ORIGINAL STYLE, ANIMATED) ── */
+@keyframes pf-plain-reviews-slide {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.pf-plain-reviews-wrap {
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(12, 10, 16, 0.75);
+  padding: 24px 0;
+}
+
+.pf-plain-reviews-wrap:hover .pf-plain-reviews-track {
+  animation-play-state: paused;
+}
+
+.pf-plain-reviews-track {
+  display: flex;
+  align-items: center;
+  width: max-content;
+  animation: pf-plain-reviews-slide 34s linear infinite;
+}
+
+.pf-plain-review-item {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 44px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.pf-plain-review-quote {
+  font-size: 16px;
+  font-weight: 800;
+  color: #FFFFFF;
+  letter-spacing: -0.01em;
+  margin-bottom: 4px;
+}
+
+.pf-plain-review-source {
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #FF753A;
+  text-transform: uppercase;
+}
+
+.pf-plain-review-divider {
+  color: rgba(255, 90, 31, 0.5);
+  font-size: 14px;
+  margin: 0 8px;
+  user-select: none;
+}
+
+/* ── TRENDING BEACONS: SLEEK WOW-FACTOR POSTER CARDS (FULL-WIDTH & CURSOR DRAG) ── */
+.pf-beacons-section-wrap {
+  width: 100%;
+  padding: 70px 0 80px;
+  box-sizing: border-box;
+}
+
+.pf-beacons-carousel-container {
+  position: relative;
+  width: 100%;
+  margin-top: 20px;
+}
+
+.pf-beacons-track {
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  padding: 16px 24px 28px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.pf-beacons-track:active {
+  cursor: grabbing;
+}
+.pf-beacons-track::-webkit-scrollbar {
+  display: none;
+}
+
+/* WOW-Factor Poster Card: Immersive Sharp-Corner Invite Poster */
+.pf-beacon-poster-card {
+  flex: 0 0 270px;
+  width: 270px;
+  height: 390px;
+  border-radius: 0px !important;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  background: #0D0A14;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.85);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  justifyContent: flex-end;
+}
+
+.pf-beacon-poster-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  border-color: rgba(255, 90, 31, 0.65);
+  box-shadow: 0 24px 50px -10px rgba(255, 90, 31, 0.4), 0 0 0 1px rgba(255, 90, 31, 0.4);
+}
+
+.pf-beacon-poster-card.is-active-beacon {
+  border: 2.5px solid #FF5A1F;
+  border-radius: 0px !important;
+  box-shadow: 0 25px 60px -10px rgba(255, 90, 31, 0.55), 0 0 24px rgba(255, 90, 31, 0.45);
+  transform: translateY(-6px) scale(1.02);
+}
+
+/* Image Layer filling entire card background with subtle zoom on hover */
+.pf-beacon-poster-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pf-beacon-poster-card:hover .pf-beacon-poster-image {
+  transform: scale(1.06);
+}
+
+/* Deep Atmospheric Bottom Gradient Overlay for Maximum Text Contrast */
+.pf-beacon-poster-gradient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.04) 0%,
+    transparent 22%,
+    rgba(0, 0, 0, 0.25) 42%,
+    rgba(8, 5, 12, 0.86) 66%,
+    rgba(4, 2, 8, 0.96) 84%,
+    rgba(0, 0, 0, 0.99) 100%
+  );
+  pointer-events: none;
+}
+
+.pf-beacon-poster-glass-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  padding: 4px 10px;
+  border-radius: 0px !important;
+  font-size: 11px;
+  font-weight: 800;
+  color: #FFA578;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Sharp-Corner Navigation Buttons */
+.pf-image3-nav-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 0px !important;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  display: grid;
+  place-items: center;
+  color: #FFFFFF;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+  transition: all 0.2s ease;
+  z-index: 20;
+}
+.pf-image3-nav-btn:hover {
+  background: #FF5A1F;
+  border-color: #FF5A1F;
+  color: #FFFFFF;
+  transform: translateY(-2px);
+}
+.pf-image3-nav-btn:active {
+  transform: translateY(0);
+}
+
+
+

@@ -1,17 +1,19 @@
 import type { Metadata } from "next";
-import { Press_Start_2P, VT323, IBM_Plex_Mono, Bricolage_Grotesque, DM_Sans } from "next/font/google";
+import { Plus_Jakarta_Sans, Press_Start_2P, VT323, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import "./skin-party.css";
 
-// ── Party Skin Fonts (default) ───────────────────────────────────────────────
-const bricolage = Bricolage_Grotesque({
+// ── Exact Partiful Typography (Plus Jakarta Sans site-wide) ───────────────
+const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
   variable: "--font-display",
   display: "swap",
 });
 
-const dmSans = DM_Sans({
+const plusJakartaBody = Plus_Jakarta_Sans({
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
   variable: "--font-body",
   display: "swap",
 });
@@ -63,13 +65,13 @@ export default function RootLayout({
     <html
       lang="en"
       data-theme="partiful"
-      className={`${bricolage.variable} ${dmSans.variable} ${pressStart2P.variable} ${vt323.variable} ${ibmPlexMono.variable} h-full`}
+      className={`${plusJakarta.variable} ${plusJakartaBody.variable} ${pressStart2P.variable} ${vt323.variable} ${ibmPlexMono.variable} h-full`}
       suppressHydrationWarning
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: skinBootScript }} />
       </head>
-      <body className="min-h-full font-mono antialiased transition-colors duration-300" suppressHydrationWarning>
+      <body className="min-h-full font-sans antialiased transition-colors duration-300" suppressHydrationWarning>
         {children}
         <script
           dangerouslySetInnerHTML={{
