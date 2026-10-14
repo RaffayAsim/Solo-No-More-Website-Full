@@ -1,6 +1,44 @@
 @import "tailwindcss";
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   BULLETPROOF ICON RENDERING SYSTEM (SITE-WIDE)
+   Ensures all Lucide icons, action SVGs, and close buttons render visibly,
+   maintain exact stroke colors, and never collapse across all pages & modals.
+   ═══════════════════════════════════════════════════════════════════════════ */
+svg.lucide,
+.lucide,
+svg[class*="lucide"] {
+  display: inline-block !important;
+  vertical-align: middle;
+  stroke: currentColor;
+  fill: none;
+  flex-shrink: 0;
+  max-width: 100%;
+}
+
+/* Explicit fallback dimension utilities for Lucide & SVG icons */
+.w-3, svg.w-3 { width: 12px !important; }
+.h-3, svg.h-3 { height: 12px !important; }
+.w-3\.5, svg.w-3\.5 { width: 14px !important; }
+.h-3\.5, svg.h-3\.5 { height: 14px !important; }
+.w-4, svg.w-4 { width: 16px !important; }
+.h-4, svg.h-4 { height: 16px !important; }
+.w-4\.5, svg.w-4\.5 { width: 18px !important; }
+.h-4\.5, svg.h-4\.5 { height: 18px !important; }
+.w-5, svg.w-5 { width: 20px !important; }
+.h-5, svg.h-5 { height: 20px !important; }
+.w-6, svg.w-6 { width: 24px !important; }
+.h-6, svg.h-6 { height: 24px !important; }
+.w-7, svg.w-7 { width: 28px !important; }
+.h-7, svg.h-7 { height: 28px !important; }
+
+/* Action buttons icon centering & pointer safety */
+button > svg,
+a > svg {
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    SOLO-NO-MORE — NOKIA SOUL DESIGN SYSTEM
    Nokia 90s-inspired UI with Light + Dark theme support
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -1326,4 +1364,91 @@ article.nokia-panel h3 {
   right: 4px;
   border-width: 0 2px 2px 0;
 }
+
+/* ── Review Marquee Infinite Animations ── */
+@keyframes reviewMarqueeUp {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-50%);
+  }
+}
+
+@keyframes reviewMarqueeDown {
+  0% {
+    transform: translateY(-50%);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.animate-review-marquee-up {
+  animation: reviewMarqueeUp 26s linear infinite;
+  will-change: transform;
+}
+
+.animate-review-marquee-down {
+  animation: reviewMarqueeDown 30s linear infinite;
+  will-change: transform;
+}
+
+.animate-review-marquee-up:hover,
+.animate-review-marquee-down:hover {
+  animation-play-state: paused;
+}
+
+/* ── Hide Scrollbar Utility ── */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ── Custom Activity Scrollbar ── */
+.custom-activity-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-activity-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 9999px;
+}
+.custom-activity-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 111, 38, 0.4);
+  border-radius: 9999px;
+}
+.custom-activity-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 111, 38, 0.7);
+}
+.custom-activity-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 111, 38, 0.4) rgba(255, 255, 255, 0.04);
+}
+
+/* ── Custom Admin Horizontal Tabs Scrollbar (Matching Image 1) ── */
+.custom-tabs-scrollbar::-webkit-scrollbar {
+  height: 8px;
+}
+.custom-tabs-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+  margin: 0 4px;
+}
+.custom-tabs-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.65);
+  border-radius: 9999px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+.custom-tabs-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #FFFFFF;
+}
+.custom-tabs-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.65) rgba(255, 255, 255, 0.12);
+}
+
+
 

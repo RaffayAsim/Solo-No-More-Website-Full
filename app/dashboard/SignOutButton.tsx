@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
+import { LogOut } from "lucide-react";
 
 interface SignOutButtonProps {
   variant?: "statusbar" | "standard";
@@ -47,10 +48,28 @@ export default function SignOutButton({ variant = "standard" }: SignOutButtonPro
   return (
     <button
       onClick={handleSignOut}
-      className="nokia-btn nokia-btn-danger"
-      style={{ width: "100%", fontSize: "7px" }}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: "6px",
+        padding: "8px 14px",
+        borderRadius: "10px",
+        background: "rgba(0, 0, 0, 0.35)",
+        border: "1px solid rgba(255, 255, 255, 0.28)",
+        color: "#FFFFFF",
+        fontSize: "11px",
+        fontWeight: 800,
+        letterSpacing: "0.04em",
+        cursor: "pointer",
+        backdropFilter: "blur(10px)",
+        transition: "all 0.15s ease",
+      }}
+      className="hover:bg-black/50 hover:border-white/50 active:scale-95"
+      title="Sign out of your session"
     >
-      ◀ SIGN OUT
+      <LogOut className="w-3.5 h-3.5 opacity-90" />
+      <span>SIGN OUT</span>
     </button>
   );
 }

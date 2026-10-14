@@ -1,53 +1,39 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { getSessionUserSecurely } from "@/lib/supabase/session";
 import ArtistDashboardClient from "./ArtistDashboardClient";
 import type { OfficialEvent } from "@/lib/supabase/types";
-
-/**
- * Securely get the logged-in user via server cookie
- */
-async function getSessionUser() {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get("sb-dmmgzpiskyocdsxamrgf-auth-token");
-
-  if (!sessionCookie?.value) return null;
-
-  try {
-    let raw = sessionCookie.value;
-    if (raw.startsWith("base64-")) {
-      raw = Buffer.from(raw.slice(7), "base64").toString("utf-8");
-    }
-    const parsed = JSON.parse(raw);
-    const accessToken = Array.isArray(parsed) ? parsed[0] : parsed.access_token;
-    if (!accessToken) return null;
-
-    const { data, error } = await supabaseAdmin.auth.getUser(accessToken);
-    if (error || !data.user) return null;
-
-    return data.user;
-  } catch {
-    return null;
-  }
-}
+import { parseEventDescription } from "@/lib/event-metadata";
 
 export const metadata = {
-  title: "Artist & Ticketing Portal — Solo-No-More",
-  description: "Publish your gigs, sell digital ticket passes via Raast in PKR, and manage door check-ins.",
+  title: "Artist & Performer Hub — Solo-No-More",
+  description: "Publish your gigs, sell digital ticket passes via platform Raast/Bank processing, manage door check-ins, and curate your EPK.",
 };
 
-export default async function ArtistDashboardPage() {
-  const user = await getSessionUser();
-  if (!user) {
+interface PageProps {
+  searchParams?: Promise<{ tab?: string }>;
+}
+
+export default async function ArtistDashboardPage({ searchParams }: PageProps) {
+  const sessionResult = await getSessionUserSecurely();
+  if ("error" in sessionResult || !sessionResult.userId) {
     redirect("/login");
   }
+  const userId = sessionResult.userId;
+  const params = searchParams ? await searchParams : {};
+  const currentTab = params?.tab || "overview";
 
-  // 1. Fetch user profile
-  const { data: profile } = await (supabaseAdmin
-    .from("profiles") as any)
-    .select("id, full_name, subscription_tier, is_partner, business_name")
-    .eq("id", user.id)
-    .single();
+  // 1. Fetch user profile and auth user metadata
+  const [{ data: profile }, { data: userRecord }] = await Promise.all([
+    (supabaseAdmin
+      .from("profiles") as any)
+      .select("id, full_name, phone, subscription_tier, is_partner, business_name, vibe_tags, bio, social_link, city")
+      .eq("id", userId)
+      .single(),
+    supabaseAdmin.auth.admin.getUserById(userId),
+  ]);
+
+  const userMeta = userRecord?.user?.user_metadata || {};
 
   // 2. Fetch all events
   const { data: events } = await (supabaseAdmin
@@ -57,7 +43,22 @@ export default async function ArtistDashboardPage() {
 
   const allEvents: OfficialEvent[] = events || [];
 
-  // 3. Fetch all active tickets with attendee profiles
+  // Filter strictly for this artist's events (Data Isolation)
+  const artistEvents = allEvents.filter((ev) => {
+    try {
+      const { metadata: meta } = parseEventDescription(ev.description);
+      if (meta.creator_id === userId) return true;
+      if (meta.creator_name && (meta.creator_name === profile?.full_name || meta.creator_name === profile?.business_name)) return true;
+      if (meta.organizer?.name && (meta.organizer.name === profile?.business_name || meta.organizer.name === profile?.full_name)) return true;
+      return false;
+    } catch {
+      return false;
+    }
+  });
+
+  const artistEventIds = new Set(artistEvents.map((e) => e.id));
+
+  // 3. Fetch tickets strictly for this artist's events
   const { data: tickets } = await (supabaseAdmin
     .from("event_tickets") as any)
     .select(`
@@ -73,12 +74,15 @@ export default async function ArtistDashboardPage() {
     `);
 
   const allTickets = tickets || [];
+  const artistTickets = allTickets.filter((t: any) => artistEventIds.has(t.event_id));
 
   return (
     <ArtistDashboardClient
       profile={profile}
-      initialEvents={allEvents}
-      initialTickets={allTickets}
+      initialEvents={artistEvents}
+      initialTickets={artistTickets}
+      initialUserMeta={userMeta}
+      initialTab={currentTab}
     />
   );
 }

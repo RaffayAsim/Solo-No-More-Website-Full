@@ -326,9 +326,24 @@ export async function getAllBeaconsForAdminAction(): Promise<{ success: boolean;
     .select(`
       *,
       host:host_id (
+        id,
         full_name,
+        phone,
         city,
         avatar_icon
+      ),
+      applications:beacon_applications (
+        id,
+        status,
+        created_at,
+        flagged_ghost,
+        applicant:applicant_id (
+          id,
+          full_name,
+          phone,
+          city,
+          avatar_icon
+        )
       )
     `)
     .order("created_at", { ascending: false });
@@ -362,4 +377,240 @@ export async function adminCancelBeaconAction(beaconId: string, reason?: string)
 
   return { success: true };
 }
+
+/**
+ * Server Action: Quick add and approve a new member directly from Admin Overview.
+ */
+export async function adminCreateMemberAction(data: {
+  fullName: string;
+  email: string;
+  password?: string;
+  phone?: string;
+  city?: string;
+  tier: "none" | "member" | "family";
+}): Promise<AdminActionResult> {
+  try {
+    await verifyAdminStatus();
+  } catch (err) {
+    if (isRedirectError(err)) throw err;
+    return { success: false, error: "Unauthorized. Admin privileges required." };
+  }
+
+  if (!data.fullName || !data.email) {
+    return { success: false, error: "Full Name and Email are required." };
+  }
+
+  const generatedPassword = data.password && data.password.length >= 6 ? data.password : "SoloNoMore2026!";
+
+  // 1. Create or lookup Supabase Auth user
+  const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+    email: data.email.trim(),
+    password: generatedPassword,
+    email_confirm: true,
+    user_metadata: {
+      full_name: data.fullName.trim(),
+      phone: data.phone?.trim() || "",
+      city: data.city?.trim() || "Karachi",
+    },
+  });
+
+  let userId = authData?.user?.id;
+
+  if (authError) {
+    if (
+      authError.message.toLowerCase().includes("already registered") ||
+      authError.message.toLowerCase().includes("duplicate")
+    ) {
+      const { data: userLookup } = await supabaseAdmin.auth.admin.listUsers();
+      const existingUser = userLookup.users.find(
+        (u) => u.email?.toLowerCase() === data.email.trim().toLowerCase()
+      );
+      if (existingUser) {
+        userId = existingUser.id;
+      } else {
+        return { success: false, error: authError.message };
+      }
+    } else {
+      return { success: false, error: authError.message };
+    }
+  }
+
+  if (userId) {
+    await (supabaseAdmin.from("profiles") as any).upsert({
+      id: userId,
+      full_name: data.fullName.trim(),
+      phone: data.phone?.trim() || null,
+      city: data.city?.trim() || "Karachi",
+      subscription_tier: data.tier || "member",
+      account_status: "approved",
+      bio: "Officially onboarded by Ops Admin",
+    });
+  }
+
+  return { success: true };
+}
+
+/**
+ * Server Action: Quick update user status from dropdown in the Member User tab
+ */
+export async function adminUpdateUserStatusAction(
+  userIdOrAppId: string,
+  newStatus: "approved" | "pending" | "payment_pending" | "suspended" | "rejected"
+): Promise<AdminActionResult> {
+  try {
+    await verifyAdminStatus();
+  } catch (err) {
+    if (isRedirectError(err)) throw err;
+    return { success: false, error: "Unauthorized. Admin privileges required." };
+  }
+
+  const profileStatusMap: Record<string, string> = {
+    approved: "approved",
+    pending: "pending_vetting",
+    payment_pending: "pending_vetting",
+    suspended: "suspended",
+    rejected: "rejected",
+  };
+
+  // 1. Update in profiles table if it exists
+  await (supabaseAdmin.from("profiles") as any)
+    .update({ account_status: profileStatusMap[newStatus] || newStatus })
+    .eq("id", userIdOrAppId);
+
+  // 2. Also update in membership_applications / local applications store
+  try {
+    const { adminApproveApplicationAction, adminVerifyPaymentAndIssueInviteAction } = await import(
+      "@/app/actions/member-applications"
+    );
+    if (newStatus === "payment_pending") {
+      await adminApproveApplicationAction(userIdOrAppId);
+    } else if (newStatus === "approved") {
+      await adminVerifyPaymentAndIssueInviteAction(userIdOrAppId);
+    } else {
+      await (supabaseAdmin.from("membership_applications") as any)
+        .update({ status: newStatus })
+        .eq("id", userIdOrAppId);
+    }
+  } catch {}
+
+  return { success: true };
+}
+
+export interface SaveUserDetailsInput {
+  id: string;
+  applicationId?: string;
+  firstName: string;
+  lastName: string;
+  displayName: string;
+  username: string;
+  email: string;
+  role: string;
+  status: string;
+  phone?: string;
+  cnic?: string;
+  city?: string;
+  address?: string;
+  bio?: string;
+  profilePictureUrl?: string;
+  cnicPictureUrl?: string;
+  instagramScreenshots?: string[];
+}
+
+/**
+ * Server Action: Save all edited fields from User Details & Edit modal
+ */
+export async function adminSaveUserDetailsAction(
+  input: SaveUserDetailsInput
+): Promise<AdminActionResult> {
+  try {
+    await verifyAdminStatus();
+  } catch (err) {
+    if (isRedirectError(err)) throw err;
+    return { success: false, error: "Unauthorized. Admin privileges required." };
+  }
+
+  const fullName = `${input.firstName.trim()} ${input.lastName.trim()}`.trim() || input.displayName.trim();
+  const isPartner = input.role.toLowerCase().includes("partner");
+  const subscriptionTier = input.role.toLowerCase().includes("admin")
+    ? "admin"
+    : isPartner
+    ? "family"
+    : "member";
+
+  const profileStatusMap: Record<string, string> = {
+    approved: "approved",
+    pending: "pending_vetting",
+    payment_pending: "pending_vetting",
+    suspended: "suspended",
+    rejected: "rejected",
+  };
+
+  // 1. Update Profile record
+  const updatePayload: any = {
+    full_name: fullName,
+    phone: input.phone || null,
+    city: input.city || "Karachi",
+    bio: input.bio || null,
+    is_partner: isPartner,
+    subscription_tier: subscriptionTier,
+    account_status: profileStatusMap[input.status] || input.status,
+  };
+
+  if (input.profilePictureUrl) {
+    updatePayload.avatar_icon = input.profilePictureUrl;
+  }
+
+  await (supabaseAdmin.from("profiles") as any)
+    .update(updatePayload)
+    .eq("id", input.id);
+
+  // 2. Also update membership application if applicable
+  const targetAppId = input.applicationId || input.id;
+  try {
+    await (supabaseAdmin.from("membership_applications") as any)
+      .update({
+        full_name: fullName,
+        username: input.username,
+        email: input.email,
+        phone: input.phone,
+        city: input.city,
+        cnic: input.cnic,
+        vibe: input.bio,
+        status: input.status === "pending" ? "pending_admin_approval" : input.status,
+        photo_url: input.profilePictureUrl || undefined,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", targetAppId);
+  } catch {}
+
+  return { success: true };
+}
+
+/**
+ * Server Action: Full member creation by Admin
+ */
+export async function adminCreateMemberFullAction(data: {
+  firstName: string;
+  lastName: string;
+  username: string;
+  email: string;
+  phone?: string;
+  city?: string;
+  cnic?: string;
+  packageTier: "none" | "member" | "family";
+  role: "member" | "partner" | "admin";
+  password?: string;
+}): Promise<AdminActionResult> {
+  const fullName = `${data.firstName.trim()} ${data.lastName.trim()}`.trim();
+  return adminCreateMemberAction({
+    fullName,
+    email: data.email,
+    password: data.password,
+    phone: data.phone,
+    city: data.city,
+    tier: data.packageTier,
+  });
+}
+
+
 

@@ -2,19 +2,38 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import {
-  createEventAction,
-  updateEventAction,
-  deleteEventAction,
-  OfficialEventPayload,
-} from "@/app/actions/admin";
 import type { OfficialEvent } from "@/lib/supabase/types";
+import {
+  Calendar,
+  MapPin,
+  Ticket,
+  CheckCircle2,
+  AlertCircle,
+  X,
+  Clock,
+  Users,
+  Sparkles,
+  ShieldCheck,
+  Building2,
+  Layers,
+} from "lucide-react";
+import { IconEdit, IconTrash, IconCheck, IconPlus, IconImage } from "@/components/icons/AppIcons";
+import EventCreateEditModal from "@/components/events/EventCreateEditModal";
+import {
+  parseEventDescription,
+  isEventConcluded,
+} from "@/lib/event-metadata";
+import {
+  verifyAndPublishEventAction,
+  deleteRichEventAction,
+} from "@/app/actions/events";
 
 interface EventsManagerClientProps {
   initialEvents: OfficialEvent[];
 }
 
 function formatScheduledAt(iso: string): string {
+  if (!iso) return "TBD";
   const d = new Date(iso);
   return d.toLocaleDateString("en-US", {
     weekday: "short",
@@ -25,35 +44,15 @@ function formatScheduledAt(iso: string): string {
   });
 }
 
-function formatToDatetimeLocal(isoString: string): string {
-  const d = new Date(isoString);
-  const pad = (num: number) => String(num).padStart(2, "0");
-  const year = d.getFullYear();
-  const month = pad(d.getMonth() + 1);
-  const day = pad(d.getDate());
-  const hours = pad(d.getHours());
-  const minutes = pad(d.getMinutes());
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
-}
-
 export default function EventsManagerClient({ initialEvents }: EventsManagerClientProps) {
   const router = useRouter();
   const [events, setEvents] = useState<OfficialEvent[]>(initialEvents);
+  const [activeTab, setActiveTab] = useState<"all" | "pending" | "past">("all");
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<OfficialEvent | null>(null);
 
-  // Form Fields
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [venueName, setVenueName] = useState("");
-  const [eventType, setEventType] = useState<"artist_split" | "platform_owned">("platform_owned");
-  const [price, setPrice] = useState("");
-  const [maxCapacity, setMaxCapacity] = useState("");
-  const [scheduledAt, setScheduledAt] = useState("");
-
-  const [isLoading, setIsLoading] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -66,18 +65,6 @@ export default function EventsManagerClient({ initialEvents }: EventsManagerClie
   // Open modal for Create
   const handleOpenCreate = () => {
     setEditingEvent(null);
-    setTitle("");
-    setDescription("");
-    setVenueName("");
-    setEventType("platform_owned");
-    setPrice("0");
-    setMaxCapacity("100");
-    
-    // Default to tomorrow same time
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    setScheduledAt(formatToDatetimeLocal(tomorrow.toISOString()));
-
     setErrorMsg(null);
     setIsModalOpen(true);
   };
@@ -85,67 +72,34 @@ export default function EventsManagerClient({ initialEvents }: EventsManagerClie
   // Open modal for Edit
   const handleOpenEdit = (evt: OfficialEvent) => {
     setEditingEvent(evt);
-    setTitle(evt.title);
-    setDescription(evt.description || "");
-    setVenueName(evt.venue_name || "");
-    setEventType(evt.event_type);
-    setPrice(String(evt.price));
-    setMaxCapacity(String(evt.max_capacity));
-    setScheduledAt(formatToDatetimeLocal(evt.scheduled_at));
-
     setErrorMsg(null);
     setIsModalOpen(true);
   };
 
-  // Handle Form Submit (Create or Update)
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+  // Verify and Publish a 3rd party event
+  const handleVerifyAndPublish = async (eventId: string, eventTitle: string) => {
+    setActionLoadingId(eventId);
     setErrorMsg(null);
     setSuccessMsg(null);
 
-    const payload: OfficialEventPayload = {
-      title,
-      description,
-      venue_name: venueName,
-      event_type: eventType,
-      price: Number(price) || 0,
-      max_capacity: Number(maxCapacity) || 100,
-      scheduled_at: new Date(scheduledAt).toISOString(),
-    };
-
     try {
-      if (editingEvent) {
-        // Update Action
-        const res = await updateEventAction(editingEvent.id, payload);
-        if (res.success) {
-          setSuccessMsg(`Event "${title}" updated successfully.`);
-          setIsModalOpen(false);
-          router.refresh();
-        } else {
-          setErrorMsg(res.error);
-        }
+      const res = await verifyAndPublishEventAction(eventId);
+      if (res.success) {
+        setSuccessMsg(`✓ Event "${eventTitle}" verified & published live!`);
+        router.refresh();
       } else {
-        // Create Action
-        const res = await createEventAction(payload);
-        if (res.success) {
-          setSuccessMsg(`Event "${title}" created successfully.`);
-          setIsModalOpen(false);
-          router.refresh();
-        } else {
-          setErrorMsg(res.error);
-        }
+        setErrorMsg(res.error || "Failed to verify event");
       }
     } catch {
-      setErrorMsg("Failed to save official event due to network issues.");
+      setErrorMsg("Failed to verify event due to network error.");
     } finally {
-      setIsLoading(false);
+      setActionLoadingId(null);
     }
   };
 
   // Handle Delete Event
   const handleDelete = async (eventId: string, eventTitle: string) => {
-    if (!confirm(`Are you sure you want to delete the event "${eventTitle}"? This will also cancel all claimed tickets.`)) {
+    if (!confirm(`Are you sure you want to delete the event "${eventTitle}"? This will cancel all claimed tickets.`)) {
       return;
     }
 
@@ -154,13 +108,13 @@ export default function EventsManagerClient({ initialEvents }: EventsManagerClie
     setSuccessMsg(null);
 
     try {
-      const res = await deleteEventAction(eventId);
+      const res = await deleteRichEventAction(eventId);
       if (res.success) {
-        setSuccessMsg(`Event "${eventTitle}" has been deleted.`);
+        setSuccessMsg(`Event "${eventTitle}" has been removed.`);
         setEvents((prev) => prev.filter((e) => e.id !== eventId));
         router.refresh();
       } else {
-        setErrorMsg(res.error);
+        setErrorMsg(res.error || "Failed to delete event.");
       }
     } catch {
       setErrorMsg("Failed to delete event due to network connection issues.");
@@ -169,298 +123,574 @@ export default function EventsManagerClient({ initialEvents }: EventsManagerClie
     }
   };
 
-  return (
-    <div style={{ padding: "24px" }}>
-      {/* Page Header */}
-      <div className="nokia-panel-sunken" style={{ padding: "16px", marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
-        <div>
-          <h1 className="font-pixel text-accent" style={{ fontSize: "14px", margin: 0, letterSpacing: "0.08em" }}>
-            ▣ OFFICIAL EVENTS BOARD
-          </h1>
-          <p className="font-mono text-muted" style={{ fontSize: "11px", margin: "4px 0 0 0" }}>
-            Manage partner official events, venue ticketing configurations, and claims.
-          </p>
-        </div>
+  // Classify events
+  const pendingEvents = events.filter((e) => {
+    const { metadata } = parseEventDescription(e.description);
+    return metadata.status === "pending_review";
+  });
 
-        <button
-          onClick={handleOpenCreate}
-          className="nokia-btn nokia-btn-primary font-pixel"
-          style={{ fontSize: "8px", padding: "8px 16px" }}
-        >
-          [+] CREATE EVENT
-        </button>
+  const filteredEvents = events.filter((e) => {
+    const { metadata } = parseEventDescription(e.description);
+    const isPast = isEventConcluded(e.scheduled_at);
+
+    if (activeTab === "pending") {
+      return metadata.status === "pending_review";
+    }
+    if (activeTab === "past") {
+      return isPast;
+    }
+    // "all" tab shows published or active events
+    return metadata.status !== "pending_review" || pendingEvents.length === 0;
+  });
+
+  return (
+    <div style={{ maxWidth: "1600px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "24px" }}>
+      {/* ── 1. PAGE HEADER (Matching User Uploaded Image) ──────────────── */}
+      <div
+        style={{
+          position: "relative",
+          overflow: "hidden",
+          borderRadius: "24px",
+          background: "linear-gradient(135deg, rgba(22, 14, 29, 0.95) 0%, rgba(10, 6, 16, 0.95) 100%)",
+          border: "1px solid rgba(255, 255, 255, 0.12)",
+          padding: "clamp(20px, 3vw, 32px)",
+          boxShadow: "0 14px 40px rgba(0, 0, 0, 0.4)",
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            right: 0,
+            width: "360px",
+            height: "360px",
+            background: "radial-gradient(circle, rgba(255, 111, 38, 0.14) 0%, transparent 70%)",
+            filter: "blur(40px)",
+            pointerEvents: "none",
+          }}
+        />
+
+        <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "16px" }}>
+          <div>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "3px 10px",
+                borderRadius: "8px",
+                fontSize: "11px",
+                fontWeight: 800,
+                color: "#FF8A3D",
+                background: "rgba(255, 111, 38, 0.12)",
+                border: "1px solid rgba(255, 111, 38, 0.28)",
+                marginBottom: "8px",
+              }}
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              <span>EVENTS &amp; TICKETING</span>
+            </div>
+
+            <h1
+              style={{
+                fontFamily: "var(--font-display), 'Plus Jakarta Sans', system-ui, sans-serif",
+                fontSize: "clamp(24px, 3vw, 32px)",
+                fontWeight: 900,
+                color: "#FFFFFF",
+                margin: "0 0 6px",
+                letterSpacing: "-0.03em",
+              }}
+            >
+              Official Events Board
+            </h1>
+            <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.6)", margin: 0, maxWidth: "600px" }}>
+              Manage partner official events, venue ticketing configurations, and attendee claims.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleOpenCreate}
+            style={{
+              background: "linear-gradient(135deg, #FF6F26 0%, #FF4400 100%)",
+              color: "#FFFFFF",
+              fontSize: "13px",
+              fontWeight: 800,
+              padding: "11px 22px",
+              borderRadius: "14px",
+              border: "none",
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "8px",
+              boxShadow: "0 4px 18px rgba(255, 111, 38, 0.45)",
+              transition: "transform 0.15s ease",
+            }}
+            className="hover:scale-105 active:scale-95"
+          >
+            <IconPlus size={16} color="#FFFFFF" />
+            <span>Create Event</span>
+          </button>
+        </div>
       </div>
 
-      {/* Global Alerts */}
+      {/* ── 2. GLOBAL ALERTS ───────────────────────────────────────────── */}
       {errorMsg && (
-        <div className="nokia-panel-raised" style={{ borderColor: "var(--accent-danger)", padding: "12px", marginBottom: "20px", display: "flex", alignItems: "center", gap: "8px" }}>
-          <span className="font-pixel text-danger" style={{ fontSize: "9px" }}>[✕ ERROR]</span>
-          <span className="font-mono text-danger" style={{ fontSize: "11px" }}>{errorMsg}</span>
+        <div
+          style={{
+            background: "rgba(255, 59, 48, 0.15)",
+            border: "1px solid rgba(255, 59, 48, 0.4)",
+            color: "#FF3B30",
+            padding: "12px 18px",
+            borderRadius: "14px",
+            fontSize: "13px",
+            fontWeight: 700,
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+          }}
+        >
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          <span>{errorMsg}</span>
         </div>
       )}
 
       {successMsg && (
-        <div className="nokia-panel-raised" style={{ borderColor: "var(--accent-success)", padding: "12px", marginBottom: "20px", display: "flex", alignItems: "center", gap: "8px" }}>
-          <span className="font-pixel text-success" style={{ fontSize: "9px" }}>[✓ SUCCESS]</span>
-          <span className="font-mono text-success" style={{ fontSize: "11px" }}>{successMsg}</span>
+        <div
+          style={{
+            background: "rgba(39, 201, 63, 0.15)",
+            border: "1px solid rgba(39, 201, 63, 0.4)",
+            color: "#27C93F",
+            padding: "12px 18px",
+            borderRadius: "14px",
+            fontSize: "13px",
+            fontWeight: 700,
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+          }}
+        >
+          <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+          <span>{successMsg}</span>
         </div>
       )}
 
-      {/* Events Data Table */}
-      <div className="nokia-panel" style={{ padding: "8px", overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "11px" }}>
-          <thead>
-            <tr style={{ borderBottom: "2px solid var(--border-strong)", color: "var(--text-secondary)" }}>
-              <th style={{ padding: "10px", fontFamily: "var(--font-pixel)", fontSize: "8px" }}>EVENT TITLE</th>
-              <th style={{ padding: "10px", fontFamily: "var(--font-pixel)", fontSize: "8px" }}>SCHEDULED TIME</th>
-              <th style={{ padding: "10px", fontFamily: "var(--font-pixel)", fontSize: "8px" }}>VENUE</th>
-              <th style={{ padding: "10px", fontFamily: "var(--font-pixel)", fontSize: "8px" }}>TYPE</th>
-              <th style={{ padding: "10px", fontFamily: "var(--font-pixel)", fontSize: "8px" }}>PRICE</th>
-              <th style={{ padding: "10px", fontFamily: "var(--font-pixel)", fontSize: "8px", textAlign: "center" }}>LIMIT</th>
-              <th style={{ padding: "10px", fontFamily: "var(--font-pixel)", fontSize: "8px", textAlign: "right" }}>ACTIONS</th>
-            </tr>
-          </thead>
-          <tbody style={{ color: "var(--text-primary)" }}>
-            {events.length > 0 ? (
-              events.map((evt) => {
-                const isArtistSplit = evt.event_type === "artist_split";
-                return (
-                  <tr key={evt.id} style={{ borderBottom: "1px solid var(--border-light)" }}>
-                    {/* Title & Desc */}
-                    <td style={{ padding: "10px", fontWeight: "bold" }}>
-                      <span className="font-pixel text-accent" style={{ fontSize: "8px", display: "block" }}>
-                        ★ {evt.title.toUpperCase()}
-                      </span>
-                      {evt.description && (
-                        <span className="font-mono text-muted" style={{ fontSize: "10px", display: "block", marginTop: "2px", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {evt.description}
-                        </span>
-                      )}
-                    </td>
+      {/* ── 3. QUEUE FILTER TABS ───────────────────────────────────────── */}
+      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+        <button
+          type="button"
+          onClick={() => setActiveTab("all")}
+          style={{
+            padding: "8px 16px",
+            borderRadius: "10px",
+            fontSize: "12.5px",
+            fontWeight: 800,
+            border: activeTab === "all" ? "1px solid rgba(255, 111, 38, 0.5)" : "1px solid rgba(255, 255, 255, 0.1)",
+            background: activeTab === "all" ? "linear-gradient(135deg, #FF6F26, #FF4400)" : "rgba(255, 255, 255, 0.04)",
+            color: "#FFFFFF",
+            cursor: "pointer",
+          }}
+        >
+          All &amp; Published ({events.length})
+        </button>
 
-                    {/* Time */}
-                    <td style={{ padding: "10px", fontFamily: "var(--font-mono)" }}>
-                      {formatScheduledAt(evt.scheduled_at)}
-                    </td>
+        <button
+          type="button"
+          onClick={() => setActiveTab("pending")}
+          style={{
+            padding: "8px 16px",
+            borderRadius: "10px",
+            fontSize: "12.5px",
+            fontWeight: 800,
+            border: activeTab === "pending" ? "1px solid rgba(255, 149, 0, 0.6)" : "1px solid rgba(255, 255, 255, 0.1)",
+            background: activeTab === "pending" ? "rgba(255, 149, 0, 0.2)" : "rgba(255, 255, 255, 0.04)",
+            color: activeTab === "pending" ? "#FF9500" : "rgba(255, 255, 255, 0.8)",
+            cursor: "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "6px",
+          }}
+        >
+          <span>Pending Artist / Partner Verification</span>
+          {pendingEvents.length > 0 && (
+            <span
+              style={{
+                background: "#FF9500",
+                color: "#000000",
+                fontSize: "10px",
+                fontWeight: 900,
+                padding: "1px 6px",
+                borderRadius: "6px",
+              }}
+            >
+              {pendingEvents.length}
+            </span>
+          )}
+        </button>
 
-                    {/* Venue */}
-                    <td style={{ padding: "10px", color: "var(--text-secondary)" }}>
-                      📍 {evt.venue_name || "TBD"}
-                    </td>
-
-                    {/* Type */}
-                    <td style={{ padding: "10px" }}>
-                      <span className={`nokia-badge ${isArtistSplit ? "nokia-badge-primary" : "nokia-badge-success"}`} style={{ fontSize: "6px" }}>
-                        {isArtistSplit ? "ARTIST SPLIT" : "PLATFORM OWNED"}
-                      </span>
-                    </td>
-
-                    {/* Price */}
-                    <td style={{ padding: "10px", fontWeight: "bold" }}>
-                      {evt.price > 0 ? `PKR ${Number(evt.price).toLocaleString()}` : "FREE / VIP"}
-                    </td>
-
-                    {/* Capacity */}
-                    <td style={{ padding: "10px", textAlign: "center" }}>
-                      <span className="nokia-badge" style={{ fontSize: "6px" }}>
-                        {evt.max_capacity} PAX
-                      </span>
-                    </td>
-
-                    {/* Actions */}
-                    <td style={{ padding: "10px", textAlign: "right" }}>
-                      <div style={{ display: "flex", gap: "4px", justifyContent: "flex-end" }}>
-                        <button
-                          onClick={() => handleOpenEdit(evt)}
-                          className="nokia-btn"
-                          style={{ padding: "4px 8px", fontSize: "7px" }}
-                          title="Edit Event"
-                        >
-                          ✎ EDIT
-                        </button>
-
-                        <button
-                          onClick={() => handleDelete(evt.id, evt.title)}
-                          disabled={actionLoadingId !== null}
-                          className="nokia-btn nokia-btn-danger"
-                          style={{ padding: "4px 8px", fontSize: "7px" }}
-                          title="Delete Event"
-                        >
-                          {actionLoadingId === evt.id ? "..." : "✕ DELETE"}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            ) : (
-              <tr>
-                <td colSpan={7} className="font-pixel text-center" style={{ padding: "32px", color: "var(--text-muted)", fontSize: "8px" }}>
-                  NO OFFICIAL EVENTS SCHEDULED.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+        <button
+          type="button"
+          onClick={() => setActiveTab("past")}
+          style={{
+            padding: "8px 16px",
+            borderRadius: "10px",
+            fontSize: "12.5px",
+            fontWeight: 800,
+            border: activeTab === "past" ? "1px solid rgba(255, 255, 255, 0.3)" : "1px solid rgba(255, 255, 255, 0.1)",
+            background: activeTab === "past" ? "rgba(255, 255, 255, 0.15)" : "rgba(255, 255, 255, 0.04)",
+            color: "#FFFFFF",
+            cursor: "pointer",
+          }}
+        >
+          Concluded Events
+        </button>
       </div>
 
-      {/* CREATE & MODIFY MODAL */}
-      {isModalOpen && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px", backgroundColor: "rgba(0,0,0,0.6)" }}>
-          <div className="nokia-panel" style={{ width: "100%", maxWidth: "500px", padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
-            
-            {/* Modal header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "2px solid var(--border-strong)", paddingBottom: "10px" }}>
-              <h3 className="font-pixel text-accent" style={{ fontSize: "10px", margin: 0 }}>
-                ▣ {editingEvent ? "MODIFY OFFICIAL EVENT" : "SCHEDULE OFFICIAL EVENT"}
-              </h3>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                style={{ border: "none", background: "none", cursor: "pointer", fontSize: "12px", color: "var(--text-primary)" }}
+      {/* ── 4. EVENTS DATA TABLE (Exact Image Format) ──────────────────── */}
+      <div
+        style={{
+          overflow: "hidden",
+          borderRadius: "20px",
+          background: "linear-gradient(180deg, rgba(18, 12, 24, 0.95) 0%, rgba(8, 4, 12, 0.95) 100%)",
+          border: "1px solid rgba(255, 255, 255, 0.12)",
+          boxShadow: "0 10px 30px rgba(0, 0, 0, 0.4)",
+        }}
+      >
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "12.5px" }}>
+            <thead>
+              <tr
+                style={{
+                  borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+                  background: "rgba(255, 255, 255, 0.02)",
+                  color: "rgba(255, 255, 255, 0.55)",
+                  fontWeight: 800,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.06em",
+                  fontSize: "11px",
+                }}
               >
-                ✕
-              </button>
-            </div>
+                <th style={{ padding: "16px 20px" }}>Event Title</th>
+                <th style={{ padding: "16px 20px" }}>Scheduled Time</th>
+                <th style={{ padding: "16px 20px" }}>Venue</th>
+                <th style={{ padding: "16px 20px" }}>Type</th>
+                <th style={{ padding: "16px 20px" }}>Price</th>
+                <th style={{ padding: "16px 20px", textAlign: "center" }}>Capacity</th>
+                <th style={{ padding: "16px 20px", textAlign: "right" }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/[0.04]">
+              {filteredEvents.length > 0 ? (
+                filteredEvents.map((evt) => {
+                  const { cleanDescription, metadata } = parseEventDescription(evt.description);
+                  const isArtistSplit = evt.event_type === "artist_split";
+                  const isPast = isEventConcluded(evt.scheduled_at);
+                  const isPending = metadata.status === "pending_review";
+                  const isLoading = actionLoadingId === evt.id;
 
-            {/* Modal Form */}
-            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              
-              {/* Event Title */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                <label className="font-pixel text-muted" style={{ fontSize: "7px" }}>
-                  EVENT TITLE
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. VIP Padel Championship"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="nokia-input"
-                />
-              </div>
+                  return (
+                    <tr
+                      key={evt.id}
+                      style={{
+                        borderBottom: "1px solid rgba(255, 255, 255, 0.04)",
+                        transition: "background-color 0.15s ease",
+                      }}
+                      className="hover:bg-white/[0.03]"
+                    >
+                      {/* Event Title + Subtitle + Creator Badge */}
+                      <td style={{ padding: "16px 20px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                          {metadata.feature_image ? (
+                            <div
+                              style={{
+                                width: "48px",
+                                height: "36px",
+                                borderRadius: "8px",
+                                overflow: "hidden",
+                                flexShrink: 0,
+                                border: "1px solid rgba(255, 111, 38, 0.4)",
+                                background: "#08040C",
+                              }}
+                            >
+                              <img
+                                src={metadata.feature_image}
+                                alt={evt.title}
+                                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                              />
+                            </div>
+                          ) : (
+                            <div
+                              style={{
+                                width: "48px",
+                                height: "36px",
+                                borderRadius: "8px",
+                                flexShrink: 0,
+                                border: "1px solid rgba(255, 255, 255, 0.1)",
+                                background: "rgba(255, 255, 255, 0.04)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                              }}
+                            >
+                              <IconImage size={16} color="rgba(255, 255, 255, 0.3)" />
+                            </div>
+                          )}
 
-              {/* Event Description */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                <label className="font-pixel text-muted" style={{ fontSize: "7px" }}>
-                  DESCRIPTION
-                </label>
-                <textarea
-                  rows={2}
-                  placeholder="Details and perks for attendees..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="nokia-input"
-                  style={{ resize: "none" }}
-                />
-              </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "3px" }}>
+                              <span style={{ fontWeight: 800, color: "#FFFFFF", fontSize: "14px" }}>
+                                {evt.title}
+                              </span>
 
-              {/* Grid fields */}
-              <div className="responsive-grid-2">
-                {/* Venue Name */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                  <label className="font-pixel text-muted" style={{ fontSize: "7px" }}>
-                    VENUE NAME
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Arena Centric"
-                    value={venueName}
-                    onChange={(e) => setVenueName(e.target.value)}
-                    className="nokia-input"
-                  />
-                </div>
+                              {/* Status Badge */}
+                              {isPast ? (
+                                <span
+                                  style={{
+                                    fontSize: "10px",
+                                    fontWeight: 800,
+                                    background: "rgba(255, 255, 255, 0.1)",
+                                    border: "1px solid rgba(255, 255, 255, 0.2)",
+                                    color: "rgba(255, 255, 255, 0.6)",
+                                    padding: "2px 6px",
+                                    borderRadius: "6px",
+                                  }}
+                                >
+                                  CONCLUDED
+                                </span>
+                              ) : isPending ? (
+                                <span
+                                  style={{
+                                    fontSize: "10px",
+                                    fontWeight: 800,
+                                    background: "rgba(255, 149, 0, 0.15)",
+                                    border: "1px solid rgba(255, 149, 0, 0.35)",
+                                    color: "#FF9500",
+                                    padding: "2px 7px",
+                                    borderRadius: "6px",
+                                  }}
+                                >
+                                  PENDING VERIFICATION
+                                </span>
+                              ) : (
+                                <span
+                                  style={{
+                                    fontSize: "10px",
+                                    fontWeight: 800,
+                                    background: "rgba(39, 201, 63, 0.12)",
+                                    border: "1px solid rgba(39, 201, 63, 0.3)",
+                                    color: "#27C93F",
+                                    padding: "2px 6px",
+                                    borderRadius: "6px",
+                                  }}
+                                >
+                                  PUBLISHED
+                                </span>
+                              )}
+                            </div>
 
-                {/* Event Type Select */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                  <label className="font-pixel text-muted" style={{ fontSize: "7px" }}>
-                    EVENT TYPE
-                  </label>
-                  <select
-                    value={eventType}
-                    onChange={(e) => setEventType(e.target.value as any)}
-                    className="nokia-input"
-                    style={{ height: "38px" }}
-                  >
-                    <option value="platform_owned">Platform Owned</option>
-                    <option value="artist_split">Artist Split</option>
-                  </select>
-                </div>
-              </div>
+                            {cleanDescription && (
+                              <div style={{ fontSize: "11.5px", color: "rgba(255, 255, 255, 0.55)", maxWidth: "340px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {cleanDescription}
+                              </div>
+                            )}
 
-              <div className="responsive-grid-3">
-                {/* Ticket Price */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                  <label className="font-pixel text-muted" style={{ fontSize: "7px" }}>
-                    PRICE (PKR)
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min={0}
-                    placeholder="0"
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    className="nokia-input"
-                  />
-                </div>
+                            {metadata.creator_name && metadata.creator_type !== "admin" && (
+                              <div style={{ fontSize: "11px", color: "#FF8A3D", marginTop: "3px", fontWeight: 700 }}>
+                                Submitted by: {metadata.creator_name} ({metadata.creator_type?.toUpperCase()})
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </td>
 
-                {/* Capacity */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                  <label className="font-pixel text-muted" style={{ fontSize: "7px" }}>
-                    CAPACITY (PAX)
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min={1}
-                    placeholder="100"
-                    value={maxCapacity}
-                    onChange={(e) => setMaxCapacity(e.target.value)}
-                    className="nokia-input"
-                  />
-                </div>
+                      {/* Scheduled Time */}
+                      <td style={{ padding: "16px 20px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "rgba(255, 255, 255, 0.8)", fontFamily: "monospace" }}>
+                          <Clock className="w-3.5 h-3.5 text-[#FF6F26]" />
+                          <span>{formatScheduledAt(evt.scheduled_at)}</span>
+                        </div>
+                      </td>
 
-                {/* Date / Time */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                  <label className="font-pixel text-muted" style={{ fontSize: "7px" }}>
-                    DATE & TIME
-                  </label>
-                  <input
-                    type="datetime-local"
-                    required
-                    value={scheduledAt}
-                    onChange={(e) => setScheduledAt(e.target.value)}
-                    className="nokia-input"
-                  />
-                </div>
-              </div>
+                      {/* Venue */}
+                      <td style={{ padding: "16px 20px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "rgba(255, 255, 255, 0.8)" }}>
+                          <MapPin className="w-3.5 h-3.5 text-[#FF8A3D]" />
+                          <span style={{ fontWeight: 600 }}>{evt.venue_name || "Karachi Venue"}</span>
+                        </div>
+                        {metadata.full_address && (
+                          <div style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.45)", marginTop: "2px" }}>
+                            {metadata.full_address}
+                          </div>
+                        )}
+                      </td>
 
-              {/* Form buttons */}
-              <div style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="nokia-btn"
-                  style={{ flex: 1 }}
-                >
-                  ✕ CANCEL
-                </button>
+                      {/* Event Type (Platform Owned vs Artist Split) */}
+                      <td style={{ padding: "16px 20px" }}>
+                        {isArtistSplit ? (
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "4px",
+                              padding: "4px 10px",
+                              borderRadius: "8px",
+                              fontSize: "11px",
+                              fontWeight: 800,
+                              background: "rgba(168, 85, 247, 0.15)",
+                              border: "1px solid rgba(168, 85, 247, 0.35)",
+                              color: "#C084FC",
+                            }}
+                          >
+                            Artist Split
+                          </span>
+                        ) : (
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "4px",
+                              padding: "4px 10px",
+                              borderRadius: "8px",
+                              fontSize: "11px",
+                              fontWeight: 800,
+                              background: "rgba(39, 201, 63, 0.12)",
+                              border: "1px solid rgba(39, 201, 63, 0.3)",
+                              color: "#27C93F",
+                            }}
+                          >
+                            Platform Owned
+                          </span>
+                        )}
+                      </td>
 
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="nokia-btn nokia-btn-primary"
-                  style={{ flex: 1 }}
-                >
-                  {isLoading ? "SAVING..." : "✓ SAVE"}
-                </button>
-              </div>
-            </form>
-          </div>
+                      {/* Price */}
+                      <td style={{ padding: "16px 20px", fontWeight: 800, color: "#FFFFFF" }}>
+                        {Number(evt.price) > 0 ? `PKR ${Number(evt.price).toLocaleString()}` : "FREE"}
+                      </td>
+
+                      {/* Capacity */}
+                      <td style={{ padding: "16px 20px", textAlign: "center" }}>
+                        <span
+                          style={{
+                            background: "rgba(255, 255, 255, 0.06)",
+                            border: "1px solid rgba(255, 255, 255, 0.12)",
+                            padding: "4px 10px",
+                            borderRadius: "8px",
+                            fontWeight: 800,
+                            color: "#FFFFFF",
+                            fontSize: "11.5px",
+                          }}
+                        >
+                          {evt.max_capacity} PAX
+                        </span>
+                      </td>
+
+                      {/* Actions */}
+                      <td style={{ padding: "16px 20px", textAlign: "right" }}>
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                          {/* Quick Verify & Publish button for pending events */}
+                          {isPending && (
+                            <button
+                              type="button"
+                              onClick={() => handleVerifyAndPublish(evt.id, evt.title)}
+                              disabled={isLoading}
+                              title="Verify & Publish Event"
+                              style={{
+                                background: "linear-gradient(135deg, #27C93F, #1E9E30)",
+                                border: "none",
+                                borderRadius: "8px",
+                                padding: "6px 12px",
+                                color: "#FFFFFF",
+                                fontSize: "11.5px",
+                                fontWeight: 800,
+                                cursor: "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "6px",
+                              }}
+                              className="hover:scale-105"
+                            >
+                              <IconCheck size={14} color="#FFFFFF" />
+                              <span>Verify &amp; Go Live</span>
+                            </button>
+                          )}
+
+                          {/* Edit button */}
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEdit(evt)}
+                            title="Edit Event"
+                            style={{
+                              width: "32px",
+                              height: "32px",
+                              borderRadius: "8px",
+                              background: "rgba(255, 255, 255, 0.08)",
+                              border: "1px solid rgba(255, 255, 255, 0.16)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              color: "#FFFFFF",
+                              cursor: "pointer",
+                              transition: "all 0.15s ease",
+                            }}
+                            className="hover:bg-white/20 hover:border-white/30"
+                          >
+                            <IconEdit size={16} color="#FFFFFF" />
+                          </button>
+
+                          {/* Delete button */}
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(evt.id, evt.title)}
+                            disabled={isLoading}
+                            title="Delete Event"
+                            style={{
+                              width: "32px",
+                              height: "32px",
+                              borderRadius: "8px",
+                              background: "rgba(255, 59, 48, 0.15)",
+                              border: "1px solid rgba(255, 59, 48, 0.3)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              color: "#FF3B30",
+                              cursor: "pointer",
+                              transition: "all 0.15s ease",
+                            }}
+                            className="hover:bg-red-500/25 hover:border-red-500/50"
+                          >
+                            <IconTrash size={16} color="#FF3B30" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={7} style={{ padding: "48px 20px", textAlign: "center", color: "rgba(255, 255, 255, 0.5)" }}>
+                    <Calendar className="w-8 h-8 mx-auto mb-2 text-white/30" />
+                    <p style={{ margin: 0, fontSize: "13px" }}>
+                      No events found in this category. Click &quot;+ Create Event&quot; to publish a new gig.
+                    </p>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
-      )}
+      </div>
+
+      {/* ── 5. COMPREHENSIVE EVENT CREATION & EDIT MODAL ───────────────── */}
+      <EventCreateEditModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        eventToEdit={editingEvent}
+        onSuccess={() => {
+          router.refresh();
+        }}
+        workspaceTitle="Admin workspace"
+      />
     </div>
   );
 }

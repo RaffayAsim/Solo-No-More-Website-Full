@@ -1,68 +1,130 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { getSessionUserSecurely } from "@/lib/supabase/session";
 import PartnerDashboardClient from "./PartnerDashboardClient";
-import type { Beacon } from "@/lib/supabase/types";
+import type { Beacon, OfficialEvent } from "@/lib/supabase/types";
+import { parseEventDescription } from "@/lib/event-metadata";
 
 export const metadata = {
-  title: "Partner command center — Solo-No-More",
-  description: "Configure your business info and manage partner promotional broadcasts.",
+  title: "Partner Command Center — Solo-No-More",
+  description: "Promote your venue, launch verified promo offers, and host brand events for solo squads.",
 };
 
-async function getSessionUser() {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get("sb-dmmgzpiskyocdsxamrgf-auth-token");
-
-  if (!sessionCookie?.value) return null;
-
-  try {
-    let raw = sessionCookie.value;
-    if (raw.startsWith("base64-")) {
-      raw = Buffer.from(raw.slice(7), "base64").toString("utf-8");
-    }
-    const parsed = JSON.parse(raw);
-    const accessToken = Array.isArray(parsed) ? parsed[0] : parsed.access_token;
-    if (!accessToken) return null;
-
-    const { data, error } = await supabaseAdmin.auth.getUser(accessToken);
-    if (error || !data.user) return null;
-
-    return data.user;
-  } catch {
-    return null;
-  }
-}
-
-export default async function PartnerDashboardPage() {
-  const user = await getSessionUser();
-  if (!user) {
+export default async function PartnerDashboardPage(props: {
+  searchParams?: Promise<{ tab?: string }>;
+}) {
+  const sessionResult = await getSessionUserSecurely();
+  if ("error" in sessionResult || !sessionResult.userId) {
     redirect("/login");
   }
+  const userId = sessionResult.userId;
 
-  // Fetch the partner's profile
-  const { data: profile } = await (supabaseAdmin
-    .from("profiles") as any)
-    .select("*")
-    .eq("id", user.id)
-    .single();
+  const searchParams = props.searchParams ? await props.searchParams : undefined;
+  const initialTab = searchParams?.tab || "overview";
 
+  // Parallel query execution for maximum speed
+  const [profileRes, beaconsRes, eventsRes] = await Promise.all([
+    (supabaseAdmin.from("profiles") as any)
+      .select("*")
+      .eq("id", userId)
+      .single(),
+    (supabaseAdmin.from("beacons") as any)
+      .select("*")
+      .eq("host_id", userId)
+      .order("created_at", { ascending: false }),
+    (supabaseAdmin.from("official_events") as any)
+      .select("*")
+      .order("scheduled_at", { ascending: false }),
+  ]);
+
+  const profile = profileRes.data;
   if (!profile || !profile.is_partner) {
     redirect("/dashboard");
   }
 
-  // Fetch partner offers hosted by this user
-  const { data: beacons } = await (supabaseAdmin
-    .from("beacons") as any)
-    .select("*")
-    .eq("host_id", user.id)
-    .order("created_at", { ascending: false });
+  const partnerOffers: Beacon[] = beaconsRes.data || [];
+  const allEventsData = eventsRes.data || [];
 
-  const partnerOffers: Beacon[] = beacons || [];
+  const partnerEvents: OfficialEvent[] = (allEventsData || []).filter((ev: any) => {
+    try {
+      const { metadata } = parseEventDescription(ev.description);
+      const isCreator = metadata.creator_id === userId;
+      const isPartnerCollab =
+        metadata.partner_id === userId ||
+        (profile.business_name &&
+          metadata.partner_name &&
+          metadata.partner_name.toLowerCase().includes(profile.business_name.toLowerCase()));
+      return isCreator || isPartnerCollab;
+    } catch {
+      return false;
+    }
+  });
+
+  // 4. Fetch ticket telemetry for these partner events
+  const eventIds = partnerEvents.map((e) => e.id);
+  let partnerTickets: any[] = [];
+  if (eventIds.length > 0) {
+    const { data: ticketsData } = await (supabaseAdmin
+      .from("event_tickets") as any)
+      .select(`
+        id,
+        event_id,
+        user_id,
+        ticket_status,
+        created_at,
+        profiles (
+          full_name,
+          city
+        )
+      `)
+      .in("event_id", eventIds);
+    partnerTickets = ticketsData || [];
+  }
+
+  // 5. Fetch squad member applications for partner promo offers
+  const offerIds = partnerOffers.map((o) => o.id);
+  let partnerApplications: any[] = [];
+  if (offerIds.length > 0) {
+    const { data: appsData } = await (supabaseAdmin
+      .from("beacon_applications") as any)
+      .select(`
+        id,
+        beacon_id,
+        applicant_id,
+        status,
+        created_at,
+        profiles:applicant_id (
+          id,
+          full_name,
+          city,
+          avatar_icon,
+          vibe_tags
+        )
+      `)
+      .in("beacon_id", offerIds);
+    partnerApplications = appsData || [];
+  }
 
   return (
-    <PartnerDashboardClient
-      profile={profile}
-      initialOffers={partnerOffers}
-    />
+    <Suspense
+      fallback={
+        <div className="p-8 text-center text-zinc-400">
+          <div className="w-8 h-8 rounded-full border-2 border-[#FF6F26] border-t-transparent animate-spin mx-auto mb-3" />
+          <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+            Initializing Partner Command Center...
+          </span>
+        </div>
+      }
+    >
+      <PartnerDashboardClient
+        profile={profile}
+        initialOffers={partnerOffers}
+        initialEvents={partnerEvents}
+        initialTickets={partnerTickets}
+        initialOfferApplications={partnerApplications}
+        initialTab={initialTab}
+      />
+    </Suspense>
   );
 }

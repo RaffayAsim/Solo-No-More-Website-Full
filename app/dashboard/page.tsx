@@ -1,11 +1,12 @@
 import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import type { AccountStatus } from "@/lib/supabase/types";
+import type { AccountStatus, OfficialEvent, Profile } from "@/lib/supabase/types";
 import SignOutButton from "./SignOutButton";
 import ApprovedScreen from "./ApprovedScreen";
 import { writeLazyTimeAlerts } from "@/app/actions/notifications";
 import { autoExpireStaleBeacons } from "@/app/actions/beacons";
 import { getSessionUserSecurely } from "@/lib/supabase/session";
+import { parseEventDescription } from "@/lib/event-metadata";
 
 export const metadata = {
   title: "Dashboard — Solo-No-More",
@@ -118,20 +119,19 @@ interface PageProps {
 export default async function DashboardPage({ searchParams }: PageProps) {
   const params = await searchParams;
 
-  // 1. Verify session (double-check beyond proxy optimistic check)
+  // 1. Verify session
   const user = await getSessionUser();
   if (!user) {
     redirect("/login");
-    return null; // TypeScript control-flow narrowing
+    return null;
   }
 
-  // 2. Fetch profile from the database using service role (bypasses RLS)
-  type ProfileRow = { full_name: string | null; account_status: string | null; city: string | null; is_partner: boolean | null };
-  const { data: profile } = await supabaseAdmin
-    .from("profiles")
-    .select("full_name, account_status, city, is_partner")
+  // 2. Fetch full profile and status
+  const { data: profile } = (await (supabaseAdmin
+    .from("profiles") as any)
+    .select("id, full_name, phone, bio, social_link, city, avatar_icon, subscription_tier, account_status, is_partner, vibe_tags, is_active_seeker")
     .eq("id", user.id)
-    .maybeSingle() as { data: ProfileRow | null; error: unknown };
+    .maybeSingle()) as { data: Profile | null; error: unknown };
 
   const status = (profile?.account_status ?? "pending_vetting") as AccountStatus;
   const fullName = profile?.full_name ?? (user.user_metadata?.full_name as string | undefined) ?? "";
@@ -139,19 +139,103 @@ export default async function DashboardPage({ searchParams }: PageProps) {
 
   // 3. Render based on account_status
   if (status === "approved") {
-    // Secure "Friend Mode" Beacons filter
-    // 1. Fetch accepted friends
-    const { data: friendships } = await (supabaseAdmin
-      .from("friends") as any)
-      .select("user_id_1, user_id_2")
-      .eq("status", "accepted")
-      .or(`user_id_1.eq.${user.id},user_id_2.eq.${user.id}`);
+    // Parallel fetch: friendships, user applications with beacon info, official events, user tickets, and user's hosted beacons
+    const [friendshipsRes, userAppsRes, officialEventsRes, userTicketsRes, userHostedBeaconsRes] = await Promise.all([
+      (supabaseAdmin.from("friends") as any)
+        .select("user_id_1, user_id_2")
+        .eq("status", "accepted")
+        .or(`user_id_1.eq.${user.id},user_id_2.eq.${user.id}`),
+      (supabaseAdmin.from("beacon_applications") as any)
+        .select(`
+          id,
+          beacon_id,
+          applicant_id,
+          status,
+          created_at,
+          updated_at,
+          beacons:beacon_id (
+            id,
+            title,
+            description,
+            category,
+            location_name,
+            scheduled_at,
+            status,
+            filled_slots,
+            total_slots,
+            google_maps_url,
+            visibility_mode,
+            created_at,
+            host_id,
+            profiles:host_id (
+              id,
+              full_name,
+              avatar_icon
+            )
+          )
+        `)
+        .eq("applicant_id", user.id)
+        .order("created_at", { ascending: false }),
+      (supabaseAdmin.from("official_events") as any)
+        .select("*")
+        .order("scheduled_at", { ascending: true }),
+      (supabaseAdmin.from("event_tickets") as any)
+        .select(`
+          id,
+          event_id,
+          ticket_status,
+          created_at,
+          official_events (
+            id,
+            title,
+            description,
+            venue_name,
+            scheduled_at,
+            price,
+            event_type
+          )
+        `)
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false }),
+      (supabaseAdmin.from("beacons") as any)
+        .select(`
+          id,
+          title,
+          description,
+          category,
+          location_name,
+          scheduled_at,
+          status,
+          filled_slots,
+          total_slots,
+          google_maps_url,
+          visibility_mode,
+          created_at
+        `)
+        .eq("host_id", user.id)
+        .order("created_at", { ascending: false }),
+    ]);
 
-    const friendIds = (friendships || []).map((f: any) =>
+    const friendships = friendshipsRes.data || [];
+    const userApps = userAppsRes.data || [];
+    const allOfficialEvents: OfficialEvent[] = officialEventsRes.data || [];
+    // Only verified & published events are showcased to members on the dashboard
+    const officialEvents: OfficialEvent[] = allOfficialEvents.filter((ev) => {
+      try {
+        const { metadata } = parseEventDescription(ev.description);
+        return metadata.status !== "pending_review" && metadata.status !== "draft";
+      } catch {
+        return true;
+      }
+    });
+    const userTickets = userTicketsRes.data || [];
+    const userHostedBeacons = userHostedBeaconsRes.data || [];
+
+    const friendIds = friendships.map((f: any) =>
       f.user_id_1 === user.id ? f.user_id_2 : f.user_id_1
     );
 
-    // 2. Fetch beacons using Postgres RLS bypass client securely
+    // Fetch live hangout beacons
     const filterString = `visibility_mode.eq.stranger,host_id.eq.${user.id}${
       friendIds.length > 0 ? `,host_id.in.(${friendIds.join(",")})` : ""
     }`;
@@ -168,15 +252,10 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       .eq("status", "active")
       .eq("city", selectedCity)
       .or(filterString)
+      .order("is_partner_offer", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false });
 
-    // Fetch user's applications for these beacons
-    const { data: userApps } = await (supabaseAdmin
-      .from("beacon_applications") as any)
-      .select("beacon_id, status")
-      .eq("applicant_id", user.id);
-
-    const appsMap = new Map((userApps || []).map((app: any) => [app.beacon_id, app.status]));
+    const appsMap = new Map(userApps.map((app: any) => [app.beacon_id, app.status]));
 
     const activeBeacons = (dbBeacons || [])
       .filter((beacon: any) => {
@@ -188,9 +267,16 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       .map((beacon: any) => ({
         ...beacon,
         application_status: appsMap.get(beacon.id) || "none",
-      }));
+      }))
+      .sort((a: any, b: any) => {
+        // Partner/Restaurant promo offers are always pinned to the top of the city's beacons
+        const aPartner = a.is_partner_offer ? 1 : 0;
+        const bPartner = b.is_partner_offer ? 1 : 0;
+        if (aPartner !== bPartner) return bPartner - aPartner;
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
 
-    // Fire lazy time-based alerts & auto-expire stale beacons (non-blocking — best-effort)
+    // Fire lazy time-based alerts & auto-expire stale beacons (non-blocking)
     writeLazyTimeAlerts(user.id).catch(() => {});
     autoExpireStaleBeacons().catch(() => {});
 
@@ -201,6 +287,12 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         initialBeacons={activeBeacons}
         selectedCity={selectedCity}
         isPartner={profile?.is_partner || false}
+        profile={profile}
+        userEmail={user.email || ""}
+        officialEvents={officialEvents}
+        userTickets={userTickets}
+        userApplications={userApps}
+        userHostedBeacons={userHostedBeacons}
       />
     );
   }
@@ -209,7 +301,6 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     return <SuspendedScreen />;
   }
 
-  // Default: pending_vetting (also handles 'rejected' gracefully)
+  // Default: pending_vetting
   return <PendingVettingScreen name={fullName} />;
 }
-

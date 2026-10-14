@@ -1,8 +1,12 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import ThemeToggle from "./ThemeToggle";
+import OverlapFeatureCards from "./OverlapFeatureCards";
+import BeaconSimulator from "./BeaconSimulator";
+import ScrollToTopButton from "./ScrollToTopButton";
+import SignUpDropdown from "./SignUpDropdown";
 import {
   Sparkles,
   MapPin,
@@ -36,7 +40,33 @@ import {
   DollarSign,
   Heart,
   Smile,
+  Music,
+  Utensils,
+  QrCode,
+  Play,
+  Video,
 } from "lucide-react";
+
+function InstagramIcon({ className, style }: { className?: string; style?: React.CSSProperties }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="24"
+      height="24"
+      stroke="currentColor"
+      strokeWidth="2"
+      fill="none"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      style={style}
+    >
+      <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+      <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+    </svg>
+  );
+}
 
 // ─── TRENDING TEMPLATES DATA (AUTHENTIC IMAGE 3 CLONE: CHAI, DRIVE, PADEL, CRICKET, ROOFTOP) ───
 
@@ -481,10 +511,180 @@ const EVENT_PREVIEWS: Record<
   },
 };
 
-export default function LandingPageClient() {
+export interface MembersOnlyEventItem {
+  id: string;
+  category: "trips" | "motorsports" | "culture" | "music";
+  title: string;
+  curator: string;
+  date: string;
+  location: string;
+  price: string;
+  publicPrice: string;
+  spotsLeft: string;
+  spotsRemaining: number;
+  totalSpots: number;
+  image: string;
+  hotBadge: string;
+  perkBadge: string;
+  membersOnly: boolean;
+}
+
+export const MEMBERS_ONLY_EVENTS: MembersOnlyEventItem[] = [
+  {
+    id: "safari-tourist-train",
+    category: "trips",
+    title: "Safari Tourist Train",
+    curator: "Solo-No-More Official Excursion",
+    date: "2026-06-09 • 8:00 PM",
+    location: "Safari Tourist Train Rawalpindi to...",
+    price: "PKR 4,500",
+    publicPrice: "PKR 6,000",
+    spotsLeft: "50 left",
+    spotsRemaining: 50,
+    totalSpots: 60,
+    image: "/images/event-safari-train.jpg",
+    hotBadge: "HOT",
+    perkBadge: "Scenic Vista Railcar Pass",
+    membersOnly: true,
+  },
+  {
+    id: "drift-fest-karachi",
+    category: "motorsports",
+    title: "Drift Fest Karachi",
+    curator: "Apex Racing × Solo-No-More",
+    date: "2026-06-03 • 8:00 PM",
+    location: "Omni Karting Circuit",
+    price: "PKR Rs 1,500",
+    publicPrice: "PKR 2,500",
+    spotsLeft: "38 left",
+    spotsRemaining: 38,
+    totalSpots: 50,
+    image: "/images/beacon-now-26.jpg",
+    hotBadge: "HOT",
+    perkBadge: "Pitlane & Karting Pass",
+    membersOnly: true,
+  },
+  {
+    id: "chaand-raat-bnc",
+    category: "culture",
+    title: "Chaand Raat by BnC Offline",
+    curator: "BnC Offline × Solo-No-More",
+    date: "2026-03-20 • 12:00 AM",
+    location: "Third Culture Coffee",
+    price: "PKR 2,500/-",
+    publicPrice: "PKR 3,500",
+    spotsLeft: "50 left",
+    spotsRemaining: 50,
+    totalSpots: 70,
+    image: "/images/beacon-chai.jpg",
+    hotBadge: "HOT",
+    perkBadge: "Henna & Elaichi Chai Bar",
+    membersOnly: true,
+  },
+  {
+    id: "scene-92-desi-cultural",
+    category: "music",
+    title: "Scene 92 – A Desi Cultural...",
+    curator: "Arts Council Karachi Stage",
+    date: "2026-02-13 • 7:00 PM - 12:00 AM",
+    location: "Studio 1, Arts Council",
+    price: "PKR 4,000/-",
+    publicPrice: "PKR 5,500",
+    spotsLeft: "50 left",
+    spotsRemaining: 50,
+    totalSpots: 80,
+    image: "/images/acoustic-jam.jpg",
+    hotBadge: "HOT",
+    perkBadge: "Full DJ Lineup Pass",
+    membersOnly: true,
+  },
+  {
+    id: "midnight-supercars",
+    category: "motorsports",
+    title: "Supercars & Midnight Run",
+    curator: "Velocity Convoy Karachi",
+    date: "2026-04-18 • 10:30 PM",
+    location: "Emaar Oceanfront Promenade",
+    price: "PKR 3,500/-",
+    publicPrice: "PKR 5,000",
+    spotsLeft: "18 left",
+    spotsRemaining: 18,
+    totalSpots: 30,
+    image: "/images/hero-rooftop.jpg",
+    hotBadge: "HOT",
+    perkBadge: "Oceanfront VIP Convoy",
+    membersOnly: true,
+  },
+  {
+    id: "pro-am-padel",
+    category: "culture",
+    title: "Pro-Am Padel Invitational",
+    curator: "Legends Arena Padel",
+    date: "2026-05-02 • 9:00 PM",
+    location: "Legends Arena Karachi",
+    price: "PKR 2,200/-",
+    publicPrice: "PKR 3,200",
+    spotsLeft: "12 left",
+    spotsRemaining: 12,
+    totalSpots: 24,
+    image: "/images/padel-squad.jpg",
+    hotBadge: "HOT",
+    perkBadge: "Court Racquets & Drinks",
+    membersOnly: true,
+  },
+  {
+    id: "loft-acoustics",
+    category: "music",
+    title: "Secret Loft Acoustics Vol. 4",
+    curator: "Indie Acoustic Sessions",
+    date: "2026-05-20 • 8:30 PM",
+    location: "DHA Phase 5 Loft Studio",
+    price: "PKR 3,000/-",
+    publicPrice: "PKR 4,200",
+    spotsLeft: "25 left",
+    spotsRemaining: 25,
+    totalSpots: 40,
+    image: "/images/beach-bonfire.jpg",
+    hotBadge: "HOT",
+    perkBadge: "Unplugged Acoustic Jam",
+    membersOnly: true,
+  },
+  {
+    id: "retro-arcade",
+    category: "culture",
+    title: "Neon Arcade & Vinyl Night",
+    curator: "Retro Underground Karachi",
+    date: "2026-06-12 • 9:00 PM",
+    location: "Old City Retro Lounge",
+    price: "PKR 1,800/-",
+    publicPrice: "PKR 2,800",
+    spotsLeft: "30 left",
+    spotsRemaining: 30,
+    totalSpots: 50,
+    image: "/images/chai-cafe.jpg",
+    hotBadge: "HOT",
+    perkBadge: "Unlimited Arcade Tokens",
+    membersOnly: true,
+  },
+];
+
+export default function LandingPageClient({
+  reviewWallData,
+}: {
+  reviewWallData?: any;
+} = {}) {
   const [activeCategory, setActiveCategory] = useState<EventCategory>("birthday");
   const [activeRsvp, setActiveRsvp] = useState<"going" | "maybe" | "cantGo" | null>("going");
   const [selectedTemplate, setSelectedTemplate] = useState<TrendingTemplateItem>(TEMPLATES[0]);
+  const [isInteracting, setIsInteracting] = useState(false);
+  const rSlots = reviewWallData?.slots || [];
+
+  // Members Only Events State (Category Filters & Favorites)
+  const [eventCategoryFilter, setEventCategoryFilter] = useState<string>("all");
+  const [eventFavorites, setEventFavorites] = useState<Record<string, boolean>>({});
+  const toggleEventFavorite = (id: string) => {
+    setEventFavorites((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
 
   // Beacons Carousel Ref & Cursor Drag Scroll State
   const carouselRef = useRef<HTMLDivElement>(null);
@@ -492,6 +692,33 @@ export default function LandingPageClient() {
   const startXRef = useRef(0);
   const scrollLeftRef = useRef(0);
   const [isDragging, setIsDragging] = useState(false);
+
+  // Auto-selection cycling animation for Beacon Cards (Cycles one-by-one smoothly)
+  useEffect(() => {
+    if (isInteracting || isDragging) return;
+
+    const interval = setInterval(() => {
+      setSelectedTemplate((prev) => {
+        const currentIndex = TEMPLATES.findIndex((t) => t.id === prev.id);
+        const nextIndex = (currentIndex + 1) % TEMPLATES.length;
+        const nextTemplate = TEMPLATES[nextIndex];
+
+        // Smoothly scroll the carousel track to bring the active card into view
+        if (carouselRef.current) {
+          const cardWidth = 330 + 16;
+          const targetScroll = nextIndex * cardWidth;
+          carouselRef.current.scrollTo({
+            left: targetScroll,
+            behavior: "smooth",
+          });
+        }
+
+        return nextTemplate;
+      });
+    }, 3200);
+
+    return () => clearInterval(interval);
+  }, [isInteracting, isDragging]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!carouselRef.current) return;
@@ -528,7 +755,7 @@ export default function LandingPageClient() {
 
   const scrollCarousel = (direction: "left" | "right") => {
     if (carouselRef.current) {
-      const scrollAmount = direction === "left" ? -300 : 300;
+      const scrollAmount = direction === "left" ? -350 : 350;
       carouselRef.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
     }
   };
@@ -617,20 +844,20 @@ export default function LandingPageClient() {
   return (
     <div className="min-h-screen flex flex-col font-sans" style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}>
       
-      {/* ── 2. NAVBAR (EDGE-TO-EDGE, 100% TRANSPARENT, CLICKABLE TABS, NO SKIN BUTTON) ── */}
+      <ScrollToTopButton />
+
+      {/* ── 2. NAVBAR (MATCHING SUBPAGES, NON-STICKY) ── */}
       <header
         style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
+          position: "relative",
           zIndex: 60,
           background: "transparent",
-          padding: "20px 48px",
+          padding: "20px clamp(20px, 3.5vw, 48px)",
           width: "100%",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
+          gap: "16px",
         }}
       >
         {/* Left: Brand Logo on far-left edge */}
@@ -642,7 +869,7 @@ export default function LandingPageClient() {
           <span
             style={{
               fontFamily: "var(--font-display), 'Plus Jakarta Sans', system-ui, sans-serif",
-              fontSize: "26px",
+              fontSize: "25px",
               fontWeight: 900,
               letterSpacing: "-0.04em",
               color: "#FFFFFF",
@@ -653,183 +880,61 @@ export default function LandingPageClient() {
           </span>
         </Link>
 
-        {/* Center: Interactive, Clickable Navbar Tabs */}
-        <nav className="hidden lg:flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => handleNavClick("gig")}
-            style={{
-              color: "#FFA05C",
-              fontWeight: 800,
-              fontSize: "14px",
-              textShadow: "0 1px 4px rgba(0, 0, 0, 0.95), 0 2px 10px rgba(0, 0, 0, 0.75)",
-              background: "transparent",
-              border: "none",
-              padding: "8px 14px",
-              borderRadius: "8px",
-              cursor: "pointer",
-              letterSpacing: "-0.01em",
-              transition: "all 0.15s ease",
-            }}
-            className="hover:bg-white/10 active:scale-95 cursor-pointer"
-          >
-            Halloween
-          </button>
-          <button
-            type="button"
-            onClick={() => handleNavClick("birthday")}
-            style={{
-              color: "#FFFFFF",
-              fontWeight: 800,
-              fontSize: "14px",
-              textShadow: "0 1px 4px rgba(0, 0, 0, 0.95), 0 2px 10px rgba(0, 0, 0, 0.75)",
-              background: "transparent",
-              border: "none",
-              padding: "8px 14px",
-              borderRadius: "8px",
-              cursor: "pointer",
-              letterSpacing: "-0.01em",
-              transition: "all 0.15s ease",
-            }}
-            className="hover:bg-white/10 active:scale-95 cursor-pointer"
-          >
-            Birthdays
-          </button>
-          <button
-            type="button"
-            onClick={() => handleNavClick("dinner")}
-            style={{
-              color: "#FFFFFF",
-              fontWeight: 800,
-              fontSize: "14px",
-              textShadow: "0 1px 4px rgba(0, 0, 0, 0.95), 0 2px 10px rgba(0, 0, 0, 0.75)",
-              background: "transparent",
-              border: "none",
-              padding: "8px 14px",
-              borderRadius: "8px",
-              cursor: "pointer",
-              letterSpacing: "-0.01em",
-              transition: "all 0.15s ease",
-            }}
-            className="hover:bg-white/10 active:scale-95 cursor-pointer"
-          >
-            Dinners
-          </button>
-          <button
-            type="button"
-            onClick={() => handleNavClick("gig")}
-            style={{
-              color: "#FFFFFF",
-              fontWeight: 800,
-              fontSize: "14px",
-              textShadow: "0 1px 4px rgba(0, 0, 0, 0.95), 0 2px 10px rgba(0, 0, 0, 0.75)",
-              background: "transparent",
-              border: "none",
-              padding: "8px 14px",
-              borderRadius: "8px",
-              cursor: "pointer",
-              letterSpacing: "-0.01em",
-              transition: "all 0.15s ease",
-            }}
-            className="hover:bg-white/10 active:scale-95 cursor-pointer"
-          >
-            Housewarmings
-          </button>
-          <Link
-            href="/dashboard/partner"
-            style={{
-              color: "#FFFFFF",
-              fontWeight: 800,
-              fontSize: "14px",
-              textShadow: "0 1px 4px rgba(0, 0, 0, 0.95), 0 2px 10px rgba(0, 0, 0, 0.75)",
-              textDecoration: "none",
-              padding: "8px 14px",
-              borderRadius: "8px",
-              letterSpacing: "-0.01em",
-              transition: "all 0.15s ease",
-            }}
-            className="hover:bg-white/10 active:scale-95 cursor-pointer"
-          >
-            For Orgs
-          </Link>
-          <Link
-            href="/dashboard/upgrade"
-            style={{
-              color: "#FFFFFF",
-              fontWeight: 800,
-              fontSize: "14px",
-              textShadow: "0 1px 4px rgba(0, 0, 0, 0.95), 0 2px 10px rgba(0, 0, 0, 0.75)",
-              textDecoration: "none",
-              padding: "8px 14px",
-              borderRadius: "8px",
-              letterSpacing: "-0.01em",
-              transition: "all 0.15s ease",
-            }}
-            className="hover:bg-white/10 active:scale-95 cursor-pointer"
-          >
-            Sell Tickets
-          </Link>
-          <button
-            type="button"
-            onClick={() => handleNavClick(activeCategory, "events-section")}
-            style={{
-              color: "#FFFFFF",
-              fontWeight: 800,
-              fontSize: "14px",
-              textShadow: "0 1px 4px rgba(0, 0, 0, 0.95), 0 2px 10px rgba(0, 0, 0, 0.75)",
-              background: "transparent",
-              border: "none",
-              padding: "8px 14px",
-              borderRadius: "8px",
-              cursor: "pointer",
-              letterSpacing: "-0.01em",
-              transition: "all 0.15s ease",
-            }}
-            className="hover:bg-white/10 active:scale-95 cursor-pointer"
-          >
-            Explore
-          </button>
+        {/* Center: Clean Subpage-matching Navbar Links */}
+        <nav className="hidden xl:flex items-center gap-1">
+          {[
+            { href: "/events", label: "Browse Events" },
+            { href: "/how-it-works", label: "How Beacon Works" },
+            { href: "/memberships", label: "Memberships" },
+            { href: "/partners", label: "Partners" },
+            { href: "/sell-tickets", label: "Sell Tickets" },
+            { href: "/about", label: "About" },
+            { href: "/contact", label: "Contact" },
+          ].map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              style={{
+                color: "#FFFFFF",
+                fontWeight: 700,
+                fontSize: "13.5px",
+                textShadow: "0 1px 4px rgba(0, 0, 0, 0.95)",
+                textDecoration: "none",
+                padding: "8px 13px",
+                borderRadius: "8px",
+                letterSpacing: "-0.01em",
+                transition: "all 0.15s ease",
+              }}
+              className="hover:bg-white/10 hover:text-[#FF8A3D] active:scale-95 cursor-pointer"
+            >
+              {item.label}
+            </Link>
+          ))}
         </nav>
 
-        {/* Right Action Buttons (NO SKIN BUTTON, 8px Partiful Style Login + Create) */}
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", flexShrink: 0 }}>
+        {/* Right Action Buttons */}
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
           <Link
             href="/login"
             style={{
               background: "rgba(18, 18, 24, 0.78)",
               border: "1px solid rgba(255, 255, 255, 0.22)",
               color: "#FFFFFF",
-              fontSize: "14px",
+              fontSize: "13.5px",
               fontWeight: 800,
               textDecoration: "none",
-              padding: "8px 20px",
+              padding: "8px 18px",
               borderRadius: "8px",
               backdropFilter: "blur(12px)",
               WebkitBackdropFilter: "blur(12px)",
               boxShadow: "0 4px 14px rgba(0, 0, 0, 0.3)",
               transition: "background 0.15s ease, transform 0.15s ease",
             }}
-            className="hover:bg-white/20 active:scale-95 cursor-pointer"
+            className="hover:bg-white/20 active:scale-95 cursor-pointer hidden sm:inline-flex"
           >
             Login
           </Link>
-          <Link
-            href="/apply"
-            style={{
-              background: "#FFFFFF",
-              color: "#000000",
-              fontSize: "14px",
-              fontWeight: 800,
-              padding: "8px 22px",
-              borderRadius: "8px",
-              textDecoration: "none",
-              boxShadow: "0 4px 18px rgba(0, 0, 0, 0.35)",
-              transition: "transform 0.15s ease, background 0.15s ease",
-            }}
-            className="hover:bg-gray-100 hover:scale-105 active:scale-95 cursor-pointer"
-          >
-            Create
-          </Link>
+          <SignUpDropdown />
         </div>
       </header>
 
@@ -879,6 +984,7 @@ export default function LandingPageClient() {
               radial-gradient(ellipse 40% 55% at 8% 20%, rgba(217, 70, 15, 0.65) 0%, transparent 65%)
             `,
             pointerEvents: "none",
+            zIndex: 2,
           }}
         />
 
@@ -1274,6 +1380,29 @@ export default function LandingPageClient() {
 
       </section>
 
+
+      {/* ── SECTION FINISHED DIVIDER LINE ── */}
+      <div
+        style={{
+          width: "100%",
+          display: "flex",
+          justifyContent: "center",
+          padding: "16px 24px",
+          position: "relative",
+          zIndex: 10,
+        }}
+        aria-hidden="true"
+      >
+        <div
+          style={{
+            width: "100%",
+            maxWidth: "1180px",
+            height: "1px",
+            background: "linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.15) 20%, rgba(255, 90, 31, 0.35) 50%, rgba(255, 255, 255, 0.15) 80%, transparent 100%)",
+          }}
+        />
+      </div>
+
       {/* ── MARQUEE ANNOUNCEMENT BANNER (AUTHENTIC ORANGE & BLACK TICKING STRIP) ── */}
       <div
         className="pf-marquee-wrap"
@@ -1355,987 +1484,30 @@ export default function LandingPageClient() {
         </div>
       </div>
 
-      {/* ── 4. REAL-TIME INTERACTIVE APP SIMULATOR (DESKTOP & MOBILE MOCKUPS) ───── */}
-      <section
-        id="events-section"
+
+      {/* ── SECTION FINISHED DIVIDER LINE ── */}
+      <div
         style={{
-          padding: "90px 20px 100px",
-          maxWidth: "1240px",
-          margin: "0 auto",
           width: "100%",
-          textAlign: "center",
+          display: "flex",
+          justifyContent: "center",
+          padding: "16px 24px",
+          position: "relative",
+          zIndex: 10,
         }}
+        aria-hidden="true"
       >
-        {/* Section Pill Badge */}
         <div
           style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "7px",
-            background: "rgba(255, 90, 31, 0.12)",
-            border: "1px solid rgba(255, 90, 31, 0.3)",
-            padding: "5px 14px",
-            borderRadius: "999px",
-            fontSize: "12px",
-            fontWeight: 800,
-            color: "#FF5A1F",
-            marginBottom: "16px",
-            letterSpacing: "0.04em",
+            width: "100%",
+            maxWidth: "1180px",
+            height: "1px",
+            background: "linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.15) 20%, rgba(255, 90, 31, 0.35) 50%, rgba(255, 255, 255, 0.15) 80%, transparent 100%)",
           }}
-        >
-          <Sparkles className="w-3.5 h-3.5" /> REAL-TIME APP SIMULATOR
-        </div>
+        />
+      </div>
 
-        {/* Heading & Subtitle */}
-        <h2
-          style={{
-            fontFamily: "var(--font-display), system-ui, sans-serif",
-            fontSize: "clamp(32px, 5vw, 54px)",
-            fontWeight: 800,
-            letterSpacing: "-0.03em",
-            margin: "0 0 14px",
-            color: "#FFFFFF",
-            lineHeight: 1.15,
-          }}
-        >
-          Drop a Beacon. Meet in Real Life.
-        </h2>
-
-        <p
-          style={{
-            fontSize: "17.5px",
-            color: "rgba(255, 255, 255, 0.65)",
-            margin: "0 auto 36px",
-            maxWidth: "620px",
-            fontWeight: 500,
-          }}
-        >
-          Experience both ways Solo No More works: broadcast your own IRL scene in 60 seconds, or discover and join active squads across Karachi.
-        </p>
-
-        {/* Clean Integrated Control Bar: Workflow Selector + Device Selector */}
-        <div
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "12px",
-            flexWrap: "wrap",
-            padding: "6px 10px",
-            background: "rgba(255, 255, 255, 0.05)",
-            borderRadius: "16px",
-            border: "1px solid rgba(255, 255, 255, 0.12)",
-            backdropFilter: "blur(12px)",
-            marginBottom: "40px",
-          }}
-        >
-          {/* Workflow Mode Tabs */}
-          <div style={{ display: "inline-flex", alignItems: "center", gap: "4px", background: "rgba(0, 0, 0, 0.5)", padding: "4px", borderRadius: "10px" }}>
-            <button
-              type="button"
-              onClick={() => { setSimulatorAction("create"); setBeaconBroadcasted(false); }}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "7px",
-                padding: "8px 16px",
-                borderRadius: "8px",
-                fontSize: "13px",
-                fontWeight: 800,
-                border: "none",
-                cursor: "pointer",
-                background: simulatorAction === "create" ? "linear-gradient(135deg, #FF6B35, #FF5A1F)" : "transparent",
-                color: simulatorAction === "create" ? "#FFFFFF" : "rgba(255, 255, 255, 0.7)",
-                transition: "all 0.18s ease",
-                boxShadow: simulatorAction === "create" ? "0 4px 14px rgba(255, 90, 31, 0.4)" : "none",
-              }}
-            >
-              <Zap className="w-3.5 h-3.5" />
-              <span>1. How Users Create Beacons</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setSimulatorAction("join")}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "7px",
-                padding: "8px 16px",
-                borderRadius: "8px",
-                fontSize: "13px",
-                fontWeight: 800,
-                border: "none",
-                cursor: "pointer",
-                background: simulatorAction === "join" ? "linear-gradient(135deg, #FF6B35, #FF5A1F)" : "transparent",
-                color: simulatorAction === "join" ? "#FFFFFF" : "rgba(255, 255, 255, 0.7)",
-                transition: "all 0.18s ease",
-                boxShadow: simulatorAction === "join" ? "0 4px 14px rgba(255, 90, 31, 0.4)" : "none",
-              }}
-            >
-              <Users className="w-3.5 h-3.5" />
-              <span>2. How Users Join Beacons</span>
-            </button>
-          </div>
-
-          <div style={{ width: "1px", height: "24px", background: "rgba(255, 255, 255, 0.15)" }} className="hidden sm:block" />
-
-          {/* Device Showcase Switcher */}
-          <div style={{ display: "inline-flex", alignItems: "center", gap: "4px", background: "rgba(0, 0, 0, 0.5)", padding: "4px", borderRadius: "10px" }}>
-            <button
-              type="button"
-              onClick={() => setDeviceVersion("desktop")}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "8px 14px",
-                borderRadius: "8px",
-                fontSize: "12.5px",
-                fontWeight: 800,
-                border: "none",
-                cursor: "pointer",
-                background: deviceVersion === "desktop" ? "rgba(255, 255, 255, 0.18)" : "transparent",
-                color: deviceVersion === "desktop" ? "#FFFFFF" : "rgba(255, 255, 255, 0.65)",
-                transition: "all 0.15s ease",
-              }}
-            >
-              <Laptop className="w-3.5 h-3.5" />
-              <span>Desktop Web View</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setDeviceVersion("mobile")}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "8px 14px",
-                borderRadius: "8px",
-                fontSize: "12.5px",
-                fontWeight: 800,
-                border: "none",
-                cursor: "pointer",
-                background: deviceVersion === "mobile" ? "rgba(255, 255, 255, 0.18)" : "transparent",
-                color: deviceVersion === "mobile" ? "#FFFFFF" : "rgba(255, 255, 255, 0.65)",
-                transition: "all 0.15s ease",
-              }}
-            >
-              <Smartphone className="w-3.5 h-3.5" />
-              <span>Mobile Phone View</span>
-            </button>
-          </div>
-        </div>
-
-        {/* ── VERSION 1: DESKTOP WEB STUDIO WINDOW MOCKUP ── */}
-        {deviceVersion === "desktop" && (
-          <div className="pf-desktop-window">
-            {/* Window Browser Titlebar with Traffic Lights */}
-            <div className="pf-window-titlebar">
-              <div className="pf-window-dots">
-                <span className="pf-window-dot red" />
-                <span className="pf-window-dot yellow" />
-                <span className="pf-window-dot green" />
-              </div>
-
-              <div className="pf-window-url">
-                <span style={{ color: "#27C93F", fontSize: "10px" }}>🔒</span>
-                <span>solonomore.com/karachi/{simulatorAction === "create" ? "host" : "radar"}</span>
-                <span style={{ color: "#FF5A1F", fontWeight: 800, fontSize: "10px", marginLeft: "8px" }}>
-                  ● LIVE KARACHI RADAR
-                </span>
-              </div>
-
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "11px", color: "rgba(255, 255, 255, 0.6)" }}>
-                <span style={{ background: "rgba(255, 90, 31, 0.2)", color: "#FF8A3D", padding: "2px 8px", borderRadius: "4px", fontWeight: 800 }}>
-                  CLIFTON · DHA
-                </span>
-              </div>
-            </div>
-
-            {/* Desktop Mockup Interior Container */}
-            <div style={{ background: "#0B0912", minHeight: "560px", color: "#FFFFFF" }}>
-              {/* Desktop Internal Navigation */}
-              <div style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.08)", padding: "14px 28px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
-                  <span style={{ color: "#FF5A1F", fontWeight: 900, fontSize: "18px", letterSpacing: "-0.03em" }}>
-                    solo-no-more
-                  </span>
-                  <div style={{ display: "flex", alignItems: "center", gap: "16px", fontSize: "13px", fontWeight: 700 }}>
-                    <span style={{ color: simulatorAction === "join" ? "#FFFFFF" : "rgba(255, 255, 255, 0.6)", borderBottom: simulatorAction === "join" ? "2px solid #FF5A1F" : "none", paddingBottom: "4px" }}>
-                      Live Radar Feed
-                    </span>
-                    <span style={{ color: simulatorAction === "create" ? "#FFFFFF" : "rgba(255, 255, 255, 0.6)", borderBottom: simulatorAction === "create" ? "2px solid #FF5A1F" : "none", paddingBottom: "4px" }}>
-                      Drop a Beacon
-                    </span>
-                  </div>
-                </div>
-
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#27C93F" }} />
-                  <span style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.7)", fontWeight: 600 }}>14 Members Active Near You</span>
-                </div>
-              </div>
-
-              {/* ── DESKTOP FLOW A: HOW TO CREATE A BEACON (INTERACTIVE STUDIO) ── */}
-              {simulatorAction === "create" && (
-                <div style={{ display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: "28px", padding: "32px 36px" }}>
-                  {/* Left Column: Interactive Form Controls */}
-                  <div>
-                    <div style={{ marginBottom: "20px" }}>
-                      <span style={{ fontSize: "11px", fontWeight: 900, color: "#FF5A1F", letterSpacing: "0.08em", textTransform: "uppercase" }}>
-                        STEP 1 OF 2 · BROADCAST STUDIO
-                      </span>
-                      <h3 style={{ fontSize: "22px", fontWeight: 800, margin: "4px 0 6px", color: "#FFFFFF" }}>
-                        What scene are you creating?
-                      </h3>
-                      <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.65)", margin: 0 }}>
-                        Click a category below to test how hosts set up real meetups in 60 seconds:
-                      </p>
-                    </div>
-
-                    {/* Vibe / Category Cards */}
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px", marginBottom: "22px" }}>
-                      {[
-                        { id: "sports", glyph: "🎾", label: "Sports & Padel", sub: "Padel, gym, turf" },
-                        { id: "casual", glyph: "☕", label: "Chai & Food", sub: "Cafes, chai runs" },
-                        { id: "nightlife", glyph: "⚡", label: "Nightlife & Gigs", sub: "Rooftops, warehouse" },
-                      ].map((item) => {
-                        const isSelected = createCategory === item.id;
-                        return (
-                          <div
-                            key={item.id}
-                            onClick={() => handleSelectSimCategory(item.id as "sports" | "casual" | "nightlife")}
-                            style={{
-                              padding: "14px 12px",
-                              borderRadius: "12px",
-                              background: isSelected ? "rgba(255, 90, 31, 0.18)" : "rgba(255, 255, 255, 0.04)",
-                              border: isSelected ? "2px solid #FF5A1F" : "1px solid rgba(255, 255, 255, 0.1)",
-                              cursor: "pointer",
-                              transition: "all 0.15s ease",
-                              textAlign: "center",
-                            }}
-                          >
-                            <div style={{ fontSize: "24px", marginBottom: "4px" }}>{item.glyph}</div>
-                            <div style={{ fontSize: "13px", fontWeight: 800, color: isSelected ? "#FFFFFF" : "rgba(255, 255, 255, 0.85)" }}>{item.label}</div>
-                            <div style={{ fontSize: "10px", color: "rgba(255, 255, 255, 0.5)", marginTop: "2px" }}>{item.sub}</div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {/* Scene Title Input */}
-                    <div style={{ marginBottom: "18px" }}>
-                      <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "rgba(255, 255, 255, 0.8)", marginBottom: "6px" }}>
-                        Beacon Title
-                      </label>
-                      <input
-                        type="text"
-                        value={createTitle}
-                        onChange={(e) => { setCreateTitle(e.target.value); setBeaconBroadcasted(false); }}
-                        style={{
-                          width: "100%",
-                          padding: "12px 14px",
-                          borderRadius: "10px",
-                          background: "rgba(255, 255, 255, 0.06)",
-                          border: "1px solid rgba(255, 255, 255, 0.15)",
-                          color: "#FFFFFF",
-                          fontSize: "14px",
-                          fontWeight: 700,
-                          outline: "none",
-                        }}
-                      />
-                    </div>
-
-                    {/* Venue & Slots Row */}
-                    <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: "12px", marginBottom: "26px" }}>
-                      <div>
-                        <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "rgba(255, 255, 255, 0.8)", marginBottom: "6px" }}>
-                          Venue / Location
-                        </label>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "rgba(255, 255, 255, 0.06)", border: "1px solid rgba(255, 255, 255, 0.15)", borderRadius: "10px", padding: "10px 12px" }}>
-                          <MapPin className="w-4 h-4 text-[#FF5A1F]" />
-                          <span style={{ fontSize: "13px", fontWeight: 600, color: "#FFFFFF" }}>{createLocation}</span>
-                        </div>
-                      </div>
-
-                      <div>
-                        <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "rgba(255, 255, 255, 0.8)", marginBottom: "6px" }}>
-                          Slots Needed
-                        </label>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(255, 255, 255, 0.06)", border: "1px solid rgba(255, 255, 255, 0.15)", borderRadius: "10px", padding: "8px 12px" }}>
-                          <button
-                            type="button"
-                            onClick={() => setCreateSlots((s) => Math.max(2, s - 1))}
-                            style={{ width: "24px", height: "24px", borderRadius: "4px", background: "rgba(255,255,255,0.1)", border: "none", color: "#FFF", cursor: "pointer", fontWeight: 800 }}
-                          >
-                            -
-                          </button>
-                          <span style={{ fontSize: "14px", fontWeight: 800, color: "#FF5A1F" }}>{createSlots} spots</span>
-                          <button
-                            type="button"
-                            onClick={() => setCreateSlots((s) => Math.min(20, s + 1))}
-                            style={{ width: "24px", height: "24px", borderRadius: "4px", background: "rgba(255,255,255,0.1)", border: "none", color: "#FFF", cursor: "pointer", fontWeight: 800 }}
-                          >
-                            +
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Big Action Button */}
-                    {!beaconBroadcasted ? (
-                      <button
-                        type="button"
-                        onClick={() => setBeaconBroadcasted(true)}
-                        style={{
-                          width: "100%",
-                          padding: "14px",
-                          borderRadius: "12px",
-                          background: "linear-gradient(135deg, #FF6B35, #FF5A1F)",
-                          color: "#FFFFFF",
-                          fontWeight: 900,
-                          fontSize: "15px",
-                          border: "none",
-                          cursor: "pointer",
-                          boxShadow: "0 8px 25px rgba(255, 90, 31, 0.45)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: "8px",
-                          transition: "all 0.15s ease",
-                        }}
-                        className="hover:scale-[1.02] active:scale-[0.98]"
-                      >
-                        <Radio className="w-4 h-4 animate-pulse" />
-                        <span>🚀 Broadcast Beacon to Karachi (Free)</span>
-                      </button>
-                    ) : (
-                      <div style={{ display: "flex", gap: "10px" }}>
-                        <button
-                          type="button"
-                          onClick={() => setBeaconBroadcasted(false)}
-                          style={{
-                            flex: 1,
-                            padding: "12px",
-                            borderRadius: "10px",
-                            background: "rgba(255, 255, 255, 0.1)",
-                            color: "#FFFFFF",
-                            border: "1px solid rgba(255, 255, 255, 0.15)",
-                            fontWeight: 700,
-                            fontSize: "13px",
-                            cursor: "pointer",
-                          }}
-                        >
-                          ✏️ Edit Beacon
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setSimulatorAction("join")}
-                          style={{
-                            flex: 1.5,
-                            padding: "12px",
-                            borderRadius: "10px",
-                            background: "#27C93F",
-                            color: "#000000",
-                            border: "none",
-                            fontWeight: 900,
-                            fontSize: "13px",
-                            cursor: "pointer",
-                            boxShadow: "0 4px 15px rgba(39, 201, 63, 0.4)",
-                          }}
-                        >
-                          🎟️ View as Guest (Test Joining) →
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Right Column: Live Output & Radar Pulse Stage */}
-                  <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
-                    {!beaconBroadcasted ? (
-                      /* Live Preview Card */
-                      <div
-                        style={{
-                          width: "100%",
-                          borderRadius: "20px",
-                          background: "radial-gradient(ellipse at 70% 40%, rgba(255, 90, 31, 0.25) 0%, rgba(18, 14, 25, 0.98) 75%)",
-                          border: "1px solid rgba(255, 255, 255, 0.15)",
-                          padding: "24px",
-                          boxShadow: "0 20px 50px rgba(0, 0, 0, 0.7)",
-                        }}
-                      >
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
-                          <span style={{ fontSize: "11px", fontWeight: 800, background: "rgba(255, 90, 31, 0.2)", color: "#FF8A3D", padding: "3px 10px", borderRadius: "6px" }}>
-                            PREVIEW CARD
-                          </span>
-                          <span style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.6)" }}>{createTime}</span>
-                        </div>
-
-                        <div style={{ width: "100%", height: "170px", borderRadius: "14px", overflow: "hidden", marginBottom: "16px", background: "#000" }}>
-                          <img
-                            src={createCategory === "sports" ? "/images/beacon-padel.jpg" : createCategory === "casual" ? "/images/beacon-chai.jpg" : "/images/beacon-now-26.jpg"}
-                            alt="Beacon flyer"
-                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                          />
-                        </div>
-
-                        <h4 style={{ fontSize: "18px", fontWeight: 800, margin: "0 0 8px", color: "#FFFFFF" }}>{createTitle}</h4>
-                        <div style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.7)", marginBottom: "14px", display: "flex", alignItems: "center", gap: "6px" }}>
-                          <MapPin className="w-3.5 h-3.5 text-[#FF5A1F]" />
-                          <span>{createLocation}</span>
-                        </div>
-
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid rgba(255, 255, 255, 0.1)", paddingTop: "12px", fontSize: "12px" }}>
-                          <span style={{ color: "#27C93F", fontWeight: 700 }}>● Ready to broadcast</span>
-                          <span style={{ color: "#FF8A3D", fontWeight: 800 }}>{createSlots} spots open</span>
-                        </div>
-                      </div>
-                    ) : (
-                      /* Live Radar Celebration Screen */
-                      <div
-                        style={{
-                          width: "100%",
-                          borderRadius: "20px",
-                          background: "radial-gradient(circle, rgba(255, 90, 31, 0.25) 0%, rgba(11, 9, 18, 0.98) 75%)",
-                          border: "2px solid #FF5A1F",
-                          padding: "36px 24px",
-                          textAlign: "center",
-                          position: "relative",
-                          overflow: "hidden",
-                          boxShadow: "0 0 50px rgba(255, 90, 31, 0.35)",
-                        }}
-                      >
-                        {/* Radar Waves Animation */}
-                        <div style={{ position: "relative", width: "100px", height: "100px", margin: "0 auto 20px", display: "grid", placeItems: "center" }}>
-                          <div className="pf-radar-wave" style={{ width: "100px", height: "100px" }} />
-                          <div className="pf-radar-wave" style={{ width: "70px", height: "70px", animationDelay: "0.6s" }} />
-                          <div style={{ width: "48px", height: "48px", borderRadius: "50%", background: "#FF5A1F", display: "grid", placeItems: "center", zIndex: 10, boxShadow: "0 0 20px #FF5A1F" }}>
-                            <Radio className="w-6 h-6 text-black" />
-                          </div>
-                        </div>
-
-                        <span style={{ fontSize: "11px", fontWeight: 900, background: "#27C93F", color: "#000", padding: "3px 10px", borderRadius: "4px", letterSpacing: "0.08em" }}>
-                          LIVE IN CLIFTON
-                        </span>
-
-                        <h4 style={{ fontSize: "20px", fontWeight: 900, margin: "12px 0 6px", color: "#FFFFFF" }}>
-                          Beacon is Live on Radar!
-                        </h4>
-
-                        <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.75)", margin: "0 0 18px" }}>
-                          ⚡ 14 nearby Karachi members notified instantly. Attendees are RSVPing now.
-                        </p>
-
-                        <div style={{ background: "rgba(0, 0, 0, 0.6)", padding: "10px 14px", borderRadius: "8px", fontSize: "12px", fontFamily: "monospace", color: "#FF8A3D", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                          <span>solonomore.com/b/padel-clifton</span>
-                          <span style={{ color: "#FFF", fontSize: "11px", background: "rgba(255,255,255,0.1)", padding: "2px 6px", borderRadius: "4px" }}>Link Ready</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* ── DESKTOP FLOW B: HOW TO JOIN A BEACON (INTERACTIVE GUEST EXPERIENCE) ── */}
-              {simulatorAction === "join" && (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1.3fr", gap: "28px", padding: "32px 36px" }}>
-                  {/* Left Column: Karachi Radar Feed of Active Beacons */}
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
-                      <span style={{ fontSize: "12px", fontWeight: 800, color: "rgba(255, 255, 255, 0.8)" }}>
-                        KARACHI RADAR FEED (4 LIVE)
-                      </span>
-                      <span style={{ fontSize: "11px", color: "#27C93F", fontWeight: 700 }}>● Auto-refreshing</span>
-                    </div>
-
-                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                      {SIMULATOR_BEACONS.map((beacon) => {
-                        const isSelected = activeBeaconId === beacon.id;
-                        const rsvp = userJoinedStatus[beacon.id];
-                        return (
-                          <div
-                            key={beacon.id}
-                            onClick={() => setActiveBeaconId(beacon.id)}
-                            style={{
-                              padding: "14px",
-                              borderRadius: "14px",
-                              background: isSelected ? "rgba(255, 90, 31, 0.15)" : "rgba(255, 255, 255, 0.04)",
-                              border: isSelected ? "2px solid #FF5A1F" : "1px solid rgba(255, 255, 255, 0.1)",
-                              cursor: "pointer",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "12px",
-                              transition: "all 0.15s ease",
-                            }}
-                          >
-                            <img src={beacon.poster} alt={beacon.title} style={{ width: "52px", height: "52px", borderRadius: "10px", objectFit: "cover" }} />
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "2px" }}>
-                                <span style={{ fontSize: "10px", fontWeight: 800, color: "#FF5A1F" }}>{beacon.categoryGlyph} {beacon.categoryLabel}</span>
-                                <span style={{ fontSize: "10px", color: "rgba(255, 255, 255, 0.5)" }}>· {beacon.date}</span>
-                              </div>
-                              <div style={{ fontSize: "13.5px", fontWeight: 800, color: "#FFFFFF", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                {beacon.title}
-                              </div>
-                              <div style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.6)", marginTop: "2px" }}>
-                                {beacon.location} · {beacon.totalSlots - beacon.filledSlots} spots left
-                              </div>
-                            </div>
-                            {rsvp === "going" && (
-                              <span style={{ fontSize: "11px", fontWeight: 900, background: "#27C93F", color: "#000", padding: "2px 8px", borderRadius: "4px" }}>
-                                JOINED
-                              </span>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Right Column: Interactive Guest Beacon Card & 3 Circular RSVP Discs */}
-                  <div
-                    style={{
-                      borderRadius: "24px",
-                      background: currentSimulatorBeacon.gradientBg,
-                      border: "1px solid rgba(255, 255, 255, 0.18)",
-                      padding: "30px",
-                      boxShadow: "0 25px 60px rgba(0, 0, 0, 0.8)",
-                      textAlign: "left",
-                      display: "flex",
-                      flexDirection: "column",
-                      justifyContent: "space-between",
-                    }}
-                  >
-                    <div>
-                      {/* Top Meta Tag */}
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
-                        <span style={{ fontSize: "12px", fontWeight: 800, color: "#FF8A3D", background: "rgba(255, 90, 31, 0.2)", padding: "3px 10px", borderRadius: "6px" }}>
-                          {currentSimulatorBeacon.categoryGlyph} {currentSimulatorBeacon.categoryLabel} MEETUP
-                        </span>
-                        <span style={{ fontSize: "13px", fontWeight: 700, color: "#FFFFFF" }}>
-                          {currentSimulatorBeacon.date} · {currentSimulatorBeacon.time}
-                        </span>
-                      </div>
-
-                      {/* Title & Host */}
-                      <h3 style={{ fontSize: "24px", fontWeight: 800, margin: "0 0 10px", color: "#FFFFFF", lineHeight: 1.2 }}>
-                        {currentSimulatorBeacon.title}
-                      </h3>
-
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px", fontSize: "13.5px" }}>
-                        <Crown className="w-4 h-4 text-[#FFB800]" />
-                        <span>Hosted by</span>
-                        <img src={currentSimulatorBeacon.hostAvatar} alt={currentSimulatorBeacon.host} style={{ width: "24px", height: "24px", borderRadius: "50%", objectFit: "cover" }} />
-                        <span style={{ fontWeight: 800, color: "#FFFFFF" }}>{currentSimulatorBeacon.host}</span>
-                        <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.5)" }}>({currentSimulatorBeacon.hostRole})</span>
-                      </div>
-
-                      <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "18px", fontSize: "13px", color: "rgba(255, 255, 255, 0.8)" }}>
-                        <MapPin className="w-4 h-4 text-[#FF5A1F]" />
-                        <span>{currentSimulatorBeacon.addressDetail}</span>
-                      </div>
-
-                      <p style={{ fontSize: "13.5px", color: "rgba(255, 255, 255, 0.8)", lineHeight: 1.5, margin: "0 0 24px" }}>
-                        {currentSimulatorBeacon.description}
-                      </p>
-
-                      {/* Guest List Avatar Row */}
-                      <div style={{ borderTop: "1px solid rgba(255, 255, 255, 0.12)", paddingTop: "16px", marginBottom: "22px" }}>
-                        <div style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.65)", marginBottom: "8px", fontWeight: 700 }}>
-                          {joinGoingCount} Members Going · {joinSlotsRemaining} Spots Left
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center" }}>
-                          {GUEST_AVATARS.slice(0, 5).map((av, idx) => (
-                            <img key={idx} src={av.img} alt={av.name} style={{ width: "32px", height: "32px", borderRadius: "50%", objectFit: "cover", marginLeft: idx === 0 ? 0 : "-8px", border: "2px solid #000" }} />
-                          ))}
-                          {activeJoinRsvp === "going" && (
-                            <span style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#FF5A1F", border: "2px solid #FFF", display: "grid", placeItems: "center", fontSize: "10px", fontWeight: 900, color: "#FFF", marginLeft: "-8px", zIndex: 10 }}>
-                              YOU
-                            </span>
-                          )}
-                          <span style={{ width: "32px", height: "32px", borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "grid", placeItems: "center", fontSize: "11px", fontWeight: 800, marginLeft: "-8px" }}>
-                            +{currentSimulatorBeacon.filledSlots - 5}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* The 3 Circular RSVP Discs */}
-                    <div>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "24px", marginBottom: "16px" }}>
-                        <button
-                          type="button"
-                          onClick={() => handleSimRsvpClick(currentSimulatorBeacon.id, "going")}
-                          className={`pf-rsvp-circle-btn ${activeJoinRsvp === "going" ? "selected-going" : ""}`}
-                          title="Going"
-                        >
-                          <span style={{ fontSize: "20px" }}>👍</span>
-                          <span style={{ fontSize: "11px", fontWeight: 800, color: "#111827" }}>Going</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleSimRsvpClick(currentSimulatorBeacon.id, "maybe")}
-                          className={`pf-rsvp-circle-btn ${activeJoinRsvp === "maybe" ? "selected-maybe" : ""}`}
-                          title="Maybe"
-                        >
-                          <span style={{ fontSize: "20px" }}>🤔</span>
-                          <span style={{ fontSize: "11px", fontWeight: 800, color: "#111827" }}>Maybe</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleSimRsvpClick(currentSimulatorBeacon.id, "cantGo")}
-                          className={`pf-rsvp-circle-btn ${activeJoinRsvp === "cantGo" ? "selected-cantgo" : ""}`}
-                          title="Can't go"
-                        >
-                          <span style={{ fontSize: "20px" }}>🥺</span>
-                          <span style={{ fontSize: "11px", fontWeight: 800, color: "#111827" }}>Can&apos;t</span>
-                        </button>
-                      </div>
-
-                      {/* Interactive Chat Unlock Button */}
-                      {activeJoinRsvp === "going" && (
-                        <div style={{ animation: "fadeIn 0.2s ease" }}>
-                          <button
-                            type="button"
-                            onClick={() => setOpenChatInMockup((o) => !o)}
-                            style={{
-                              width: "100%",
-                              padding: "10px",
-                              borderRadius: "10px",
-                              background: "rgba(255, 255, 255, 0.12)",
-                              border: "1px solid rgba(255, 255, 255, 0.25)",
-                              color: "#FFFFFF",
-                              fontWeight: 800,
-                              fontSize: "13px",
-                              cursor: "pointer",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              gap: "8px",
-                            }}
-                          >
-                            <MessageSquare className="w-4 h-4 text-[#FF5A1F]" />
-                            <span>{openChatInMockup ? "Hide Squad Chat" : `💬 Open Squad Chat (${joinGoingCount} members)`}</span>
-                          </button>
-
-                          {/* Embedded Live Chat Drawer inside Mockup */}
-                          {openChatInMockup && (
-                            <div style={{ marginTop: "12px", background: "rgba(0, 0, 0, 0.6)", borderRadius: "12px", padding: "14px", border: "1px solid rgba(255, 255, 255, 0.15)" }}>
-                              <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "12px", maxHeight: "120px", overflowY: "auto" }}>
-                                {simulatedChatMsgs.map((msg, idx) => (
-                                  <div key={idx} style={{ fontSize: "12px", lineHeight: 1.4 }}>
-                                    <span style={{ fontWeight: 800, color: "#FF8A3D" }}>{msg.from}: </span>
-                                    <span style={{ color: "#FFFFFF" }}>{msg.text}</span>
-                                  </div>
-                                ))}
-                              </div>
-                              <form onSubmit={handleSendSimChat} style={{ display: "flex", gap: "8px" }}>
-                                <input
-                                  type="text"
-                                  placeholder="Type a message to the squad..."
-                                  value={simChatInput}
-                                  onChange={(e) => setSimChatInput(e.target.value)}
-                                  style={{ flex: 1, padding: "8px 12px", borderRadius: "6px", background: "rgba(255, 255, 255, 0.1)", border: "none", color: "#FFF", fontSize: "12px", outline: "none" }}
-                                />
-                                <button type="submit" style={{ padding: "8px 14px", borderRadius: "6px", background: "#FF5A1F", border: "none", color: "#FFF", fontWeight: 800, fontSize: "12px", cursor: "pointer" }}>
-                                  Send
-                                </button>
-                              </form>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ── VERSION 2: MOBILE PHONE IPHONE 16 PRO MOCKUP ── */}
-        {deviceVersion === "mobile" && (
-          <div className="pf-phone-mockup">
-            {/* Top Status Bar & Dynamic Island */}
-            <div style={{ padding: "12px 24px 8px", display: "flex", alignItems: "center", justifyContent: "space-between", color: "#FFFFFF", fontSize: "12px", fontWeight: 700 }}>
-              <span>9:41</span>
-              {/* Dynamic Island Pill with Live Status */}
-              <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "#000000", padding: "4px 12px", borderRadius: "999px", border: "1px solid rgba(255, 255, 255, 0.15)" }}>
-                <span className="w-2 h-2 rounded-full bg-[#FF5A1F] animate-pulse" />
-                <span style={{ fontSize: "10px", fontWeight: 800, color: "#FF5A1F" }}>
-                  {beaconBroadcasted ? "BEACON LIVE" : "KARACHI RADAR"}
-                </span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                <span>5G</span>
-                <span>●</span>
-              </div>
-            </div>
-
-            {/* Mobile App Navigation Bar */}
-            <div style={{ padding: "8px 20px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255, 255, 255, 0.1)" }}>
-              <span style={{ color: "#FF5A1F", fontWeight: 900, fontSize: "16px" }}>solo-no-more</span>
-              <div style={{ fontSize: "11px", fontWeight: 800, background: "rgba(255, 255, 255, 0.1)", padding: "3px 9px", borderRadius: "6px", color: "#FFFFFF" }}>
-                {simulatorAction === "create" ? "HOST MODE" : "RADAR MODE"}
-              </div>
-            </div>
-
-            {/* Phone Screen Scrollable Content Body */}
-            <div style={{ padding: "18px 18px 28px", background: "#0D0A14", minHeight: "560px", textAlign: "left" }}>
-              {/* MOBILE FLOW A: CREATE A BEACON */}
-              {simulatorAction === "create" && (
-                <div>
-                  {!beaconBroadcasted ? (
-                    <div>
-                      <span style={{ fontSize: "11px", fontWeight: 900, color: "#FF5A1F", letterSpacing: "0.08em" }}>
-                        DROP A BEACON (KARACHI)
-                      </span>
-                      <h4 style={{ fontSize: "18px", fontWeight: 800, margin: "4px 0 14px", color: "#FFFFFF" }}>
-                        Select Meetup Vibe
-                      </h4>
-
-                      {/* Vibe Selection Pills */}
-                      <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
-                        {[
-                          { id: "sports", label: "🎾 Sports" },
-                          { id: "casual", label: "☕ Chai" },
-                          { id: "nightlife", label: "⚡ Night" },
-                        ].map((v) => (
-                          <button
-                            key={v.id}
-                            type="button"
-                            onClick={() => handleSelectSimCategory(v.id as "sports" | "casual" | "nightlife")}
-                            style={{
-                              flex: 1,
-                              padding: "10px 4px",
-                              borderRadius: "10px",
-                              fontSize: "12px",
-                              fontWeight: 800,
-                              cursor: "pointer",
-                              background: createCategory === v.id ? "#FF5A1F" : "rgba(255,255,255,0.06)",
-                              color: "#FFFFFF",
-                              border: "none",
-                            }}
-                          >
-                            {v.label}
-                          </button>
-                        ))}
-                      </div>
-
-                      {/* Scene Title Input */}
-                      <div style={{ marginBottom: "14px" }}>
-                        <label style={{ fontSize: "11px", fontWeight: 700, color: "rgba(255,255,255,0.7)", display: "block", marginBottom: "4px" }}>
-                          Scene Title
-                        </label>
-                        <input
-                          type="text"
-                          value={createTitle}
-                          onChange={(e) => setCreateTitle(e.target.value)}
-                          style={{ width: "100%", padding: "10px", borderRadius: "8px", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", color: "#FFF", fontSize: "13px", fontWeight: 700 }}
-                        />
-                      </div>
-
-                      {/* Venue & Slots Preview */}
-                      <div style={{ background: "rgba(255,255,255,0.05)", padding: "12px", borderRadius: "10px", marginBottom: "20px", fontSize: "12px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px", color: "#FFF", fontWeight: 700 }}>
-                          <MapPin className="w-3.5 h-3.5 text-[#FF5A1F]" />
-                          <span>{createLocation}</span>
-                        </div>
-                        <div style={{ display: "flex", justifyContent: "space-between", color: "rgba(255,255,255,0.6)" }}>
-                          <span>{createTime}</span>
-                          <span style={{ color: "#FF8A3D", fontWeight: 800 }}>{createSlots} spots open</span>
-                        </div>
-                      </div>
-
-                      {/* Broadcast CTA */}
-                      <button
-                        type="button"
-                        onClick={() => setBeaconBroadcasted(true)}
-                        style={{
-                          width: "100%",
-                          padding: "13px",
-                          borderRadius: "12px",
-                          background: "linear-gradient(135deg, #FF6B35, #FF5A1F)",
-                          color: "#FFFFFF",
-                          fontWeight: 900,
-                          fontSize: "14px",
-                          border: "none",
-                          cursor: "pointer",
-                          boxShadow: "0 6px 20px rgba(255, 90, 31, 0.4)",
-                        }}
-                      >
-                        ⚡ Broadcast Live Beacon (Free)
-                      </button>
-                    </div>
-                  ) : (
-                    /* Mobile Radar Broadcast Screen */
-                    <div style={{ textAlign: "center", padding: "24px 8px" }}>
-                      <div style={{ position: "relative", width: "80px", height: "80px", margin: "0 auto 16px", display: "grid", placeItems: "center" }}>
-                        <div className="pf-radar-wave" style={{ width: "80px", height: "80px" }} />
-                        <div style={{ width: "42px", height: "42px", borderRadius: "50%", background: "#FF5A1F", display: "grid", placeItems: "center", zIndex: 10 }}>
-                          <Radio className="w-5 h-5 text-black" />
-                        </div>
-                      </div>
-
-                      <span style={{ fontSize: "10px", fontWeight: 900, background: "#27C93F", color: "#000", padding: "2px 8px", borderRadius: "4px" }}>
-                        BROADCASTING IN CLIFTON
-                      </span>
-                      <h4 style={{ fontSize: "17px", fontWeight: 800, margin: "10px 0 6px", color: "#FFF" }}>
-                        Your Beacon is Live!
-                      </h4>
-                      <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.7)", margin: "0 0 20px" }}>
-                        14 nearby members in Clifton & DHA alerted.
-                      </p>
-
-                      <button
-                        type="button"
-                        onClick={() => setSimulatorAction("join")}
-                        style={{
-                          width: "100%",
-                          padding: "12px",
-                          borderRadius: "10px",
-                          background: "#27C93F",
-                          color: "#000",
-                          fontWeight: 900,
-                          fontSize: "13px",
-                          border: "none",
-                          cursor: "pointer",
-                        }}
-                      >
-                        🎟️ Test Joining This Beacon →
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* MOBILE FLOW B: JOIN A BEACON */}
-              {simulatorAction === "join" && (
-                <div>
-                  <div style={{ width: "100%", height: "190px", borderRadius: "14px", overflow: "hidden", marginBottom: "14px", boxShadow: "0 10px 30px rgba(0,0,0,0.6)" }}>
-                    <img src={currentSimulatorBeacon.poster} alt={currentSimulatorBeacon.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  </div>
-
-                  <h4 style={{ fontSize: "18px", fontWeight: 800, color: "#FFFFFF", margin: "0 0 6px", lineHeight: 1.25 }}>
-                    {currentSimulatorBeacon.title}
-                  </h4>
-                  <div style={{ fontSize: "12px", fontWeight: 700, color: "#FF8A3D", marginBottom: "10px" }}>
-                    {currentSimulatorBeacon.date} · {currentSimulatorBeacon.time}
-                  </div>
-
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px", fontSize: "12px", color: "rgba(255,255,255,0.85)" }}>
-                    <Crown className="w-3.5 h-3.5 text-[#FFB800]" />
-                    <span>Hosted by</span>
-                    <img src={currentSimulatorBeacon.hostAvatar} alt={currentSimulatorBeacon.host} style={{ width: "18px", height: "18px", borderRadius: "50%" }} />
-                    <span style={{ fontWeight: 800, color: "#FFF" }}>{currentSimulatorBeacon.host}</span>
-                  </div>
-
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "14px", fontSize: "11.5px", color: "rgba(255,255,255,0.7)" }}>
-                    <MapPin className="w-3.5 h-3.5 text-[#FF5A1F]" />
-                    <span>{currentSimulatorBeacon.location}</span>
-                  </div>
-
-                  {/* Attendees Stack */}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px", borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "10px" }}>
-                    <span style={{ fontSize: "11.5px", fontWeight: 700, color: "#FFF" }}>
-                      {joinGoingCount} Going · {joinSlotsRemaining} Left
-                    </span>
-                    <div style={{ display: "flex", alignItems: "center" }}>
-                      {GUEST_AVATARS.slice(0, 3).map((av, idx) => (
-                        <img key={idx} src={av.img} alt={av.name} style={{ width: "22px", height: "22px", borderRadius: "50%", marginLeft: idx === 0 ? 0 : "-6px", border: "1.5px solid #000" }} />
-                      ))}
-                      <span style={{ width: "22px", height: "22px", borderRadius: "50%", background: "rgba(255,255,255,0.2)", fontSize: "9px", fontWeight: 800, display: "grid", placeItems: "center", marginLeft: "-6px" }}>+9</span>
-                    </div>
-                  </div>
-
-                  {/* The 3 Circular Reaction Discs in Mobile Thumb Zone */}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-around", gap: "12px", marginBottom: "18px" }}>
-                    <button
-                      type="button"
-                      onClick={() => handleSimRsvpClick(currentSimulatorBeacon.id, "going")}
-                      className={`pf-rsvp-circle-btn ${activeJoinRsvp === "going" ? "selected-going" : ""}`}
-                      style={{ width: "60px", height: "60px" }}
-                    >
-                      <span style={{ fontSize: "17px" }}>👍</span>
-                      <span style={{ fontSize: "10px", fontWeight: 800, color: "#111827" }}>Going</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleSimRsvpClick(currentSimulatorBeacon.id, "maybe")}
-                      className={`pf-rsvp-circle-btn ${activeJoinRsvp === "maybe" ? "selected-maybe" : ""}`}
-                      style={{ width: "60px", height: "60px" }}
-                    >
-                      <span style={{ fontSize: "17px" }}>🤔</span>
-                      <span style={{ fontSize: "10px", fontWeight: 800, color: "#111827" }}>Maybe</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleSimRsvpClick(currentSimulatorBeacon.id, "cantGo")}
-                      className={`pf-rsvp-circle-btn ${activeJoinRsvp === "cantGo" ? "selected-cantgo" : ""}`}
-                      style={{ width: "60px", height: "60px" }}
-                    >
-                      <span style={{ fontSize: "17px" }}>🥺</span>
-                      <span style={{ fontSize: "10px", fontWeight: 800, color: "#111827" }}>Can&apos;t</span>
-                    </button>
-                  </div>
-
-                  {/* Bottom Action Button */}
-                  <Link
-                    href="/signup"
-                    style={{
-                      display: "block",
-                      width: "100%",
-                      textAlign: "center",
-                      padding: "12px",
-                      borderRadius: "12px",
-                      background: "linear-gradient(135deg, #FF6B35, #FF5A1F)",
-                      color: "#FFFFFF",
-                      fontWeight: 900,
-                      fontSize: "13px",
-                      textDecoration: "none",
-                      boxShadow: "0 6px 20px rgba(255, 90, 31, 0.4)",
-                    }}
-                  >
-                    ⚡ Claim Your Spot in Karachi
-                  </Link>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </section>
-
-      {/* ── 5. PLAIN ANIMATED REVIEWS & PRESS TICKER (EXACT ORIGINAL STYLE, ANIMATED) ─── */}
-      <section
-        id="reviews-section"
-        className="pf-plain-reviews-wrap"
-        aria-label="Press and Reviews Ticker"
-      >
-        <div className="pf-plain-reviews-track">
-          {[...PRESS_PARTNER_REVIEWS, ...COMMUNITY_HOST_REVIEWS, ...PRESS_PARTNER_REVIEWS, ...COMMUNITY_HOST_REVIEWS].map((item, idx) => {
-            const quoteText = "quote" in item ? item.quote : "";
-            const sourceText = "source" in item ? item.source : "author" in item ? `${(item as any).author} · ${(item as any).role}` : "";
-            return (
-              <div key={idx} className="pf-plain-review-item">
-                <div className="pf-plain-review-quote">
-                  &ldquo;{quoteText}&rdquo;
-                </div>
-                <div className="pf-plain-review-source">
-                  {sourceText}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* ── 6. TRENDING BEACONS (FULL-WIDTH, WOW-FACTOR POSTER CARDS & CURSOR SCROLL) ─── */}
+      {/* ── 4. TRENDING BEACONS (ENLARGED FULL-WIDTH INVITE POSTERS & CURSOR SCROLL) ─── */}
       <section
         id="templates-section"
         style={{
@@ -2345,8 +1517,24 @@ export default function LandingPageClient() {
           margin: 0,
           boxSizing: "border-box",
           overflow: "hidden",
+          background: "#060408",
+          position: "relative",
         }}
       >
+        {/* Subtle Geometric Dotted Texture Overlay */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            backgroundImage: "radial-gradient(rgba(255, 255, 255, 0.18) 1.25px, transparent 1.25px)",
+            backgroundSize: "22px 22px",
+            backgroundPosition: "center",
+            pointerEvents: "none",
+            zIndex: 0,
+            opacity: 0.85,
+          }}
+          aria-hidden="true"
+        />
         {/* Header: Trending Beacons */}
         <div
           style={{
@@ -2403,39 +1591,67 @@ export default function LandingPageClient() {
             </p>
           </div>
 
-          {/* Navigation Controls: Sharp-Corner Buttons + Drag Hint */}
+          {/* Navigation Controls: Perfectly Centered Buttons + Drag Hint */}
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <span style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.5)", fontWeight: 700, marginRight: "4px" }} className="hidden sm:inline">
+            <span style={{ fontSize: "12.5px", color: "rgba(255, 255, 255, 0.55)", fontWeight: 700, marginRight: "4px", display: "inline-flex", alignItems: "center", gap: "4px" }} className="hidden sm:inline-flex">
               Drag with cursor ⇄
             </span>
             <button
               type="button"
-              onClick={() => scrollCarousel("left")}
+              onClick={() => {
+                scrollCarousel("left");
+                setIsInteracting(true);
+              }}
               aria-label="Previous beacon"
               className="pf-image3-nav-btn"
-              style={{ borderRadius: "0px" }}
+              style={{
+                width: "42px",
+                height: "42px",
+                borderRadius: "10px",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: 0,
+                margin: 0,
+              }}
             >
-              <ChevronLeft className="w-5 h-5" />
+              <ChevronLeft className="w-5 h-5 shrink-0" style={{ display: "block", margin: "auto" }} />
             </button>
             <button
               type="button"
-              onClick={() => scrollCarousel("right")}
+              onClick={() => {
+                scrollCarousel("right");
+                setIsInteracting(true);
+              }}
               aria-label="Next beacon"
               className="pf-image3-nav-btn"
-              style={{ borderRadius: "0px" }}
+              style={{
+                width: "42px",
+                height: "42px",
+                borderRadius: "10px",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: 0,
+                margin: 0,
+              }}
             >
-              <ChevronRight className="w-5 h-5" />
+              <ChevronRight className="w-5 h-5 shrink-0" style={{ display: "block", margin: "auto" }} />
             </button>
           </div>
         </div>
 
-        {/* Horizontal Track of Poster Cards (Sharp Corners & Full Edge-to-Edge) */}
+        {/* Horizontal Track of Poster Cards (Enlarged Size: 330px x 480px + Auto-selection) */}
         <div className="pf-beacons-carousel-container">
           <div
             ref={carouselRef}
             className="pf-beacons-track"
+            onMouseEnter={() => setIsInteracting(true)}
+            onMouseLeave={() => {
+              setIsInteracting(false);
+              handleMouseLeave();
+            }}
             onMouseDown={handleMouseDown}
-            onMouseLeave={handleMouseLeave}
             onMouseUp={handleMouseUp}
             onMouseMove={handleMouseMove}
             onWheel={handleWheel}
@@ -2446,17 +1662,47 @@ export default function LandingPageClient() {
               return (
                 <div
                   key={tmpl.id}
-                  onClick={() => setSelectedTemplate(tmpl)}
+                  onClick={() => {
+                    setSelectedTemplate(tmpl);
+                    setIsInteracting(true);
+                  }}
                   className={`pf-beacon-poster-card ${isSelected ? "is-active-beacon" : ""}`}
                   style={{
                     position: "relative",
                     overflow: "hidden",
-                    height: "390px",
-                    width: "270px",
-                    flex: "0 0 270px",
+                    height: "480px",
+                    width: "330px",
+                    flex: "0 0 330px",
                     borderRadius: "0px",
+                    transition: "all 0.35s cubic-bezier(0.16, 1, 0.3, 1)",
                   }}
                 >
+                  {/* Active Beacon Selection Badge */}
+                  {isSelected && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "14px",
+                        right: "14px",
+                        zIndex: 15,
+                        background: "rgba(255, 90, 31, 0.94)",
+                        backdropFilter: "blur(8px)",
+                        color: "#FFFFFF",
+                        fontSize: "10px",
+                        fontWeight: 900,
+                        padding: "3px 9px",
+                        borderRadius: "999px",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "5px",
+                        boxShadow: "0 4px 14px rgba(255, 90, 31, 0.65)",
+                        letterSpacing: "0.05em",
+                      }}
+                    >
+                      <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#FFFFFF" }} className="animate-pulse" />
+                      <span>SELECTED</span>
+                    </div>
+                  )}
                   {/* Background Flyer Image */}
                   <img
                     src={tmpl.posterImg}
@@ -2476,7 +1722,7 @@ export default function LandingPageClient() {
                       left: 0,
                       right: 0,
                       zIndex: 10,
-                      padding: "24px 18px 20px",
+                      padding: "26px 20px 22px",
                       textAlign: "left",
                       background: "linear-gradient(to top, rgba(0, 0, 0, 0.98) 0%, rgba(5, 3, 8, 0.92) 60%, rgba(5, 3, 8, 0.7) 80%, transparent 100%)",
                     }}
@@ -2491,14 +1737,14 @@ export default function LandingPageClient() {
                         backdropFilter: "blur(10px)",
                         WebkitBackdropFilter: "blur(10px)",
                         border: "1px solid rgba(255, 255, 255, 0.25)",
-                        padding: "4px 10px",
+                        padding: "5px 12px",
                         borderRadius: "0px",
-                        fontSize: "11px",
+                        fontSize: "11.5px",
                         fontWeight: 800,
                         color: "#FFA578",
                         letterSpacing: "0.04em",
                         textTransform: "uppercase",
-                        marginBottom: "8px",
+                        marginBottom: "10px",
                       }}
                     >
                       {tmpl.posterBadge}
@@ -2508,12 +1754,12 @@ export default function LandingPageClient() {
                     <div
                       style={{
                         fontFamily: "var(--font-display), system-ui, sans-serif",
-                        fontSize: "18px",
+                        fontSize: "20px",
                         fontWeight: 900,
                         color: "#FFFFFF",
                         letterSpacing: "-0.02em",
                         lineHeight: 1.2,
-                        marginBottom: "6px",
+                        marginBottom: "8px",
                         textShadow: "0 2px 10px rgba(0, 0, 0, 0.95)",
                       }}
                     >
@@ -2523,13 +1769,13 @@ export default function LandingPageClient() {
                     {/* Location: Pure High-Contrast White Text + Vivid Glowing Orange Pin */}
                     <div
                       style={{
-                        fontSize: "12.5px",
+                        fontSize: "13.5px",
                         fontWeight: 800,
                         color: "#FFFFFF",
                         display: "flex",
                         alignItems: "center",
                         gap: "6px",
-                        marginBottom: "9px",
+                        marginBottom: "11px",
                         textShadow: "0 1px 8px rgba(0, 0, 0, 0.95)",
                       }}
                     >
@@ -2544,15 +1790,15 @@ export default function LandingPageClient() {
                         alignItems: "center",
                         justifyContent: "space-between",
                         borderTop: "1px solid rgba(255, 255, 255, 0.22)",
-                        paddingTop: "9px",
-                        fontSize: "12px",
+                        paddingTop: "11px",
+                        fontSize: "12.5px",
                       }}
                     >
                       <span style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 800 }}>
-                        <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#27C93F", boxShadow: "0 0 8px #27C93F" }} />
+                        <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#27C93F", boxShadow: "0 0 8px #27C93F" }} />
                         <span style={{ color: "#FFFFFF" }}>{tmpl.time}</span>
                       </span>
-                      <span style={{ color: "rgba(255, 255, 255, 0.75)", fontWeight: 700, fontSize: "11px" }}>
+                      <span style={{ color: "rgba(255, 255, 255, 0.75)", fontWeight: 700, fontSize: "11.5px" }}>
                         Tap to select
                       </span>
                     </div>
@@ -2618,19 +1864,553 @@ export default function LandingPageClient() {
         </div>
       </section>
 
-      {/* ── 7. "WE'RE NOT LIKE OTHER INVITES" (EXACT 3-ROW PARTIFUL CLONE - DARK & ORANGE THEME) ───────── */}
-      <section
-        id="features-section"
+
+      {/* ── SECTION FINISHED DIVIDER LINE ── */}
+      <div
         style={{
-          background: "#060408",
-          color: "#FFFFFF",
-          padding: "110px 24px 120px",
           width: "100%",
+          display: "flex",
+          justifyContent: "center",
+          padding: "16px 24px",
+          position: "relative",
+          zIndex: 10,
+        }}
+        aria-hidden="true"
+      >
+        <div
+          style={{
+            width: "100%",
+            maxWidth: "1180px",
+            height: "1px",
+            background: "linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.15) 20%, rgba(255, 90, 31, 0.35) 50%, rgba(255, 255, 255, 0.15) 80%, transparent 100%)",
+          }}
+        />
+      </div>
+
+      {/* ── 5. REAL-TIME BEACON SIMULATOR (LIVE RADAR + BROADCASTER + PHONE PREVIEW) ── */}
+      <BeaconSimulator />
+
+      {/* ── SECTION FINISHED DIVIDER LINE ── */}
+      <div
+        style={{
+          width: "100%",
+          display: "flex",
+          justifyContent: "center",
+          padding: "16px 24px",
+          position: "relative",
+          zIndex: 10,
+        }}
+        aria-hidden="true"
+      >
+        <div
+          style={{
+            width: "100%",
+            maxWidth: "1180px",
+            height: "1px",
+            background: "linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.15) 20%, rgba(255, 90, 31, 0.35) 50%, rgba(255, 255, 255, 0.15) 80%, transparent 100%)",
+          }}
+        />
+      </div>
+
+      {/* ── 5. PLAIN ANIMATED REVIEWS & PRESS TICKER (MOVED ABOVE MEMBERS ONLY EVENTS) ─── */}
+      <section
+        id="reviews-section"
+        className="pf-plain-reviews-wrap"
+        style={{ borderBottom: "none", background: "#060408", marginBottom: "24px", position: "relative", overflow: "hidden" }}
+        aria-label="Press and Reviews Ticker"
+      >
+        {/* Subtle Geometric Dotted Texture Overlay */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            backgroundImage: "radial-gradient(rgba(255, 255, 255, 0.18) 1.25px, transparent 1.25px)",
+            backgroundSize: "22px 22px",
+            backgroundPosition: "center",
+            pointerEvents: "none",
+            zIndex: 0,
+            opacity: 0.85,
+          }}
+          aria-hidden="true"
+        />
+        <div className="pf-plain-reviews-track">
+          {[...PRESS_PARTNER_REVIEWS, ...COMMUNITY_HOST_REVIEWS, ...PRESS_PARTNER_REVIEWS, ...COMMUNITY_HOST_REVIEWS].map((item, idx) => {
+            const quoteText = "quote" in item ? item.quote : "";
+            const sourceText = "source" in item ? item.source : "author" in item ? `${(item as any).author} · ${(item as any).role}` : "";
+            return (
+              <div key={idx} className="pf-plain-review-item">
+                <div className="pf-plain-review-quote">
+                  &ldquo;{quoteText}&rdquo;
+                </div>
+                <div className="pf-plain-review-source">
+                  {sourceText}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+
+      {/* ── SECTION FINISHED DIVIDER LINE ── */}
+      <div
+        style={{
+          width: "100%",
+          display: "flex",
+          justifyContent: "center",
+          padding: "16px 24px",
+          position: "relative",
+          zIndex: 10,
+        }}
+        aria-hidden="true"
+      >
+        <div
+          style={{
+            width: "100%",
+            maxWidth: "1180px",
+            height: "1px",
+            background: "linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.15) 20%, rgba(255, 90, 31, 0.35) 50%, rgba(255, 255, 255, 0.15) 80%, transparent 100%)",
+          }}
+        />
+      </div>
+
+      {/* ── 6. "MEMBERS ONLY EVENTS" SECTION (FULL-SCREEN, ROUNDED CORNERS TOP & BOTTOM, ORANGE GRADIENT & DOTTED TEXTURE) ── */}
+      <section
+        id="members-only-events-section"
+        style={{
+          width: "100%",
+          borderRadius: "clamp(32px, 4vw, 56px)",
+          background: "linear-gradient(135deg, #FF6F26 0%, #FF5A1F 40%, #E6450A 75%, #BD3000 100%)",
+          padding: "70px min(4vw, 48px) 75px",
+          marginTop: "24px",
+          marginBottom: "24px",
           position: "relative",
           overflow: "hidden",
+          border: "1.5px solid rgba(255, 255, 255, 0.22)",
         }}
       >
-        {/* Electric party sunset atmospheric background auras */}
+        {/* Subtle Geometric Dotted Texture Overlay (Only on Members Only Orange Gradient) */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              backgroundImage: "radial-gradient(rgba(255, 255, 255, 0.24) 1.25px, transparent 1.25px)",
+              backgroundSize: "22px 22px",
+              backgroundPosition: "center",
+              pointerEvents: "none",
+              zIndex: 1,
+              opacity: 0.85,
+            }}
+            aria-hidden="true"
+          />
+
+          {/* Subtle Ambient Radial Lighting for Depth & Shine on Orange Gradient */}
+          <div
+            style={{
+              position: "absolute",
+              top: "-15%",
+              left: "50%",
+              transform: "translateX(-50%)",
+              width: "900px",
+              height: "500px",
+              background: "radial-gradient(ellipse at 50% 25%, rgba(255, 255, 255, 0.22) 0%, transparent 65%)",
+              pointerEvents: "none",
+              zIndex: 1,
+            }}
+          />
+
+          {/* Top-Right Decorative White Starburst Accent */}
+          <div
+            style={{
+              position: "absolute",
+              top: "32px",
+              right: "min(4vw, 48px)",
+              width: "36px",
+              height: "36px",
+              color: "#FFFFFF",
+              opacity: 0.9,
+              pointerEvents: "none",
+              zIndex: 1,
+            }}
+            className="animate-[spin_20s_linear_infinite]"
+          >
+          <svg viewBox="0 0 24 24" width="100%" height="100%" fill="currentColor">
+            <path d="M12 0L13.8 8.2L20.5 3.5L16.8 11.2L24 12L16.8 12.8L20.5 20.5L13.8 15.8L12 24L10.2 15.8L3.5 20.5L7.2 12.8L0 12L7.2 11.2L3.5 3.5L10.2 8.2Z" />
+          </svg>
+        </div>
+
+        <div style={{ maxWidth: "1560px", margin: "0 auto", position: "relative", zIndex: 2 }}>
+          {/* Header Row: Pill, Title, Subtitle + View All Events Button */}
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "flex-end",
+              justifyContent: "space-between",
+              gap: "24px",
+              marginBottom: "42px",
+            }}
+          >
+            <div style={{ textAlign: "left", maxWidth: "800px" }}>
+              {/* Flame Pill Badge: 🔥 MEMBERS ONLY */}
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "7px",
+                  fontSize: "12px",
+                  fontWeight: 900,
+                  letterSpacing: "0.14em",
+                  color: "#FFFFFF",
+                  marginBottom: "14px",
+                  textTransform: "uppercase",
+                  background: "rgba(18, 9, 14, 0.75)",
+                  border: "1px solid rgba(255, 255, 255, 0.28)",
+                  padding: "6px 16px",
+                  borderRadius: "999px",
+                  boxShadow: "0 4px 18px rgba(0, 0, 0, 0.25)",
+                  backdropFilter: "blur(10px)",
+                }}
+              >
+                <Flame className="w-3.5 h-3.5 text-[#FFA05C] fill-[#FFA05C]" />
+                <span>MEMBERS ONLY</span>
+              </div>
+
+              {/* Headline: Members Only Events (Crisp White with High Contrast) */}
+              <h2
+                style={{
+                  fontFamily: "var(--font-display), system-ui, sans-serif",
+                  fontSize: "clamp(34px, 4.6vw, 60px)",
+                  fontWeight: 900,
+                  letterSpacing: "-0.035em",
+                  color: "#FFFFFF",
+                  lineHeight: 1.15,
+                  margin: "0 0 10px",
+                  textShadow: "0 3px 18px rgba(0, 0, 0, 0.3)",
+                }}
+              >
+                Members Only Events
+              </h2>
+
+              {/* Subtitle (Crisp White/Cream with High Contrast) */}
+              <p
+                style={{
+                  fontSize: "16.5px",
+                  fontWeight: 600,
+                  color: "rgba(255, 255, 255, 0.95)",
+                  margin: 0,
+                  lineHeight: 1.5,
+                  textShadow: "0 2px 8px rgba(0, 0, 0, 0.25)",
+                }}
+              >
+                Premium access experiences curated for members.
+              </p>
+            </div>
+
+            {/* Top-Right CTA Pill: [ View All Events → ] */}
+            <div>
+              <Link
+                href="/events"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  background: "rgba(18, 9, 14, 0.85)",
+                  border: "1.5px solid rgba(255, 255, 255, 0.28)",
+                  color: "#FFFFFF",
+                  fontSize: "13.5px",
+                  fontWeight: 800,
+                  padding: "11px 24px",
+                  borderRadius: "999px",
+                  textDecoration: "none",
+                  transition: "all 0.25s ease",
+                  backdropFilter: "blur(10px)",
+                  boxShadow: "0 6px 20px rgba(0, 0, 0, 0.35)",
+                }}
+                className="hover:scale-105 hover:bg-[#12090E] hover:border-white"
+              >
+                <span>View All Events</span>
+                <ArrowRight className="w-4 h-4 text-[#FFA05C]" />
+              </Link>
+            </div>
+          </div>
+
+          {/* ── 4-COLUMN CARDS GRID (LARGER DEEP ONYX CARDS STANDING OUT SHARPLY ON ORANGE) ── */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-left">
+            {MEMBERS_ONLY_EVENTS.map((event) => {
+              const isFav = !!eventFavorites[event.id];
+              return (
+                <div
+                  key={event.id}
+                  className="group rounded-3xl transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_28px_65px_rgba(0,0,0,0.65)]"
+                  style={{
+                    background: "linear-gradient(180deg, #170C14 0%, #10060C 100%)",
+                    border: "1.5px solid rgba(255, 255, 255, 0.15)",
+                    boxShadow: "0 20px 50px rgba(0, 0, 0, 0.45)",
+                    padding: "15px 15px 22px",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  {/* Larger Thumbnail Container (Height: 275px) */}
+                  <div
+                    style={{
+                      position: "relative",
+                      height: "275px",
+                      borderRadius: "18px",
+                      overflow: "hidden",
+                      background: "#080408",
+                    }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={event.image}
+                      alt={event.title}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        transition: "transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)",
+                      }}
+                      className="group-hover:scale-105"
+                    />
+
+                    {/* Gradient Overlay for badges contrast */}
+                    <div
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        background: "linear-gradient(180deg, rgba(8,4,8,0.58) 0%, transparent 40%, rgba(8,4,8,0.7) 100%)",
+                        pointerEvents: "none",
+                      }}
+                    />
+
+                    {/* Top-Left: 🔥 HOT Badge */}
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "12px",
+                        left: "12px",
+                        background: "linear-gradient(135deg, #FF6F26 0%, #FF5A1F 100%)",
+                        color: "#FFFFFF",
+                        fontSize: "11px",
+                        fontWeight: 900,
+                        letterSpacing: "0.08em",
+                        padding: "5px 12px",
+                        borderRadius: "999px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "5px",
+                        boxShadow: "0 4px 14px rgba(255, 90, 31, 0.5)",
+                        zIndex: 2,
+                      }}
+                    >
+                      <Flame className="w-3.5 h-3.5 fill-white text-white" />
+                      <span>HOT</span>
+                    </div>
+
+                    {/* Top-Right: Members Only Frosted Pill */}
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "12px",
+                        right: "12px",
+                        background: "rgba(18, 10, 16, 0.78)",
+                        backdropFilter: "blur(12px)",
+                        border: "1px solid rgba(255, 255, 255, 0.2)",
+                        color: "#FFFFFF",
+                        fontSize: "11px",
+                        fontWeight: 700,
+                        padding: "5px 13px",
+                        borderRadius: "999px",
+                        zIndex: 2,
+                      }}
+                    >
+                      Members Only
+                    </div>
+                  </div>
+
+                  {/* Card Body Details */}
+                  <div style={{ paddingTop: "16px", flexGrow: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                    <div>
+                      {/* Event Title */}
+                      <h3
+                        style={{
+                          fontFamily: "var(--font-display), system-ui, sans-serif",
+                          fontSize: "19px",
+                          fontWeight: 800,
+                          color: "#FFFFFF",
+                          margin: "0 0 10px",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                        title={event.title}
+                      >
+                        {event.title}
+                      </h3>
+
+                      {/* Date & Time Row */}
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          fontSize: "13px",
+                          color: "rgba(255, 255, 255, 0.65)",
+                          margin: "0 0 7px",
+                        }}
+                      >
+                        <Calendar className="w-3.5 h-3.5 text-[#FFA05C] shrink-0" />
+                        <span>{event.date}</span>
+                      </div>
+
+                      {/* Location Row */}
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          fontSize: "13px",
+                          color: "rgba(255, 255, 255, 0.65)",
+                          margin: "0 0 18px",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                        title={event.location}
+                      >
+                        <MapPin className="w-3.5 h-3.5 text-[#FFA05C] shrink-0" />
+                        <span className="truncate">{event.location}</span>
+                      </div>
+                    </div>
+
+                    {/* Bottom Price & Urgency Left Row */}
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        paddingTop: "14px",
+                        borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontFamily: "var(--font-display), system-ui, sans-serif",
+                          fontSize: "20px",
+                          fontWeight: 900,
+                          color: "#FFA05C",
+                          letterSpacing: "-0.01em",
+                        }}
+                      >
+                        {event.price}
+                      </span>
+                      <span
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "5px",
+                          fontSize: "12.5px",
+                          fontWeight: 700,
+                          color: "rgba(255, 205, 130, 0.95)",
+                        }}
+                      >
+                        <Clock className="w-3.5 h-3.5 text-[#FFA05C]" />
+                        <span>{event.spotsLeft}</span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      
+
+      {/* ── SECTION FINISHED DIVIDER LINE ── */}
+      <div
+        style={{
+          width: "100%",
+          display: "flex",
+          justifyContent: "center",
+          padding: "16px 24px",
+          position: "relative",
+          zIndex: 10,
+        }}
+        aria-hidden="true"
+      >
+        <div
+          style={{
+            width: "100%",
+            maxWidth: "1180px",
+            height: "1px",
+            background: "linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.15) 20%, rgba(255, 90, 31, 0.35) 50%, rgba(255, 255, 255, 0.15) 80%, transparent 100%)",
+          }}
+        />
+      </div>
+
+            {/* ── 7. "WE'RE NOT LIKE OTHER INVITES" (DYNAMIC ON-SCROLL OVERLAPPING ORANGE GRADIENT CARDS) ───────── */}
+      <OverlapFeatureCards />
+
+{/* ── SECTION FINISHED DIVIDER LINE ── */}
+      <div
+        style={{
+          width: "100%",
+          display: "flex",
+          justifyContent: "center",
+          padding: "16px 24px",
+          position: "relative",
+          zIndex: 10,
+        }}
+        aria-hidden="true"
+      >
+        <div
+          style={{
+            width: "100%",
+            maxWidth: "1180px",
+            height: "1px",
+            background: "linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.15) 20%, rgba(255, 90, 31, 0.35) 50%, rgba(255, 255, 255, 0.15) 80%, transparent 100%)",
+          }}
+        />
+      </div>
+
+      {/* ── 8. "POWERFUL FEATURES, EASY EVENTS" (FULL-SCREEN, ROUNDED CORNERS TOP & BOTTOM, ORANGE GRADIENT & DOTTED TEXTURE) ── */}
+      <section
+        id="powerful-features-section"
+        style={{
+          width: "100%",
+          borderRadius: "clamp(32px, 4vw, 56px)",
+          background:
+            "radial-gradient(ellipse at 50% 0%, #FF6F3A 0%, #FF5A1F 35%, #E64808 70%, #B83200 100%)",
+          color: "#FFFFFF",
+          padding: "70px min(4vw, 48px) 100px",
+          marginTop: "24px",
+          marginBottom: "24px",
+          position: "relative",
+          overflow: "hidden",
+          boxShadow: "0 20px 60px rgba(0, 0, 0, 0.45)",
+        }}
+      >
+        {/* Subtle Geometric Dotted Texture Overlay (Matching Orange Gradient Texture) */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            backgroundImage: "radial-gradient(rgba(255, 255, 255, 0.24) 1.25px, transparent 1.25px)",
+            backgroundSize: "22px 22px",
+            backgroundPosition: "center",
+            pointerEvents: "none",
+            zIndex: 1,
+            opacity: 0.85,
+          }}
+          aria-hidden="true"
+        />
+
+        {/* Soft atmospheric overlay */}
         <div
           aria-hidden="true"
           style={{
@@ -2638,1059 +2418,11 @@ export default function LandingPageClient() {
             inset: 0,
             pointerEvents: "none",
             background:
-              "radial-gradient(circle at 88% 12%, rgba(255, 90, 31, 0.18) 0%, transparent 48%), radial-gradient(circle at 10% 48%, rgba(255, 138, 61, 0.14) 0%, transparent 44%), radial-gradient(circle at 90% 82%, rgba(255, 90, 31, 0.16) 0%, transparent 48%)",
-            zIndex: 0,
+              "radial-gradient(circle at 15% 25%, rgba(255, 255, 255, 0.12) 0%, transparent 40%), radial-gradient(circle at 85% 75%, rgba(0, 0, 0, 0.25) 0%, transparent 50%)",
           }}
         />
 
-        <div
-          style={{
-            position: "relative",
-            zIndex: 1,
-            maxWidth: "1180px",
-            margin: "0 auto",
-            display: "flex",
-            flexDirection: "column",
-            gap: "120px",
-          }}
-        >
-          {/* Section Header */}
-          <div style={{ textAlign: "center", maxWidth: "680px", margin: "0 auto -20px" }}>
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                background: "rgba(255, 90, 31, 0.12)",
-                border: "1px solid rgba(255, 90, 31, 0.3)",
-                padding: "5px 14px",
-                borderRadius: "0px",
-                fontSize: "11px",
-                fontWeight: 800,
-                color: "#FF8A3D",
-                letterSpacing: "0.08em",
-                marginBottom: "16px",
-              }}
-            >
-              PURPOSE-BUILT FOR REAL GATHERINGS
-            </div>
-            <h2
-              style={{
-                fontFamily: "var(--font-display), system-ui, sans-serif",
-                fontSize: "clamp(34px, 5vw, 56px)",
-                fontWeight: 800,
-                letterSpacing: "-0.03em",
-                color: "#FFFFFF",
-                margin: "0 0 14px",
-                lineHeight: 1.1,
-              }}
-            >
-              We&apos;re not like other invites
-            </h2>
-            <p style={{ fontSize: "18px", color: "#A39EAC", margin: "0 auto", lineHeight: 1.55 }}>
-              Everything you need to host without awkward group chats, flaky guestlists, or cash confusion.
-            </p>
-          </div>
-
-          {/* ════ ROW 1: "New! Sell tickets for your event 🎟️" (Image 1 Clone - Orange Theme + Close Overlap) ════ */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-              gap: "48px",
-              alignItems: "center",
-            }}
-          >
-            {/* Left Column: Text & CTA */}
-            <div style={{ maxWidth: "520px" }}>
-              <h3
-                style={{
-                  fontFamily: "var(--font-display), system-ui, sans-serif",
-                  fontSize: "clamp(30px, 3.8vw, 44px)",
-                  fontWeight: 800,
-                  color: "#FFFFFF",
-                  letterSpacing: "-0.03em",
-                  margin: "0 0 16px",
-                  lineHeight: 1.15,
-                }}
-              >
-                New! Sell tickets for your event 🎟️
-              </h3>
-              <p
-                style={{
-                  fontSize: "clamp(17px, 2vw, 20px)",
-                  color: "#A39EAC",
-                  lineHeight: 1.45,
-                  margin: "0 0 28px",
-                  fontWeight: 500,
-                }}
-              >
-                Add ticket tiers, use QR code check-in, and track sales — all in one place.
-              </p>
-              <Link
-                href="/apply"
-                style={{
-                  background: "#FFFFFF",
-                  color: "#000000",
-                  fontSize: "15px",
-                  fontWeight: 800,
-                  padding: "13px 28px",
-                  borderRadius: "0px",
-                  textDecoration: "none",
-                  display: "inline-block",
-                  boxShadow: "0 4px 20px rgba(255, 90, 31, 0.25)",
-                  transition: "background 0.15s ease, transform 0.15s ease",
-                }}
-                className="hover:bg-neutral-100 hover:scale-105 active:scale-95 cursor-pointer"
-              >
-                Get started
-              </Link>
-            </div>
-
-            {/* Right Column: Two Angled Tickets Close & Overlapping (Orange & Obsidian Website Theme) */}
-            <div
-              style={{
-                position: "relative",
-                minHeight: "440px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              {/* Ticket 1: Vibrant Sunset Orange Gradient Pass (underneath, tilted left, close overlap) */}
-              <div
-                style={{
-                  width: "245px",
-                  height: "465px",
-                  borderRadius: "18px",
-                  background: "linear-gradient(145deg, #FF7A45 0%, #FF5A1F 45%, #D63900 100%)",
-                  boxShadow: "0 22px 55px rgba(0, 0, 0, 0.7), 0 0 35px rgba(255, 90, 31, 0.3)",
-                  transform: "rotate(-7deg)",
-                  position: "relative",
-                  padding: "16px 14px 30px",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  flexShrink: 0,
-                  zIndex: 1,
-                  marginRight: "-75px",
-                  transition: "transform 0.3s ease",
-                  border: "1px solid rgba(255, 255, 255, 0.35)",
-                }}
-              >
-                {/* Top Notch Cutout matching black bg */}
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "-1px",
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    width: "22px",
-                    height: "11px",
-                    background: "#060408",
-                    borderBottomLeftRadius: "12px",
-                    borderBottomRightRadius: "12px",
-                  }}
-                />
-
-                {/* QR Code Container */}
-                <div
-                  style={{
-                    background: "#FFFFFF",
-                    borderRadius: "12px",
-                    padding: "12px",
-                    boxShadow: "0 4px 14px rgba(0, 0, 0, 0.2)",
-                  }}
-                >
-                  <div style={{ position: "relative", width: "100%", aspectRatio: "1/1", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <svg viewBox="0 0 100 100" style={{ width: "100%", height: "100%", display: "block" }}>
-                      {/* Top-Left Finder */}
-                      <rect x="6" y="6" width="24" height="24" fill="#000" rx="3" />
-                      <rect x="10" y="10" width="16" height="16" fill="#fff" rx="1.5" />
-                      <rect x="14" y="14" width="8" height="8" fill="#000" rx="1" />
-                      {/* Top-Right Finder */}
-                      <rect x="70" y="6" width="24" height="24" fill="#000" rx="3" />
-                      <rect x="74" y="10" width="16" height="16" fill="#fff" rx="1.5" />
-                      <rect x="78" y="14" width="8" height="8" fill="#000" rx="1" />
-                      {/* Bottom-Left Finder */}
-                      <rect x="6" y="70" width="24" height="24" fill="#000" rx="3" />
-                      <rect x="10" y="74" width="16" height="16" fill="#fff" rx="1.5" />
-                      <rect x="14" y="78" width="8" height="8" fill="#000" rx="1" />
-                      {/* Alignment Pattern */}
-                      <rect x="68" y="68" width="14" height="14" fill="#000" rx="2" />
-                      <rect x="71" y="71" width="8" height="8" fill="#fff" rx="1" />
-                      <rect x="73" y="73" width="4" height="4" fill="#000" />
-                      {/* Matrix Bits */}
-                      <g fill="#000">
-                        <rect x="34" y="8" width="4" height="4" /><rect x="42" y="8" width="4" height="4" /><rect x="50" y="8" width="4" height="4" /><rect x="58" y="8" width="4" height="4" />
-                        <rect x="8" y="34" width="4" height="4" /><rect x="8" y="42" width="4" height="4" /><rect x="8" y="50" width="4" height="4" /><rect x="8" y="58" width="4" height="4" />
-                        <rect x="34" y="16" width="4" height="3" /><rect x="42" y="16" width="6" height="3" /><rect x="52" y="16" width="4" height="3" /><rect x="60" y="16" width="5" height="3" />
-                        <rect x="34" y="24" width="6" height="4" /><rect x="44" y="24" width="4" height="4" /><rect x="52" y="24" width="6" height="4" /><rect x="62" y="24" width="3" height="4" />
-                        <rect x="6" y="36" width="4" height="4" /><rect x="14" y="36" width="5" height="4" /><rect x="23" y="36" width="4" height="4" />
-                        <rect x="6" y="46" width="5" height="4" /><rect x="15" y="46" width="3" height="4" /><rect x="22" y="46" width="5" height="4" />
-                        <rect x="6" y="56" width="4" height="4" /><rect x="14" y="56" width="4" height="4" /><rect x="22" y="56" width="4" height="4" />
-                        <rect x="70" y="36" width="5" height="4" /><rect x="79" y="36" width="4" height="4" /><rect x="87" y="36" width="5" height="4" />
-                        <rect x="74" y="45" width="4" height="4" /><rect x="82" y="45" width="5" height="4" /><rect x="91" y="45" width="3" height="4" />
-                        <rect x="70" y="54" width="4" height="4" /><rect x="78" y="54" width="5" height="4" /><rect x="87" y="54" width="4" height="4" />
-                        <rect x="34" y="70" width="4" height="4" /><rect x="42" y="70" width="5" height="4" /><rect x="51" y="70" width="4" height="4" /><rect x="59" y="70" width="5" height="4" />
-                        <rect x="36" y="78" width="5" height="4" /><rect x="45" y="78" width="3" height="4" /><rect x="52" y="78" width="6" height="4" /><rect x="62" y="78" width="3" height="4" />
-                        <rect x="34" y="86" width="4" height="4" /><rect x="42" y="86" width="5" height="4" /><rect x="51" y="86" width="4" height="4" /><rect x="59" y="86" width="5" height="4" />
-                        <rect x="70" y="86" width="5" height="4" /><rect x="79" y="86" width="4" height="4" /><rect x="87" y="86" width="5" height="4" />
-                      </g>
-                    </svg>
-                    {/* Center Partiful ? Badge */}
-                    <div
-                      style={{
-                        position: "absolute",
-                        width: "30%",
-                        height: "30%",
-                        background: "#FFFFFF",
-                        borderRadius: "50%",
-                        boxShadow: "0 2px 6px rgba(0, 0, 0, 0.2)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <span style={{ fontSize: "18px", fontWeight: 900, color: "#FF5A1F", lineHeight: 1 }}>?</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Perforation Dashed Line */}
-                <div style={{ borderTop: "1.5px dashed rgba(255, 255, 255, 0.4)", margin: "14px -14px 10px" }} />
-
-                {/* Stub Text with ample bottom clearance */}
-                <div style={{ color: "#FFFFFF", textAlign: "left", paddingLeft: "4px", paddingBottom: "14px" }}>
-                  <div style={{ fontSize: "14px", fontWeight: 800, color: "#FFFFFF", lineHeight: 1.2 }}>Mod Ref Night</div>
-                  <div style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.9)", fontWeight: 500, marginBottom: "8px" }}>General Admission</div>
-                  <div style={{ fontSize: "9px", letterSpacing: "0.06em", color: "rgba(255, 255, 255, 0.75)", fontWeight: 700 }}>DATE</div>
-                  <div style={{ fontSize: "12px", fontWeight: 800, color: "#FFFFFF", marginBottom: "6px" }}>October 2</div>
-                  <div style={{ fontSize: "9px", letterSpacing: "0.06em", color: "rgba(255, 255, 255, 0.75)", fontWeight: 700 }}>TIME</div>
-                  <div style={{ fontSize: "12px", fontWeight: 800, color: "#FFFFFF" }}>11:00 PM EST</div>
-                </div>
-
-                {/* Bottom Notch Cutout matching black bg */}
-                <div
-                  style={{
-                    position: "absolute",
-                    bottom: "-1px",
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    width: "22px",
-                    height: "11px",
-                    background: "#060408",
-                    borderTopLeftRadius: "12px",
-                    borderTopRightRadius: "12px",
-                  }}
-                />
-              </div>
-
-              {/* Ticket 2: Deep Obsidian Black Pass with Electric Orange Accents (in front, tilted right, tight overlap) */}
-              <div
-                style={{
-                  width: "245px",
-                  height: "465px",
-                  borderRadius: "18px",
-                  background: "linear-gradient(155deg, #18121F 0%, #100C16 50%, #251006 100%)",
-                  boxShadow: "0 28px 65px rgba(0, 0, 0, 0.8), 0 0 35px rgba(255, 90, 31, 0.25)",
-                  transform: "rotate(6deg)",
-                  position: "relative",
-                  padding: "16px 14px 30px",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  flexShrink: 0,
-                  zIndex: 2,
-                  transition: "transform 0.3s ease",
-                  border: "1.5px solid rgba(255, 90, 31, 0.45)",
-                }}
-              >
-                {/* Top Notch Cutout matching black bg */}
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "-1px",
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    width: "22px",
-                    height: "11px",
-                    background: "#060408",
-                    borderBottomLeftRadius: "12px",
-                    borderBottomRightRadius: "12px",
-                  }}
-                />
-
-                {/* QR Code Container */}
-                <div
-                  style={{
-                    background: "#FFFFFF",
-                    borderRadius: "12px",
-                    padding: "12px",
-                    boxShadow: "0 4px 14px rgba(0, 0, 0, 0.2)",
-                  }}
-                >
-                  <div style={{ position: "relative", width: "100%", aspectRatio: "1/1", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <svg viewBox="0 0 100 100" style={{ width: "100%", height: "100%", display: "block" }}>
-                      {/* Top-Left Finder */}
-                      <rect x="6" y="6" width="24" height="24" fill="#000" rx="3" />
-                      <rect x="10" y="10" width="16" height="16" fill="#fff" rx="1.5" />
-                      <rect x="14" y="14" width="8" height="8" fill="#000" rx="1" />
-                      {/* Top-Right Finder */}
-                      <rect x="70" y="6" width="24" height="24" fill="#000" rx="3" />
-                      <rect x="74" y="10" width="16" height="16" fill="#fff" rx="1.5" />
-                      <rect x="78" y="14" width="8" height="8" fill="#000" rx="1" />
-                      {/* Bottom-Left Finder */}
-                      <rect x="6" y="70" width="24" height="24" fill="#000" rx="3" />
-                      <rect x="10" y="74" width="16" height="16" fill="#fff" rx="1.5" />
-                      <rect x="14" y="78" width="8" height="8" fill="#000" rx="1" />
-                      {/* Alignment Pattern */}
-                      <rect x="68" y="68" width="14" height="14" fill="#000" rx="2" />
-                      <rect x="71" y="71" width="8" height="8" fill="#fff" rx="1" />
-                      <rect x="73" y="73" width="4" height="4" fill="#000" />
-                      {/* Matrix Bits */}
-                      <g fill="#000">
-                        <rect x="34" y="8" width="4" height="4" /><rect x="42" y="8" width="4" height="4" /><rect x="50" y="8" width="4" height="4" /><rect x="58" y="8" width="4" height="4" />
-                        <rect x="8" y="34" width="4" height="4" /><rect x="8" y="42" width="4" height="4" /><rect x="8" y="50" width="4" height="4" /><rect x="8" y="58" width="4" height="4" />
-                        <rect x="34" y="16" width="5" height="3" /><rect x="42" y="16" width="5" height="3" /><rect x="51" y="16" width="4" height="3" /><rect x="60" y="16" width="5" height="3" />
-                        <rect x="34" y="24" width="5" height="4" /><rect x="43" y="24" width="5" height="4" /><rect x="52" y="24" width="5" height="4" /><rect x="61" y="24" width="4" height="4" />
-                        <rect x="6" y="36" width="4" height="4" /><rect x="14" y="36" width="5" height="4" /><rect x="23" y="36" width="4" height="4" />
-                        <rect x="6" y="46" width="5" height="4" /><rect x="15" y="46" width="3" height="4" /><rect x="22" y="46" width="5" height="4" />
-                        <rect x="6" y="56" width="4" height="4" /><rect x="14" y="56" width="4" height="4" /><rect x="22" y="56" width="4" height="4" />
-                        <rect x="70" y="36" width="5" height="4" /><rect x="79" y="36" width="4" height="4" /><rect x="87" y="36" width="5" height="4" />
-                        <rect x="74" y="45" width="4" height="4" /><rect x="82" y="45" width="5" height="4" /><rect x="91" y="45" width="3" height="4" />
-                        <rect x="70" y="54" width="4" height="4" /><rect x="78" y="54" width="5" height="4" /><rect x="87" y="54" width="4" height="4" />
-                        <rect x="34" y="70" width="4" height="4" /><rect x="42" y="70" width="5" height="4" /><rect x="51" y="70" width="4" height="4" /><rect x="59" y="70" width="5" height="4" />
-                        <rect x="36" y="78" width="5" height="4" /><rect x="45" y="78" width="3" height="4" /><rect x="52" y="78" width="6" height="4" /><rect x="62" y="78" width="3" height="4" />
-                        <rect x="34" y="86" width="4" height="4" /><rect x="42" y="86" width="5" height="4" /><rect x="51" y="86" width="4" height="4" /><rect x="59" y="86" width="5" height="4" />
-                        <rect x="70" y="86" width="5" height="4" /><rect x="79" y="86" width="4" height="4" /><rect x="87" y="86" width="5" height="4" />
-                      </g>
-                    </svg>
-                    <div
-                      style={{
-                        position: "absolute",
-                        width: "30%",
-                        height: "30%",
-                        background: "#FFFFFF",
-                        borderRadius: "50%",
-                        boxShadow: "0 2px 6px rgba(0, 0, 0, 0.2)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <span style={{ fontSize: "18px", fontWeight: 900, color: "#FF5A1F", lineHeight: 1 }}>?</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Perforation Dashed Line */}
-                <div style={{ borderTop: "1.5px dashed rgba(255, 90, 31, 0.35)", margin: "14px -14px 10px" }} />
-
-                {/* Stub Text with ample bottom clearance */}
-                <div style={{ color: "#FFFFFF", textAlign: "left", paddingLeft: "4px", paddingBottom: "14px", position: "relative" }}>
-                  <div style={{ fontSize: "14px", fontWeight: 800, color: "#FFFFFF", lineHeight: 1.2 }}>Backyard Open Mic Night</div>
-                  <div style={{ fontSize: "12px", color: "#FF8A3D", fontWeight: 600, marginBottom: "8px" }}>General Admission</div>
-                  <div style={{ fontSize: "9px", letterSpacing: "0.06em", color: "rgba(255, 160, 92, 0.8)", fontWeight: 700 }}>DATE</div>
-                  <div style={{ fontSize: "12px", fontWeight: 800, color: "#FFFFFF", marginBottom: "6px" }}>December 14</div>
-                  <div style={{ fontSize: "9px", letterSpacing: "0.06em", color: "rgba(255, 160, 92, 0.8)", fontWeight: 700 }}>TIME</div>
-                  <div style={{ fontSize: "12px", fontWeight: 800, color: "#FFFFFF" }}>11:00 AM EST</div>
-                  <span style={{ position: "absolute", right: "6px", bottom: "14px", fontSize: "14px", fontWeight: 900, color: "#FF5A1F" }}>?</span>
-                </div>
-
-                {/* Bottom Notch Cutout matching black bg */}
-                <div
-                  style={{
-                    position: "absolute",
-                    bottom: "-1px",
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    width: "22px",
-                    height: "11px",
-                    background: "#060408",
-                    borderTopLeftRadius: "12px",
-                    borderTopRightRadius: "12px",
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* ════ ROW 2: "See who's going 👀" (Image 2 Clone - Upgraded Glassmorphic RSVP Card + Close Overlap) ════ */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-              gap: "48px",
-              alignItems: "center",
-            }}
-          >
-            {/* Left Column: Overlapping RSVP Card (Upgraded Frosted Obsidian) & Chat Card (Light) with Close Overlap */}
-            <div
-              style={{
-                position: "relative",
-                minHeight: "440px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              {/* Card A: Upgraded Frosted Obsidian RSVP Card (behind, tilted left, close overlap) */}
-              <div
-                style={{
-                  width: "270px",
-                  borderRadius: "22px",
-                  background: "linear-gradient(145deg, rgba(28, 20, 36, 0.96) 0%, rgba(18, 14, 24, 0.98) 100%)",
-                  border: "1.5px solid rgba(255, 90, 31, 0.28)",
-                  boxShadow: "0 24px 55px rgba(0, 0, 0, 0.7), 0 0 30px rgba(255, 90, 31, 0.15)",
-                  transform: "rotate(-6deg)",
-                  padding: "20px 18px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "14px",
-                  flexShrink: 0,
-                  zIndex: 1,
-                  marginRight: "-65px",
-                  transition: "transform 0.3s ease",
-                }}
-              >
-                {/* Sleek Top Status Bar */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingBottom: "10px", borderBottom: "1px solid rgba(255, 255, 255, 0.08)" }}>
-                  <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "10px", fontWeight: 800, color: "#FFA05C", letterSpacing: "0.08em" }}>
-                    <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#27C93F", boxShadow: "0 0 8px #27C93F", display: "inline-block" }} />
-                    LIVE GUESTLIST
-                  </div>
-                  <span style={{ fontSize: "10px", fontWeight: 800, color: "rgba(255, 255, 255, 0.5)", background: "rgba(255, 255, 255, 0.08)", padding: "2px 6px", borderRadius: "4px" }}>
-                    32 GOING
-                  </span>
-                </div>
-
-                {/* RSVP Row 1: Joy */}
-                <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
-                  <img
-                    src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
-                    alt="Joy"
-                    style={{ width: "36px", height: "36px", borderRadius: "50%", objectFit: "cover", flexShrink: 0, border: "2px solid #FF5A1F" }}
-                  />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: "13px", fontWeight: 700, color: "#FFFFFF", marginBottom: "6px" }}>
-                      Joy +1 <span style={{ fontWeight: 500, color: "rgba(255, 255, 255, 0.85)" }}>rsvped Going</span> 👍
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <span
-                        style={{
-                          background: "rgba(255, 90, 31, 0.22)",
-                          border: "1px solid rgba(255, 90, 31, 0.4)",
-                          padding: "2px 8px",
-                          borderRadius: "999px",
-                          fontSize: "11px",
-                          fontWeight: 800,
-                          color: "#FFA05C",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "4px",
-                        }}
-                      >
-                        🎉 2
-                      </span>
-                      <MessageSquare className="w-3.5 h-3.5 text-orange-300" />
-                      <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.6)", fontWeight: 600 }}>Reply</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* RSVP Row 2: Jojo */}
-                <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
-                  <img
-                    src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80"
-                    alt="Jojo"
-                    style={{ width: "36px", height: "36px", borderRadius: "50%", objectFit: "cover", flexShrink: 0, border: "2px solid rgba(255, 255, 255, 0.25)" }}
-                  />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: "13px", fontWeight: 700, color: "#FFFFFF", marginBottom: "6px" }}>
-                      Jojo <span style={{ fontWeight: 500, color: "rgba(255, 255, 255, 0.85)" }}>rsvped Maybe</span> 🤔
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <span
-                        style={{
-                          background: "rgba(255, 255, 255, 0.12)",
-                          border: "1px solid rgba(255, 255, 255, 0.2)",
-                          padding: "2px 8px",
-                          borderRadius: "999px",
-                          fontSize: "11px",
-                          fontWeight: 700,
-                          color: "#FFFFFF",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "4px",
-                        }}
-                      >
-                        🤝 4
-                      </span>
-                      <MessageSquare className="w-3.5 h-3.5 text-orange-300" />
-                      <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.6)", fontWeight: 600 }}>Reply</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* RSVP Row 3: Jackie */}
-                <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
-                  <img
-                    src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=100&auto=format&fit=crop&q=80"
-                    alt="Jackie"
-                    style={{ width: "36px", height: "36px", borderRadius: "50%", objectFit: "cover", flexShrink: 0, border: "2px solid #FFA05C" }}
-                  />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: "13px", fontWeight: 700, color: "#FFFFFF", marginBottom: "6px" }}>
-                      Jackie <span style={{ fontWeight: 500, color: "rgba(255, 255, 255, 0.85)" }}>rsvped Going</span> 🥳
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <span
-                        style={{
-                          background: "rgba(255, 59, 48, 0.22)",
-                          border: "1px solid rgba(255, 59, 48, 0.4)",
-                          padding: "2px 8px",
-                          borderRadius: "999px",
-                          fontSize: "11px",
-                          fontWeight: 700,
-                          color: "#FF7575",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "4px",
-                        }}
-                      >
-                        ❤️ 3
-                      </span>
-                      <span
-                        style={{
-                          background: "rgba(255, 149, 0, 0.22)",
-                          border: "1px solid rgba(255, 149, 0, 0.4)",
-                          padding: "2px 8px",
-                          borderRadius: "999px",
-                          fontSize: "11px",
-                          fontWeight: 700,
-                          color: "#FFA05C",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "4px",
-                        }}
-                      >
-                        🔥 2
-                      </span>
-                      <MessageSquare className="w-3.5 h-3.5 text-orange-300" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card B: Light Comment Feed Card (front, tilted right, tight overlap) */}
-              <div
-                style={{
-                  width: "290px",
-                  borderRadius: "22px",
-                  background: "linear-gradient(175deg, #FFFFFF 0%, #F5FBF9 50%, #E8F7F3 100%)",
-                  border: "1px solid rgba(255, 255, 255, 0.8)",
-                  boxShadow: "0 28px 65px rgba(0, 0, 0, 0.55), 0 4px 18px rgba(0, 0, 0, 0.15)",
-                  transform: "rotate(4deg)",
-                  padding: "20px 18px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "16px",
-                  flexShrink: 0,
-                  zIndex: 2,
-                  transition: "transform 0.3s ease",
-                }}
-              >
-                {/* Comment 1: sammy */}
-                <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
-                  <img
-                    src="https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&auto=format&fit=crop&q=80"
-                    alt="sammy"
-                    style={{ width: "34px", height: "34px", borderRadius: "50%", objectFit: "cover", flexShrink: 0 }}
-                  />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: "12.5px", fontWeight: 800, color: "#111827", marginBottom: "2px" }}>
-                      sammy <span style={{ fontWeight: 500, color: "#9CA3AF", fontSize: "11px" }}>15m</span>
-                    </div>
-                    <div style={{ fontSize: "12.5px", color: "#1F2937", lineHeight: 1.35, marginBottom: "6px" }}>
-                      🚨 SOS can anyone bring more drinks + snacks?
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <span
-                        style={{
-                          background: "#E8EDFB",
-                          border: "1px solid #D1DCF8",
-                          padding: "2px 8px",
-                          borderRadius: "999px",
-                          fontSize: "11px",
-                          fontWeight: 700,
-                          color: "#1E40AF",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "4px",
-                        }}
-                      >
-                        🍿 6
-                      </span>
-                      <MessageSquare className="w-3.5 h-3.5 text-gray-400" />
-                      <span style={{ fontSize: "11px", color: "#9CA3AF", fontWeight: 600 }}>Reply</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Comment 2: Ryan */}
-                <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
-                  <img
-                    src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80"
-                    alt="Ryan"
-                    style={{ width: "34px", height: "34px", borderRadius: "50%", objectFit: "cover", flexShrink: 0 }}
-                  />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: "12.5px", fontWeight: 800, color: "#111827", marginBottom: "2px" }}>
-                      Ryan <span style={{ fontWeight: 500, color: "#9CA3AF", fontSize: "11px" }}>6m</span>
-                    </div>
-                    <div style={{ fontSize: "12.5px", color: "#1F2937", lineHeight: 1.35, marginBottom: "6px" }}>
-                      omw with some seltzers and drinks 🍻
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <span
-                        style={{
-                          background: "#E8EDFB",
-                          border: "1px solid #D1DCF8",
-                          padding: "2px 8px",
-                          borderRadius: "999px",
-                          fontSize: "11px",
-                          fontWeight: 700,
-                          color: "#1E40AF",
-                        }}
-                      >
-                        🧃 8
-                      </span>
-                      <span
-                        style={{
-                          background: "#E8F5E9",
-                          border: "1px solid #C8E6C9",
-                          padding: "2px 8px",
-                          borderRadius: "999px",
-                          fontSize: "11px",
-                          fontWeight: 700,
-                          color: "#2E7D32",
-                        }}
-                      >
-                        🥑 4
-                      </span>
-                      <MessageSquare className="w-3.5 h-3.5 text-gray-400" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Comment 3: Luis */}
-                <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
-                  <img
-                    src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80"
-                    alt="Luis"
-                    style={{ width: "34px", height: "34px", borderRadius: "50%", objectFit: "cover", flexShrink: 0 }}
-                  />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: "12.5px", fontWeight: 800, color: "#111827", marginBottom: "2px" }}>
-                      Luis <span style={{ fontWeight: 500, color: "#9CA3AF", fontSize: "11px" }}>2m</span>
-                    </div>
-                    <div style={{ fontSize: "12.5px", color: "#1F2937", lineHeight: 1.35, marginBottom: "6px" }}>
-                      I have popcorn + preztels
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <span
-                        style={{
-                          background: "#E8EDFB",
-                          border: "1px solid #D1DCF8",
-                          padding: "2px 8px",
-                          borderRadius: "999px",
-                          fontSize: "11px",
-                          fontWeight: 700,
-                          color: "#1E40AF",
-                        }}
-                      >
-                        🍿 3
-                      </span>
-                      <span
-                        style={{
-                          background: "#FFF3E0",
-                          border: "1px solid #FFE0B2",
-                          padding: "2px 8px",
-                          borderRadius: "999px",
-                          fontSize: "11px",
-                          fontWeight: 700,
-                          color: "#E65100",
-                        }}
-                      >
-                        🥨 2
-                      </span>
-                      <MessageSquare className="w-3.5 h-3.5 text-gray-400" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Bottom Input: Avatar + "Leave a comment" */}
-                <div style={{ display: "flex", gap: "8px", alignItems: "center", marginTop: "4px" }}>
-                  <img
-                    src="https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=80&auto=format&fit=crop&q=80"
-                    alt="Me"
-                    style={{ width: "26px", height: "26px", borderRadius: "50%", objectFit: "cover" }}
-                  />
-                  <div
-                    style={{
-                      flex: 1,
-                      background: "#F1F3F5",
-                      borderRadius: "999px",
-                      padding: "8px 14px",
-                      fontSize: "12px",
-                      color: "#9CA3AF",
-                    }}
-                  >
-                    Leave a comment
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Column: Text & CTA */}
-            <div style={{ maxWidth: "520px" }}>
-              <h3
-                style={{
-                  fontFamily: "var(--font-display), system-ui, sans-serif",
-                  fontSize: "clamp(30px, 3.8vw, 44px)",
-                  fontWeight: 800,
-                  color: "#FFFFFF",
-                  letterSpacing: "-0.03em",
-                  margin: "0 0 16px",
-                  lineHeight: 1.15,
-                }}
-              >
-                See who&apos;s going 👀
-              </h3>
-              <p
-                style={{
-                  fontSize: "clamp(17px, 2vw, 20px)",
-                  color: "#A39EAC",
-                  lineHeight: 1.45,
-                  margin: "0 0 12px",
-                  fontWeight: 500,
-                }}
-              >
-                Stalk the guest list, leave comments, reply to friends, and add reactions.
-              </p>
-              <p
-                style={{
-                  fontSize: "clamp(17px, 2vw, 20px)",
-                  color: "#FF8A3D",
-                  lineHeight: 1.45,
-                  margin: "0 0 28px",
-                  fontWeight: 600,
-                }}
-              >
-                Keep the party going.
-              </p>
-              <Link
-                href="/apply"
-                style={{
-                  background: "#FFFFFF",
-                  color: "#000000",
-                  fontSize: "15px",
-                  fontWeight: 800,
-                  padding: "13px 28px",
-                  borderRadius: "0px",
-                  textDecoration: "none",
-                  display: "inline-block",
-                  boxShadow: "0 4px 20px rgba(255, 90, 31, 0.25)",
-                  transition: "background 0.15s ease, transform 0.15s ease",
-                }}
-                className="hover:bg-neutral-100 hover:scale-105 active:scale-95 cursor-pointer"
-              >
-                Create event
-              </Link>
-            </div>
-          </div>
-
-          {/* ════ ROW 3: "Text Blast your guests" (Image 3 Clone - Vibrant Sunset Orange Header) ════ */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-              gap: "48px",
-              alignItems: "center",
-            }}
-          >
-            {/* Left Column: Text & CTA */}
-            <div style={{ maxWidth: "520px" }}>
-              <h3
-                style={{
-                  fontFamily: "var(--font-display), system-ui, sans-serif",
-                  fontSize: "clamp(30px, 3.8vw, 44px)",
-                  fontWeight: 800,
-                  color: "#FFFFFF",
-                  letterSpacing: "-0.03em",
-                  margin: "0 0 16px",
-                  lineHeight: 1.15,
-                }}
-              >
-                Text Blast your guests
-              </h3>
-              <p
-                style={{
-                  fontSize: "clamp(17px, 2vw, 20px)",
-                  color: "#A39EAC",
-                  lineHeight: 1.45,
-                  margin: "0 0 14px",
-                  fontWeight: 500,
-                }}
-              >
-                Running late, need more drinks, 10 people texting you asking how to get in?
-              </p>
-              <p
-                style={{
-                  fontSize: "clamp(17px, 2vw, 20px)",
-                  color: "#FF8A3D",
-                  lineHeight: 1.45,
-                  margin: "0 0 28px",
-                  fontWeight: 600,
-                }}
-              >
-                Send updates to everyone at once.
-              </p>
-              <Link
-                href="/apply"
-                style={{
-                  background: "#FFFFFF",
-                  color: "#000000",
-                  fontSize: "15px",
-                  fontWeight: 800,
-                  padding: "13px 28px",
-                  borderRadius: "0px",
-                  textDecoration: "none",
-                  display: "inline-block",
-                  boxShadow: "0 4px 20px rgba(255, 90, 31, 0.25)",
-                  transition: "background 0.15s ease, transform 0.15s ease",
-                }}
-                className="hover:bg-neutral-100 hover:scale-105 active:scale-95 cursor-pointer"
-              >
-                Create event
-              </Link>
-            </div>
-
-            {/* Right Column: iOS iMessage Mockup with Vibrant Sunset Orange Header & Megaphone */}
-            <div
-              style={{
-                maxWidth: "400px",
-                width: "100%",
-                margin: "0 auto",
-                position: "relative",
-              }}
-            >
-              {/* Phone Card Frame */}
-              <div
-                style={{
-                  background: "#FFFFFF",
-                  borderRadius: "24px",
-                  border: "1px solid rgba(255, 255, 255, 0.2)",
-                  boxShadow: "0 28px 70px rgba(0, 0, 0, 0.75), 0 0 40px rgba(255, 90, 31, 0.18)",
-                  overflow: "visible",
-                  position: "relative",
-                }}
-              >
-                {/* Vibrant Sunset Orange Header (Updated from Light Blue) */}
-                <div
-                  style={{
-                    background: "linear-gradient(135deg, #FF6B35 0%, #FF5A1F 60%, #E64A19 100%)",
-                    height: "90px",
-                    borderTopLeftRadius: "23px",
-                    borderTopRightRadius: "23px",
-                    position: "relative",
-                  }}
-                />
-
-                {/* Popout Host Avatar with Megaphone & Comic Action Lines */}
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "32px",
-                    left: "22px",
-                    zIndex: 10,
-                  }}
-                >
-                  <div style={{ position: "relative" }}>
-                    {/* Host Avatar with Themed Border */}
-                    <img
-                      src="https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=160&auto=format&fit=crop&q=80"
-                      alt="Host"
-                      style={{
-                        width: "70px",
-                        height: "70px",
-                        borderRadius: "50%",
-                        objectFit: "cover",
-                        border: "3.5px solid #FF5A1F",
-                        boxShadow: "0 8px 22px rgba(0, 0, 0, 0.35)",
-                        display: "block",
-                      }}
-                    />
-
-                    {/* Megaphone angled forward */}
-                    <div
-                      style={{
-                        position: "absolute",
-                        bottom: "-2px",
-                        right: "-12px",
-                        fontSize: "24px",
-                        transform: "rotate(-12deg)",
-                        filter: "drop-shadow(0 4px 10px rgba(255, 90, 31, 0.4))",
-                      }}
-                    >
-                      📣
-                    </div>
-
-                    {/* Comic action sound lines radiating into the chat in warm sunset orange */}
-                    <svg
-                      viewBox="0 0 50 50"
-                      style={{
-                        position: "absolute",
-                        left: "64px",
-                        top: "16px",
-                        width: "40px",
-                        height: "40px",
-                        pointerEvents: "none",
-                        overflow: "visible",
-                      }}
-                    >
-                      <path d="M4 14 L-4 12" stroke="#FFA05C" strokeWidth="2.5" strokeLinecap="round" />
-                      <path d="M12 8 L8 -2" stroke="#FFA05C" strokeWidth="2.5" strokeLinecap="round" />
-                      <path d="M22 6 L24 -4" stroke="#FFA05C" strokeWidth="2.5" strokeLinecap="round" />
-                      <path d="M28 12 L38 4" stroke="#FFA05C" strokeWidth="2.5" strokeLinecap="round" />
-                      <path d="M30 20 L40 18" stroke="#FFA05C" strokeWidth="2.5" strokeLinecap="round" />
-                    </svg>
-                  </div>
-                </div>
-
-                {/* iMessage Chat Body */}
-                <div
-                  style={{
-                    padding: "44px 20px 18px",
-                    background: "#FFFFFF",
-                    borderBottomLeftRadius: "23px",
-                    borderBottomRightRadius: "23px",
-                  }}
-                >
-                  {/* Timestamp */}
-                  <div
-                    style={{
-                      textAlign: "center",
-                      color: "#8E8E93",
-                      fontSize: "11px",
-                      fontWeight: 500,
-                      marginBottom: "16px",
-                    }}
-                  >
-                    Today 6:00 PM
-                  </div>
-
-                  {/* Message Bubble 1 */}
-                  <div
-                    style={{
-                      background: "#E9E9EB",
-                      borderRadius: "18px",
-                      padding: "12px 16px",
-                      color: "#000000",
-                      fontSize: "13.5px",
-                      lineHeight: 1.4,
-                      marginBottom: "10px",
-                      maxWidth: "88%",
-                      boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
-                    }}
-                  >
-                    The host of Birthday Bash sent you a Text Blast 📣
-                  </div>
-
-                  {/* Message Bubble 2 */}
-                  <div
-                    style={{
-                      background: "#E9E9EB",
-                      borderRadius: "18px",
-                      padding: "12px 16px",
-                      color: "#000000",
-                      fontSize: "13.5px",
-                      lineHeight: 1.4,
-                      marginBottom: "24px",
-                      maxWidth: "88%",
-                      boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
-                    }}
-                  >
-                    Hey!! Buzz #2 when you arrive 🥳 Can&apos;t wait to celebrate!
-                  </div>
-
-                  {/* iMessage Input Bar */}
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px" }}>
-                    <div
-                      style={{
-                        width: "30px",
-                        height: "30px",
-                        borderRadius: "50%",
-                        background: "#E5E5EA",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "#8E8E93",
-                        fontSize: "18px",
-                        fontWeight: 300,
-                        cursor: "default",
-                      }}
-                    >
-                      +
-                    </div>
-                    <div
-                      style={{
-                        flex: 1,
-                        height: "36px",
-                        borderRadius: "999px",
-                        border: "1px solid #D1D1D6",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        padding: "0 14px",
-                        background: "#FFFFFF",
-                      }}
-                    >
-                      <span style={{ color: "#8E8E93", fontSize: "14px" }}>iMessage</span>
-                      <Mic className="w-4 h-4 text-[#8E8E93]" />
-                    </div>
-                  </div>
-
-                  {/* iPhone Home Indicator */}
-                  <div
-                    style={{
-                      width: "134px",
-                      height: "5px",
-                      background: "#000000",
-                      borderRadius: "999px",
-                      margin: "0 auto",
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── 8. "POWERFUL FEATURES, EASY EVENTS" (BLACK & ORANGE THEMED CLONE) ── */}
-      <section
-        id="powerful-features-section"
-        style={{
-          background: "#060408",
-          color: "#FFFFFF",
-          padding: "96px 24px 100px",
-          position: "relative",
-          borderTop: "1px solid rgba(255, 255, 255, 0.08)",
-        }}
-      >
-        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1200px", margin: "0 auto", position: "relative", zIndex: 1 }}>
           {/* Main Section Header */}
           <div style={{ textAlign: "center", marginBottom: "56px" }}>
             <h2
@@ -3702,6 +2434,7 @@ export default function LandingPageClient() {
                 color: "#FFFFFF",
                 margin: 0,
                 lineHeight: 1.1,
+                textShadow: "0 4px 24px rgba(0, 0, 0, 0.35)",
               }}
             >
               Powerful features, easy events
@@ -3720,102 +2453,167 @@ export default function LandingPageClient() {
             {/* Card 1: Find a time that works */}
             <div
               style={{
-                background: "#120D1A",
-                border: "1px solid rgba(255, 255, 255, 0.09)",
-                boxShadow: "0 14px 40px rgba(0, 0, 0, 0.6)",
+                background: "linear-gradient(180deg, #130D1B 0%, #0E0817 100%)",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+                borderRadius: "24px",
+                boxShadow: "0 20px 45px rgba(0, 0, 0, 0.65)",
                 display: "flex",
                 flexDirection: "column",
                 overflow: "hidden",
-                transition: "transform 0.2s ease, border-color 0.2s ease",
+                transition: "transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease",
               }}
-              className="hover:border-[#FF5A1F]/50 hover:-translate-y-1 transition-all"
+              className="hover:border-[#FF5A1F]/60 hover:-translate-y-1.5 transition-all duration-300"
             >
-              {/* Card 1 Visual: Dark phone poll UI with orange & purple confetti */}
+              {/* Card 1 Visual: High-Tech Group Availability & Consensus Radar */}
               <div
                 style={{
-                  height: "280px",
-                  background: "radial-gradient(circle at 50% 20%, #2E1547 0%, #110B1E 65%, #0A0612 100%)",
+                  height: "290px",
+                  background: "radial-gradient(circle at 50% 15%, rgba(255, 90, 31, 0.22) 0%, rgba(35, 17, 54, 0.45) 50%, #0B0813 100%)",
                   position: "relative",
                   overflow: "hidden",
-                  padding: "16px 14px 0",
+                  padding: "16px 14px",
                   display: "flex",
+                  alignItems: "center",
                   justifyContent: "center",
                 }}
               >
-                {/* Floating confetti bits */}
-                <span style={{ position: "absolute", top: "18px", left: "20px", color: "#FF5A1F", fontSize: "16px", transform: "rotate(-15deg)" }}>✦</span>
-                <span style={{ position: "absolute", top: "34px", right: "26px", color: "#FF8A3D", fontSize: "14px", transform: "rotate(25deg)" }}>✦</span>
-                <span style={{ position: "absolute", bottom: "40px", left: "18px", color: "#FF5A1F", fontSize: "12px" }}>•</span>
-                <span style={{ position: "absolute", top: "60px", right: "16px", color: "#FBBF24", fontSize: "13px" }}>★</span>
+                {/* Subtle ambient sparkles */}
+                <span style={{ position: "absolute", top: "14px", left: "16px", color: "#FF5A1F", fontSize: "14px", opacity: 0.8 }}>✦</span>
+                <span style={{ position: "absolute", top: "24px", right: "20px", color: "#FF8A3D", fontSize: "12px", opacity: 0.7 }}>✦</span>
+                <span style={{ position: "absolute", bottom: "16px", left: "20px", color: "rgba(255,255,255,0.2)", fontSize: "10px" }}>•</span>
 
-                {/* Phone Mockup Frame */}
+                {/* Glassmorphic Consensus Radar Card */}
                 <div
                   style={{
-                    width: "260px",
-                    background: "#0E0A17",
-                    border: "2px solid rgba(255, 255, 255, 0.18)",
-                    borderBottom: "none",
-                    borderTopLeftRadius: "28px",
-                    borderTopRightRadius: "28px",
-                    padding: "12px 10px 0",
-                    boxShadow: "0 -8px 24px rgba(0, 0, 0, 0.6)",
+                    width: "100%",
+                    maxWidth: "320px",
+                    background: "rgba(18, 12, 26, 0.94)",
+                    border: "1px solid rgba(255, 255, 255, 0.14)",
+                    borderRadius: "20px",
+                    padding: "14px 14px 12px",
+                    boxShadow: "0 18px 40px rgba(0, 0, 0, 0.65), 0 0 24px rgba(255, 90, 31, 0.12)",
+                    backdropFilter: "blur(14px)",
                     display: "flex",
                     flexDirection: "column",
+                    gap: "9px",
                   }}
                 >
-                  {/* Phone notch */}
-                  <div style={{ width: "70px", height: "4px", background: "#3A3347", borderRadius: "999px", margin: "0 auto 10px" }} />
-                  
-                  {/* Poll Title */}
-                  <div style={{ textAlign: "center", fontSize: "12px", fontWeight: 700, color: "rgba(255, 255, 255, 0.6)", marginBottom: "10px" }}>
-                    Find a Time
-                  </div>
-
-                  {/* 3 Poll Options Carousel / Row */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1.3fr 1fr", gap: "6px", marginBottom: "14px" }}>
-                    {/* Option 1 */}
-                    <div style={{ background: "#1C1628", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px", padding: "8px 6px", textAlign: "center" }}>
-                      <div style={{ fontSize: "10px", fontWeight: 700, color: "#E5E7EB", whiteSpace: "nowrap" }}>Pasta Dinner</div>
-                      <div style={{ fontSize: "8.5px", color: "#9CA3AF" }}>This Friday</div>
-                      <div style={{ fontSize: "7.5px", color: "#6B7280", marginTop: "4px" }}>6 Will Go • 1 Maybe</div>
-                    </div>
-
-                    {/* Option 2 (Selected - Most Popular in Vibrant Orange) */}
-                    <div
-                      style={{
-                        background: "#1E1226",
-                        borderRadius: "10px",
-                        padding: "8px 6px",
-                        textAlign: "center",
-                        boxShadow: "0 4px 18px rgba(255, 90, 31, 0.35)",
-                        border: "2px solid #FF5A1F",
-                        transform: "scale(1.04)",
-                        zIndex: 2,
-                      }}
-                    >
-                      <div style={{ display: "inline-block", background: "#FF5A1F", color: "#FFF", fontSize: "7px", fontWeight: 900, padding: "1px 5px", borderRadius: "999px", marginBottom: "2px" }}>
-                        🏆 MOST POPULAR
-                      </div>
-                      <div style={{ fontSize: "11px", fontWeight: 800, color: "#FFFFFF", whiteSpace: "nowrap" }}>House party 🍷</div>
-                      <div style={{ fontSize: "9px", color: "#FF8A3D", fontWeight: 700 }}>This Saturday</div>
-                      <div style={{ fontSize: "8px", color: "#FF5A1F", fontWeight: 800, marginTop: "2px" }}>8 Will Go • 1 Maybe</div>
-                    </div>
-
-                    {/* Option 3 */}
-                    <div style={{ background: "#1C1628", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px", padding: "8px 6px", textAlign: "center" }}>
-                      <div style={{ fontSize: "10px", fontWeight: 700, color: "#E5E7EB", whiteSpace: "nowrap" }}>Brunch 🥂</div>
-                      <div style={{ fontSize: "8.5px", color: "#9CA3AF" }}>Next Sunday</div>
-                      <div style={{ fontSize: "7.5px", color: "#6B7280", marginTop: "4px" }}>4 Will Go • 0 Maybe</div>
-                    </div>
-                  </div>
-
-                  {/* Responses Footer inside phone */}
-                  <div style={{ background: "rgba(255, 255, 255, 0.05)", borderRadius: "8px", padding: "6px 8px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  {/* Top Poll Info Bar */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingBottom: "4px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <div style={{ width: "16px", height: "16px", borderRadius: "50%", background: "#FF5A1F", color: "#FFF", fontSize: "9px", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>L</div>
-                      <span style={{ fontSize: "9.5px", color: "#E5E7EB", fontWeight: 600 }}>Luis Ocampo</span>
+                      <Calendar className="w-3.5 h-3.5 text-[#FF8A3D]" />
+                      <span style={{ fontSize: "10.5px", fontWeight: 800, color: "#FF8A3D", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                        Group Poll Consensus
+                      </span>
                     </div>
-                    <span style={{ fontSize: "8.5px", color: "#9CA3AF" }}>Ally K. +1</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                      <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#22C55E", boxShadow: "0 0 8px #22C55E" }} />
+                      <span style={{ fontSize: "10px", color: "rgba(255, 255, 255, 0.7)", fontWeight: 600 }}>14 Voted</span>
+                    </div>
+                  </div>
+
+                  {/* Option 1: Top Consensus Match */}
+                  <div
+                    style={{
+                      border: "1.5px solid rgba(255, 90, 31, 0.55)",
+                      background: "linear-gradient(135deg, rgba(255, 90, 31, 0.16) 0%, rgba(24, 15, 34, 0.85) 100%)",
+                      borderRadius: "14px",
+                      padding: "9px 11px",
+                      boxShadow: "0 4px 16px rgba(255, 90, 31, 0.18)",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      {/* Date block */}
+                      <div
+                        style={{
+                          width: "40px",
+                          height: "40px",
+                          background: "rgba(255, 90, 31, 0.22)",
+                          border: "1px solid rgba(255, 90, 31, 0.45)",
+                          borderRadius: "10px",
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <span style={{ fontSize: "8px", fontWeight: 800, color: "#FF8A3D", letterSpacing: "0.08em", lineHeight: 1 }}>FRI</span>
+                        <span style={{ fontSize: "16px", fontWeight: 900, color: "#FFFFFF", lineHeight: 1.1 }}>24</span>
+                      </div>
+
+                      {/* Middle Details */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                          <span style={{ fontSize: "12px", fontWeight: 800, color: "#FFFFFF", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            Rooftop Sunset 🌅
+                          </span>
+                          <span style={{ fontSize: "9px", fontWeight: 700, color: "#FF8A3D" }}>12 can go</span>
+                        </div>
+                        {/* Progress Bar */}
+                        <div style={{ height: "4px", background: "rgba(255, 255, 255, 0.12)", borderRadius: "999px", margin: "5px 0 3px", overflow: "hidden" }}>
+                          <div style={{ width: "86%", height: "100%", background: "linear-gradient(90deg, #FF5A1F, #FF8A3D)", borderRadius: "999px" }} />
+                        </div>
+                        <div style={{ fontSize: "9px", color: "rgba(255, 255, 255, 0.65)" }}>8:30 PM • 86% agreement</div>
+                      </div>
+
+                      {/* Right Checkmark */}
+                      <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: "rgba(34, 197, 94, 0.18)", border: "1px solid rgba(34, 197, 94, 0.5)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <Check className="w-3 h-3 text-[#22C55E]" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Option 2: Alternative Date */}
+                  <div
+                    style={{
+                      border: "1px solid rgba(255, 255, 255, 0.08)",
+                      background: "rgba(255, 255, 255, 0.03)",
+                      borderRadius: "14px",
+                      padding: "8px 11px",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      {/* Date block */}
+                      <div
+                        style={{
+                          width: "38px",
+                          height: "38px",
+                          background: "rgba(255, 255, 255, 0.05)",
+                          border: "1px solid rgba(255, 255, 255, 0.1)",
+                          borderRadius: "10px",
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <span style={{ fontSize: "8px", fontWeight: 800, color: "#9CA3AF", letterSpacing: "0.08em", lineHeight: 1 }}>SAT</span>
+                        <span style={{ fontSize: "15px", fontWeight: 800, color: "#E5E7EB", lineHeight: 1.1 }}>25</span>
+                      </div>
+
+                      {/* Middle Details */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                          <span style={{ fontSize: "11.5px", fontWeight: 700, color: "#D1D5DB", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            Late Drive & Chai ☕
+                          </span>
+                          <span style={{ fontSize: "9px", fontWeight: 600, color: "#9CA3AF" }}>6 can go</span>
+                        </div>
+                        {/* Progress Bar */}
+                        <div style={{ height: "4px", background: "rgba(255, 255, 255, 0.08)", borderRadius: "999px", margin: "4px 0 3px", overflow: "hidden" }}>
+                          <div style={{ width: "43%", height: "100%", background: "rgba(255, 255, 255, 0.4)", borderRadius: "999px" }} />
+                        </div>
+                        <div style={{ fontSize: "9px", color: "rgba(255, 255, 255, 0.5)" }}>10:00 PM • 43% agreement</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Micro Footer Notice */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "5px", paddingTop: "2px" }}>
+                    <Sparkles className="w-3 h-3 text-[#FF8A3D]" />
+                    <span style={{ fontSize: "9.5px", fontWeight: 700, color: "#FF8A3D" }}>Best match automatically scheduled for Friday</span>
                   </div>
                 </div>
               </div>
@@ -3834,20 +2632,21 @@ export default function LandingPageClient() {
                   href="/apply"
                   style={{
                     background: "rgba(255, 90, 31, 0.12)",
-                    border: "1px solid rgba(255, 90, 31, 0.45)",
+                    border: "1.5px solid rgba(255, 90, 31, 0.4)",
                     color: "#FF8A3D",
                     fontSize: "14px",
                     fontWeight: 700,
-                    padding: "12px 16px",
-                    borderRadius: "0px",
+                    padding: "12px 18px",
+                    borderRadius: "999px",
                     textAlign: "center",
                     textDecoration: "none",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     gap: "6px",
+                    transition: "all 0.2s ease",
                   }}
-                  className="hover:bg-[#FF5A1F] hover:text-white transition-colors"
+                  className="hover:bg-[#FF5A1F] hover:text-white hover:shadow-[0_4px_22px_rgba(255,90,31,0.4)] transition-all"
                 >
                   Try it ↗
                 </Link>
@@ -3857,68 +2656,206 @@ export default function LandingPageClient() {
             {/* Card 2: Get answers upfront */}
             <div
               style={{
-                background: "#120D1A",
-                border: "1px solid rgba(255, 255, 255, 0.09)",
-                boxShadow: "0 14px 40px rgba(0, 0, 0, 0.6)",
+                background: "linear-gradient(180deg, #130D1B 0%, #0E0817 100%)",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+                borderRadius: "24px",
+                boxShadow: "0 20px 45px rgba(0, 0, 0, 0.65)",
                 display: "flex",
                 flexDirection: "column",
                 overflow: "hidden",
-                transition: "transform 0.2s ease, border-color 0.2s ease",
+                transition: "transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease",
               }}
-              className="hover:border-[#FF5A1F]/50 hover:-translate-y-1 transition-all"
+              className="hover:border-[#FF5A1F]/60 hover:-translate-y-1.5 transition-all duration-300"
             >
-              {/* Card 2 Visual: Dietary question bubbles with dusk wine & ember gradient */}
+              {/* Card 2 Visual: Interactive Event Customizer & Guest Preference Feed */}
               <div
                 style={{
-                  height: "280px",
-                  background: "radial-gradient(circle at 60% 40%, #3B1622 0%, #1E0E1B 50%, #0D0814 100%)",
+                  height: "290px",
+                  background: "radial-gradient(circle at 60% 25%, rgba(225, 29, 72, 0.16) 0%, rgba(255, 90, 31, 0.14) 45%, #0C0814 100%)",
                   position: "relative",
                   overflow: "hidden",
-                  padding: "24px 18px",
+                  padding: "16px 14px",
                   display: "flex",
                   flexDirection: "column",
-                  justifyContent: "space-around",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "7px",
                 }}
               >
-                {/* Bubble 1: Gluten-free with avatar */}
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", alignSelf: "flex-start", transform: "translateX(10px)" }}>
-                  <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#FF5A1F", color: "#FFF", fontSize: "13px", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 10px rgba(0,0,0,0.4)" }}>
-                    S
-                  </div>
-                  <div style={{ background: "rgba(255, 255, 255, 0.12)", border: "1px solid rgba(255, 255, 255, 0.2)", color: "#FFFFFF", fontSize: "13px", fontWeight: 700, padding: "8px 16px", borderRadius: "999px", boxShadow: "0 4px 14px rgba(0, 0, 0, 0.3)", backdropFilter: "blur(6px)" }}>
-                    I&apos;m gluten-free!
-                  </div>
-                </div>
-
-                {/* Central main question bubble with Orange Glow */}
+                {/* Host Question Header Card */}
                 <div
                   style={{
-                    background: "rgba(18, 12, 22, 0.95)",
-                    border: "1.5px solid rgba(255, 90, 31, 0.5)",
-                    backdropFilter: "blur(8px)",
-                    color: "#FFFFFF",
-                    fontSize: "15px",
-                    fontWeight: 800,
-                    padding: "12px 20px",
-                    borderRadius: "18px",
-                    textAlign: "center",
-                    alignSelf: "center",
-                    boxShadow: "0 8px 24px rgba(255, 90, 31, 0.2)",
-                    letterSpacing: "-0.01em",
+                    width: "100%",
+                    maxWidth: "320px",
+                    background: "linear-gradient(135deg, rgba(255, 90, 31, 0.18) 0%, rgba(22, 14, 30, 0.95) 100%)",
+                    border: "1.5px solid rgba(255, 90, 31, 0.45)",
+                    borderRadius: "14px",
+                    padding: "9px 12px",
+                    boxShadow: "0 8px 24px rgba(0, 0, 0, 0.55), 0 0 18px rgba(255, 90, 31, 0.12)",
+                    backdropFilter: "blur(12px)",
                   }}
                 >
-                  Have any dietary restrictions?
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "3px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <div
+                        style={{
+                          width: "18px",
+                          height: "18px",
+                          borderRadius: "50%",
+                          background: "linear-gradient(135deg, #FF5A1F, #D63900)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "9px",
+                          fontWeight: 800,
+                          color: "#FFF",
+                        }}
+                      >
+                        H
+                      </div>
+                      <span style={{ fontSize: "10px", fontWeight: 800, color: "#FF8A3D", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                        Host Question
+                      </span>
+                    </div>
+                    <span style={{ fontSize: "9px", color: "rgba(255, 255, 255, 0.6)", fontWeight: 600 }}>Required for RSVP</span>
+                  </div>
+                  <div style={{ fontSize: "12px", fontWeight: 800, color: "#FFFFFF" }}>
+                    &quot;What should we prep for the squad?&quot; 📝
+                  </div>
                 </div>
 
-                {/* Bubble 2: Yes vegetarian with avatar & crown */}
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", alignSelf: "flex-end", transform: "translateX(-8px)" }}>
-                  <div style={{ background: "rgba(255, 255, 255, 0.12)", border: "1px solid rgba(255, 255, 255, 0.2)", color: "#FFFFFF", fontSize: "13px", fontWeight: 700, padding: "8px 16px", borderRadius: "999px", boxShadow: "0 4px 14px rgba(0, 0, 0, 0.3)", backdropFilter: "blur(6px)" }}>
-                    yes! vegetarian 🥦
+                {/* Response 1: Dietary */}
+                <div
+                  style={{
+                    width: "100%",
+                    maxWidth: "320px",
+                    background: "rgba(20, 14, 28, 0.88)",
+                    border: "1px solid rgba(34, 197, 94, 0.35)",
+                    borderRadius: "12px",
+                    padding: "7px 11px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "9px",
+                    boxShadow: "0 4px 14px rgba(0, 0, 0, 0.4)",
+                    backdropFilter: "blur(10px)",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "26px",
+                      height: "26px",
+                      borderRadius: "50%",
+                      background: "linear-gradient(135deg, #22C55E, #15803D)",
+                      color: "#FFF",
+                      fontSize: "11px",
+                      fontWeight: 800,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    S
                   </div>
-                  <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#E11D48", color: "#FFF", fontSize: "13px", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
-                    <span style={{ position: "absolute", top: "-8px", left: "8px", fontSize: "12px" }}>👑</span>
-                    M
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: "8.5px", fontWeight: 800, color: "#4ADE80", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                      Dietary • Sarah K.
+                    </div>
+                    <div style={{ fontSize: "11px", fontWeight: 700, color: "#FFFFFF", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      Gluten-free & strictly vegetarian 🥗
+                    </div>
                   </div>
+                  <Check className="w-3.5 h-3.5 text-[#4ADE80] shrink-0" />
+                </div>
+
+                {/* Response 2: Playlist */}
+                <div
+                  style={{
+                    width: "100%",
+                    maxWidth: "320px",
+                    background: "rgba(20, 14, 28, 0.88)",
+                    border: "1px solid rgba(255, 90, 31, 0.4)",
+                    borderRadius: "12px",
+                    padding: "7px 11px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "9px",
+                    boxShadow: "0 4px 14px rgba(0, 0, 0, 0.4)",
+                    backdropFilter: "blur(10px)",
+                    transform: "translateX(8px)",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "26px",
+                      height: "26px",
+                      borderRadius: "50%",
+                      background: "linear-gradient(135deg, #FF5A1F, #C2410C)",
+                      color: "#FFF",
+                      fontSize: "11px",
+                      fontWeight: 800,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    T
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: "8.5px", fontWeight: 800, color: "#FF8A3D", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                      Song Request • Taha M.
+                    </div>
+                    <div style={{ fontSize: "11px", fontWeight: 700, color: "#FFFFFF", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      Kaytranada & Keinemusik vibes 🎵
+                    </div>
+                  </div>
+                  <Check className="w-3.5 h-3.5 text-[#FF8A3D] shrink-0" />
+                </div>
+
+                {/* Response 3: Theme / Contribution */}
+                <div
+                  style={{
+                    width: "100%",
+                    maxWidth: "320px",
+                    background: "rgba(20, 14, 28, 0.88)",
+                    border: "1px solid rgba(168, 85, 247, 0.35)",
+                    borderRadius: "12px",
+                    padding: "7px 11px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "9px",
+                    boxShadow: "0 4px 14px rgba(0, 0, 0, 0.4)",
+                    backdropFilter: "blur(10px)",
+                    transform: "translateX(-6px)",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "26px",
+                      height: "26px",
+                      borderRadius: "50%",
+                      background: "linear-gradient(135deg, #A855F7, #7E22CE)",
+                      color: "#FFF",
+                      fontSize: "11px",
+                      fontWeight: 800,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    Z
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: "8.5px", fontWeight: 800, color: "#C084FC", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                      Bringing • Zainab
+                    </div>
+                    <div style={{ fontSize: "11px", fontWeight: 700, color: "#FFFFFF", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      Ginger mocktails & matcha bites 🍹
+                    </div>
+                  </div>
+                  <Check className="w-3.5 h-3.5 text-[#C084FC] shrink-0" />
                 </div>
               </div>
 
@@ -3936,148 +2873,145 @@ export default function LandingPageClient() {
                   href="/apply"
                   style={{
                     background: "rgba(255, 90, 31, 0.12)",
-                    border: "1px solid rgba(255, 90, 31, 0.45)",
+                    border: "1.5px solid rgba(255, 90, 31, 0.4)",
                     color: "#FF8A3D",
                     fontSize: "14px",
                     fontWeight: 700,
-                    padding: "12px 16px",
-                    borderRadius: "0px",
+                    padding: "12px 18px",
+                    borderRadius: "999px",
                     textAlign: "center",
                     textDecoration: "none",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     gap: "6px",
+                    transition: "all 0.2s ease",
                   }}
-                  className="hover:bg-[#FF5A1F] hover:text-white transition-colors"
+                  className="hover:bg-[#FF5A1F] hover:text-white hover:shadow-[0_4px_22px_rgba(255,90,31,0.4)] transition-all"
                 >
                   Try it ↗
                 </Link>
               </div>
             </div>
 
-            {/* Card 3: Collect payments (Black & Orange Theme) */}
+            {/* Card 3: Collect payments */}
             <div
               style={{
-                background: "#120D1A",
-                border: "1px solid rgba(255, 255, 255, 0.09)",
-                boxShadow: "0 14px 40px rgba(0, 0, 0, 0.6)",
+                background: "linear-gradient(180deg, #130D1B 0%, #0E0817 100%)",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+                borderRadius: "24px",
+                boxShadow: "0 20px 45px rgba(0, 0, 0, 0.65)",
                 display: "flex",
                 flexDirection: "column",
                 overflow: "hidden",
-                transition: "transform 0.2s ease, border-color 0.2s ease",
+                transition: "transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease",
               }}
-              className="hover:border-[#FF5A1F]/50 hover:-translate-y-1 transition-all"
+              className="hover:border-[#FF5A1F]/60 hover:-translate-y-1.5 transition-all duration-300"
             >
-              {/* Card 3 Visual: Floating gold bills and vibrant sunset orange ticket roll */}
+              {/* Card 3 Visual: Luxury Digital Event Pass & Instant Split-Pay Module */}
               <div
                 style={{
-                  height: "280px",
-                  background: "radial-gradient(circle at 50% 50%, #3A1B0B 0%, #1A0D06 50%, #09050C 100%)",
+                  height: "290px",
+                  background: "radial-gradient(circle at 50% 35%, rgba(255, 90, 31, 0.22) 0%, rgba(45, 18, 10, 0.3) 50%, #0B060F 100%)",
                   position: "relative",
                   overflow: "hidden",
+                  padding: "16px 14px",
                   display: "flex",
+                  flexDirection: "column",
                   alignItems: "center",
                   justifyContent: "center",
                 }}
               >
-                {/* Floating gold currency bills */}
+                {/* Layer 1: Luxury Digital Ticket Pass (Angled behind) */}
                 <div
                   style={{
-                    position: "absolute",
-                    top: "22px",
-                    left: "18px",
-                    width: "82px",
-                    height: "46px",
-                    background: "rgba(251, 191, 36, 0.15)",
-                    border: "1px solid rgba(251, 191, 36, 0.5)",
-                    borderRadius: "4px",
-                    transform: "rotate(-25deg)",
-                    boxShadow: "0 8px 18px rgba(0,0,0,0.4)",
-                    padding: "4px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <span style={{ fontSize: "10px", fontWeight: 900, color: "#FBBF24" }}>100</span>
-                  <DollarSign className="w-4 h-4 text-[#FBBF24]" />
-                  <span style={{ fontSize: "10px", fontWeight: 900, color: "#FBBF24" }}>$</span>
-                </div>
-
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "30px",
-                    right: "22px",
-                    width: "74px",
-                    height: "42px",
-                    background: "rgba(251, 191, 36, 0.12)",
-                    border: "1px solid rgba(251, 191, 36, 0.45)",
-                    borderRadius: "4px",
-                    transform: "rotate(28deg)",
-                    boxShadow: "0 8px 18px rgba(0,0,0,0.4)",
-                    padding: "4px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <span style={{ fontSize: "9px", fontWeight: 900, color: "#FBBF24" }}>100</span>
-                  <DollarSign className="w-3.5 h-3.5 text-[#FBBF24]" />
-                  <span style={{ fontSize: "9px", fontWeight: 900, color: "#FBBF24" }}>$</span>
-                </div>
-
-                {/* 3D Vibrant Sunset Orange Rolled Event Admission Tickets */}
-                <div
-                  style={{
-                    width: "160px",
-                    height: "110px",
+                    width: "92%",
+                    maxWidth: "300px",
+                    background: "linear-gradient(135deg, rgba(255, 120, 60, 0.16) 0%, rgba(22, 12, 32, 0.95) 100%)",
+                    border: "1.2px solid rgba(255, 110, 40, 0.45)",
+                    borderRadius: "16px",
+                    padding: "10px 14px 8px",
+                    transform: "translateY(-14px) rotate(-2deg)",
+                    boxShadow: "0 14px 34px rgba(0, 0, 0, 0.7), 0 0 25px rgba(255, 90, 31, 0.18)",
                     position: "relative",
-                    transform: "rotate(-10deg)",
-                    filter: "drop-shadow(0 14px 32px rgba(255, 90, 31, 0.5))",
                   }}
                 >
-                  {/* Rolled spool cylinder */}
-                  <div
-                    style={{
-                      width: "130px",
-                      height: "75px",
-                      background: "linear-gradient(135deg, #FF7A45 0%, #FF5A1F 55%, #D63900 100%)",
-                      borderRadius: "14px",
-                      border: "2px solid rgba(255, 255, 255, 0.45)",
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "#FFFFFF",
-                      position: "relative",
-                      overflow: "hidden",
-                    }}
-                  >
-                    <div style={{ position: "absolute", top: "4px", left: "6px", right: "6px", borderTop: "1px dashed rgba(255,255,255,0.7)" }} />
-                    <div style={{ fontSize: "28px", fontWeight: 900, color: "#FFFFFF", lineHeight: 1 }}>?</div>
-                    <div style={{ fontSize: "9px", fontWeight: 800, letterSpacing: "0.15em", color: "#FFE4D6", marginTop: "2px" }}>
-                      ADMISSION TICKET
-                    </div>
-                    <div style={{ position: "absolute", bottom: "4px", left: "6px", right: "6px", borderBottom: "1px dashed rgba(255,255,255,0.7)" }} />
+                  {/* Left & Right stub notches */}
+                  <div style={{ position: "absolute", left: "-7px", top: "50%", width: "12px", height: "12px", borderRadius: "50%", background: "#0B060F", transform: "translateY(-50%)" }} />
+                  <div style={{ position: "absolute", right: "-7px", top: "50%", width: "12px", height: "12px", borderRadius: "50%", background: "#0B060F", transform: "translateY(-50%)" }} />
+
+                  {/* Header */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "2px" }}>
+                    <span style={{ fontSize: "8.5px", fontWeight: 800, color: "#FF8A3D", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                      SOLO-NO-MORE VIP PASS
+                    </span>
+                    <span style={{ fontSize: "8.5px", fontWeight: 700, color: "rgba(255,255,255,0.6)", fontFamily: "monospace" }}>#0842</span>
                   </div>
 
-                  {/* Ribbon curl tail */}
-                  <div
-                    style={{
-                      position: "absolute",
-                      bottom: "-8px",
-                      right: "-12px",
-                      width: "80px",
-                      height: "44px",
-                      background: "linear-gradient(135deg, #FF5A1F 0%, #D63900 100%)",
-                      borderRadius: "8px",
-                      transform: "rotate(18deg)",
-                      zIndex: -1,
-                      border: "1.5px solid rgba(255, 255, 255, 0.35)",
-                    }}
-                  />
+                  {/* Title & Meta */}
+                  <div style={{ fontSize: "13px", fontWeight: 800, color: "#FFFFFF" }}>Rooftop Afterhours 🪩</div>
+                  <div style={{ fontSize: "9.5px", color: "rgba(255, 255, 255, 0.7)" }}>Sat, Oct 25 • 10:00 PM • $35.00</div>
+
+                  {/* Perforated Divider & Barcode lines */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px dashed rgba(255,255,255,0.22)", paddingTop: "5px", marginTop: "5px" }}>
+                    <div style={{ display: "flex", gap: "2px", alignItems: "flex-end", height: "12px" }}>
+                      <span style={{ width: "2px", height: "12px", background: "#FF8A3D" }} />
+                      <span style={{ width: "1px", height: "9px", background: "#FF8A3D" }} />
+                      <span style={{ width: "3px", height: "12px", background: "#FF8A3D" }} />
+                      <span style={{ width: "1px", height: "7px", background: "#FF8A3D" }} />
+                      <span style={{ width: "2px", height: "12px", background: "#FF8A3D" }} />
+                      <span style={{ width: "1px", height: "10px", background: "#FF8A3D" }} />
+                      <span style={{ width: "3px", height: "12px", background: "#FF8A3D" }} />
+                      <span style={{ width: "2px", height: "12px", background: "#FF8A3D" }} />
+                      <span style={{ width: "1px", height: "8px", background: "#FF8A3D" }} />
+                    </div>
+                    <span style={{ fontSize: "7.5px", fontWeight: 800, letterSpacing: "0.12em", color: "#FF8A3D" }}>VERIFIED ENTRY TICKET</span>
+                  </div>
+                </div>
+
+                {/* Layer 2: Instant Split-Pay Settlement Card (Floating Forward) */}
+                <div
+                  style={{
+                    width: "96%",
+                    maxWidth: "310px",
+                    background: "rgba(16, 10, 22, 0.95)",
+                    border: "1.5px solid rgba(255, 255, 255, 0.16)",
+                    borderRadius: "15px",
+                    padding: "10px 14px",
+                    transform: "translateY(8px) rotate(1.5deg)",
+                    boxShadow: "0 18px 42px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 0, 0, 0.5)",
+                    backdropFilter: "blur(14px)",
+                  }}
+                >
+                  {/* Top Row */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <CreditCard className="w-3.5 h-3.5 text-[#FF8A3D]" />
+                      <span style={{ fontSize: "11px", fontWeight: 800, color: "#FFFFFF" }}>Instant Split-Pay</span>
+                    </div>
+                    <span style={{ fontSize: "10px", fontWeight: 800, color: "#22C55E", display: "flex", alignItems: "center", gap: "3px" }}>
+                      <Check className="w-3 h-3" /> Auto-Collected
+                    </span>
+                  </div>
+
+                  {/* Amount Display */}
+                  <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", margin: "4px 0 6px" }}>
+                    <div style={{ display: "flex", alignItems: "baseline" }}>
+                      <span style={{ fontSize: "21px", fontWeight: 900, color: "#FFFFFF", letterSpacing: "-0.03em" }}>$35.00</span>
+                      <span style={{ fontSize: "10.5px", color: "rgba(255,255,255,0.55)", marginLeft: "4px" }}>/ guest</span>
+                    </div>
+                    <span style={{ fontSize: "9px", fontWeight: 600, color: "rgba(255,255,255,0.7)", background: "rgba(255,255,255,0.08)", padding: "2px 8px", borderRadius: "999px" }}>
+                      Apple Pay • Cards
+                    </span>
+                  </div>
+
+                  {/* Live Settlement Feed */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "9.5px", color: "#9CA3AF", borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "5px" }}>
+                    <span style={{ color: "#E5E7EB" }}>✓ Maya R. ($35)</span>
+                    <span>•</span>
+                    <span style={{ color: "#E5E7EB" }}>✓ Liam T. ($35)</span>
+                    <span style={{ display: "inline-block", width: "6px", height: "6px", borderRadius: "50%", background: "#22C55E", boxShadow: "0 0 6px #22C55E" }} />
+                  </div>
                 </div>
               </div>
 
@@ -4095,20 +3029,21 @@ export default function LandingPageClient() {
                   href="/apply"
                   style={{
                     background: "rgba(255, 90, 31, 0.12)",
-                    border: "1px solid rgba(255, 90, 31, 0.45)",
+                    border: "1.5px solid rgba(255, 90, 31, 0.4)",
                     color: "#FF8A3D",
                     fontSize: "14px",
                     fontWeight: 700,
-                    padding: "12px 16px",
-                    borderRadius: "0px",
+                    padding: "12px 18px",
+                    borderRadius: "999px",
                     textAlign: "center",
                     textDecoration: "none",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     gap: "6px",
+                    transition: "all 0.2s ease",
                   }}
-                  className="hover:bg-[#FF5A1F] hover:text-white transition-colors"
+                  className="hover:bg-[#FF5A1F] hover:text-white hover:shadow-[0_4px_22px_rgba(255,90,31,0.4)] transition-all"
                 >
                   Try it ↗
                 </Link>
@@ -4116,342 +3051,573 @@ export default function LandingPageClient() {
             </div>
           </div>
 
-          {/* ─── SUB-FEATURE ROWS (BLACK & ORANGE THEMED) ─── */}
+          {/* ─── SUB-FEATURE BANNERS (ELEVATED OBSIDIAN PARTY CARDS WITH HIGH DYNAMIC ENERGY) ─── */}
 
-          {/* Sub-row 1: Send invites on any platform */}
+          {/* Sub-row 1 Banner Card: Send invites on any platform */}
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-              gap: "48px",
-              alignItems: "center",
-              marginBottom: "110px",
+              background: "linear-gradient(145deg, #130D1C 0%, #0A0612 100%)",
+              border: "1.5px solid rgba(255, 255, 255, 0.18)",
+              borderRadius: "32px",
+              padding: "42px 36px",
+              boxShadow: "0 28px 70px rgba(0, 0, 0, 0.55), 0 0 45px rgba(255, 90, 31, 0.08)",
+              marginBottom: "36px",
+              position: "relative",
+              overflow: "hidden",
             }}
           >
-            {/* Visual Box (Left): Illustrated card with vintage dove and pixel retro stickers in Black & Orange theme */}
+            {/* Subtle radial ambient glow inside card */}
             <div
               style={{
-                background: "linear-gradient(145deg, #1C0F18 0%, #120A14 50%, #200E06 100%)",
-                borderRadius: "28px",
-                height: "360px",
-                position: "relative",
-                display: "flex",
+                position: "absolute",
+                top: "-30%",
+                left: "-10%",
+                width: "450px",
+                height: "450px",
+                background: "radial-gradient(circle, rgba(255, 90, 31, 0.12) 0%, transparent 70%)",
+                pointerEvents: "none",
+              }}
+            />
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                gap: "48px",
                 alignItems: "center",
-                justifyContent: "center",
-                border: "1px solid rgba(255, 90, 31, 0.3)",
-                boxShadow: "0 18px 45px rgba(0, 0, 0, 0.7), 0 0 35px rgba(255, 90, 31, 0.15)",
-                overflow: "hidden",
+                position: "relative",
+                zIndex: 2,
               }}
             >
-              {/* Floating Instagram Pixel Icon (Top Left in Black & Orange) */}
+              {/* Visual Box (Left): High-Fidelity Holographic RSVP Pass with Layered Floating App Badges */}
               <div
                 style={{
-                  position: "absolute",
-                  top: "24px",
-                  left: "30px",
-                  width: "44px",
-                  height: "44px",
-                  background: "#0E0714",
-                  border: "2px solid #FF5A1F",
-                  borderRadius: "12px",
+                  background: "radial-gradient(ellipse at 50% 50%, rgba(255, 90, 31, 0.22) 0%, rgba(18, 10, 24, 0.95) 70%), #0D0714",
+                  borderRadius: "28px",
+                  height: "380px",
+                  position: "relative",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  boxShadow: "0 6px 18px rgba(255, 90, 31, 0.25)",
-                  transform: "rotate(-10deg)",
-                }}
-              >
-                <div style={{ width: "24px", height: "24px", border: "2.5px solid #FF8A3D", borderRadius: "7px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <div style={{ width: "8px", height: "8px", border: "2px solid #FF8A3D", borderRadius: "50%" }} />
-                </div>
-              </div>
-
-              {/* Floating Partiful Pixel Bubble (Top Right with Orange Glow) */}
-              <div
-                style={{
-                  position: "absolute",
-                  top: "22px",
-                  right: "26px",
-                  background: "#120A16",
-                  border: "2.5px solid #FF5A1F",
-                  padding: "6px 12px",
-                  boxShadow: "3px 3px 0 #FF5A1F",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  fontSize: "12px",
-                  fontWeight: 900,
-                  color: "#FFFFFF",
-                  transform: "rotate(4deg)",
-                }}
-              >
-                <span style={{ fontSize: "14px", fontWeight: 900, color: "#FF5A1F" }}>?</span> partiful
-              </div>
-
-              {/* Floating Pixel Arrow (Bottom Left) */}
-              <div
-                style={{
-                  position: "absolute",
-                  bottom: "32px",
-                  left: "32px",
-                  width: "36px",
-                  height: "36px",
-                  transform: "rotate(-20deg)",
-                }}
-              >
-                <svg viewBox="0 0 24 24" fill="#FF5A1F" style={{ width: "100%", height: "100%", filter: "drop-shadow(2px 2px 0 #000)" }}>
-                  <polygon points="2,2 2,22 8,16 14,22 17,19 11,13 19,13" />
-                </svg>
-              </div>
-
-              {/* Floating Envelope Icon (Bottom Right with Orange Border) */}
-              <div
-                style={{
-                  position: "absolute",
-                  bottom: "26px",
-                  right: "34px",
-                  background: "#120A16",
-                  border: "2px solid #FF5A1F",
-                  borderRadius: "8px",
-                  padding: "8px 12px",
-                  boxShadow: "3px 3px 0 #FF5A1F",
-                  transform: "rotate(8deg)",
-                }}
-              >
-                <Mail className="w-5 h-5 text-[#FF8A3D]" />
-              </div>
-
-              {/* Floating Scattered Orange Hearts */}
-              <span style={{ position: "absolute", top: "60px", left: "30%", color: "#FF5A1F", fontSize: "16px" }}>♥</span>
-              <span style={{ position: "absolute", top: "110px", left: "22%", color: "#FF8A3D", fontSize: "13px" }}>♥</span>
-              <span style={{ position: "absolute", bottom: "90px", right: "20%", color: "#FF5A1F", fontSize: "15px" }}>♥</span>
-              <span style={{ position: "absolute", top: "140px", right: "24%", color: "#FFB088", fontSize: "12px" }}>♥</span>
-
-              {/* Central Vintage Dove Artwork Card with Orange Sky */}
-              <div
-                style={{
-                  width: "190px",
-                  background: "#160D1A",
-                  borderRadius: "14px",
-                  boxShadow: "0 12px 30px rgba(0, 0, 0, 0.6)",
+                  border: "1.5px solid rgba(255, 90, 31, 0.35)",
+                  boxShadow: "0 20px 50px rgba(0, 0, 0, 0.7), 0 0 35px rgba(255, 90, 31, 0.15)",
                   overflow: "hidden",
-                  border: "2px solid rgba(255, 90, 31, 0.4)",
-                  textAlign: "center",
                 }}
               >
-                {/* Sky & Dove Canvas */}
-                <div style={{ height: "150px", background: "linear-gradient(180deg, #32160A 0%, #180B05 100%)", position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  {/* Flying vintage dove SVG */}
-                  <svg viewBox="0 0 100 80" style={{ width: "85%", height: "85%" }}>
-                    <path
-                      d="M20,45 C28,30 45,22 65,24 C55,15 40,12 25,18 C15,22 8,30 20,45 Z"
-                      fill="#FFFFFF"
-                      stroke="#FF5A1F"
-                      strokeWidth="1.5"
-                    />
-                    <path
-                      d="M25,40 C35,38 52,38 70,42 C80,44 88,40 92,34 C85,46 72,54 55,56 C42,58 30,52 25,40 Z"
-                      fill="#FFFFFF"
-                      stroke="#FF5A1F"
-                      strokeWidth="1.5"
-                    />
-                    {/* Ribbon in beak */}
-                    <path d="M22,44 Q14,56 18,65" fill="none" stroke="#FF5A1F" strokeWidth="2" />
-                    <rect x="12" y="62" width="18" height="12" fill="#FEF08A" stroke="#FF5A1F" strokeWidth="1" rx="2" />
-                    <text x="14" y="70" fontSize="5" fontWeight="bold" fill="#000">you&apos;re invited</text>
-                  </svg>
+                {/* Floating Instagram Close Friends Share Badge (Top Left) */}
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "18px",
+                    left: "22px",
+                    background: "rgba(18, 10, 26, 0.92)",
+                    border: "1.5px solid #FF5A1F",
+                    borderRadius: "14px",
+                    padding: "7px 12px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    boxShadow: "0 8px 24px rgba(255, 90, 31, 0.25)",
+                    transform: "rotate(-8deg)",
+                    zIndex: 5,
+                    backdropFilter: "blur(12px)",
+                  }}
+                >
+                  <div style={{ width: "22px", height: "22px", borderRadius: "6px", background: "linear-gradient(45deg, #F58529, #DD2A7B, #8134AF)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Share2 className="w-3 h-3 text-white" />
+                  </div>
+                  <span style={{ fontSize: "11px", fontWeight: 800, color: "#FFFFFF" }}>IG Close Friends</span>
                 </div>
-                {/* RSVP to my party card stub */}
-                <div style={{ background: "#0D0812", padding: "10px 8px" }}>
-                  <div style={{ fontSize: "12px", fontWeight: 800, color: "#FFFFFF" }}>RSVP to my party</div>
-                  <div style={{ fontSize: "10px", color: "#FF8A3D", fontWeight: 600 }}>partiful.com</div>
+
+                {/* Floating Brand Badge (Top Right) */}
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "18px",
+                    right: "22px",
+                    background: "#120A16",
+                    border: "2px solid #FF5A1F",
+                    padding: "6px 12px",
+                    boxShadow: "3px 3px 0 #FF5A1F",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    fontSize: "12px",
+                    fontWeight: 900,
+                    color: "#FFFFFF",
+                    transform: "rotate(4deg)",
+                    zIndex: 5,
+                  }}
+                >
+                  <span style={{ fontSize: "14px", fontWeight: 900, color: "#FF5A1F" }}>✦</span> solo-no-more
+                </div>
+
+                {/* Floating Interactive Cursor (Bottom Left) */}
+                <div
+                  style={{
+                    position: "absolute",
+                    bottom: "24px",
+                    left: "26px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    zIndex: 5,
+                    transform: "rotate(-12deg)",
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" fill="#FF5A1F" style={{ width: "28px", height: "28px", filter: "drop-shadow(2px 2px 0 #000)" }}>
+                    <polygon points="2,2 2,22 8,16 14,22 17,19 11,13 19,13" />
+                  </svg>
+                  <span style={{ background: "#FF5A1F", color: "#FFFFFF", fontSize: "10px", fontWeight: 800, padding: "2px 7px", borderRadius: "999px" }}>
+                    1-Tap RSVP
+                  </span>
+                </div>
+
+                {/* Floating WhatsApp Squad Chat Drop (Bottom Right) */}
+                <div
+                  style={{
+                    position: "absolute",
+                    bottom: "22px",
+                    right: "24px",
+                    background: "rgba(14, 26, 18, 0.94)",
+                    border: "1.5px solid #25D366",
+                    borderRadius: "12px",
+                    padding: "7px 12px",
+                    boxShadow: "0 8px 24px rgba(37, 211, 102, 0.25)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "7px",
+                    transform: "rotate(6deg)",
+                    zIndex: 5,
+                    backdropFilter: "blur(12px)",
+                  }}
+                >
+                  <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#25D366", boxShadow: "0 0 6px #25D366" }} />
+                  <span style={{ fontSize: "11px", fontWeight: 800, color: "#FFFFFF" }}>WhatsApp Squad (14)</span>
+                </div>
+
+                {/* Floating Neon Hearts & Sparkles */}
+                <span style={{ position: "absolute", top: "72px", left: "28%", color: "#FF5A1F", fontSize: "16px", zIndex: 4 }}>♥</span>
+                <span style={{ position: "absolute", top: "120px", left: "18%", color: "#FF8A3D", fontSize: "13px", zIndex: 4 }}>♥</span>
+                <span style={{ position: "absolute", bottom: "80px", right: "22%", color: "#FF5A1F", fontSize: "15px", zIndex: 4 }}>♥</span>
+                <span style={{ position: "absolute", top: "85px", right: "20%", color: "#FFB088", fontSize: "12px", zIndex: 4 }}>✦</span>
+
+                {/* Central Holographic RSVP Pass */}
+                <div
+                  style={{
+                    width: "220px",
+                    background: "linear-gradient(155deg, rgba(32, 16, 42, 0.95) 0%, rgba(16, 8, 22, 0.98) 100%)",
+                    borderRadius: "18px",
+                    boxShadow: "0 18px 45px rgba(0, 0, 0, 0.8), 0 0 25px rgba(255, 90, 31, 0.25)",
+                    overflow: "hidden",
+                    border: "1.5px solid rgba(255, 90, 31, 0.45)",
+                    textAlign: "center",
+                    position: "relative",
+                    zIndex: 3,
+                  }}
+                >
+                  {/* Top Header Tag */}
+                  <div style={{ background: "rgba(255, 90, 31, 0.14)", padding: "7px 10px", borderBottom: "1px solid rgba(255, 90, 31, 0.3)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={{ fontSize: "9px", fontWeight: 800, color: "#FF8A3D", letterSpacing: "0.08em" }}>SOLO-NO-MORE PASS</span>
+                    <span style={{ fontSize: "8.5px", color: "rgba(255,255,255,0.7)", fontWeight: 700 }}>LIVE</span>
+                  </div>
+
+                  {/* Artwork / Party Card Body */}
+                  <div style={{ padding: "14px 12px 10px", background: "linear-gradient(180deg, #2A1308 0%, #150905 100%)", position: "relative" }}>
+                    {/* Retro Dove / Party Emblem */}
+                    <div style={{ height: "70px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <svg viewBox="0 0 100 70" style={{ width: "75%", height: "100%" }}>
+                        <path d="M20,40 C28,25 45,18 65,20 C55,12 40,9 25,15 C15,19 8,26 20,40 Z" fill="#FFFFFF" stroke="#FF5A1F" strokeWidth="1.5" />
+                        <path d="M25,35 C35,33 52,33 70,37 C80,39 88,35 92,29 C85,41 72,49 55,51 C42,53 30,47 25,35 Z" fill="#FFFFFF" stroke="#FF5A1F" strokeWidth="1.5" />
+                        <path d="M22,39 Q14,50 18,59" fill="none" stroke="#FF5A1F" strokeWidth="2" />
+                        <rect x="12" y="56" width="22" height="12" fill="#FEF08A" stroke="#FF5A1F" strokeWidth="1" rx="2" />
+                        <text x="14" y="64" fontSize="4.5" fontWeight="bold" fill="#000">you&apos;re invited</text>
+                      </svg>
+                    </div>
+
+                    {/* Party Details */}
+                    <div style={{ fontSize: "14px", fontWeight: 800, color: "#FFFFFF", marginTop: "4px" }}>RSVP to my party</div>
+                    <div style={{ fontSize: "11px", color: "#FF8A3D", fontWeight: 800, marginTop: "2px" }}>solonomore.com</div>
+                    <div style={{ fontSize: "9px", color: "rgba(255,255,255,0.6)", marginTop: "3px" }}>24 Attending • Karachi</div>
+                  </div>
+
+                  {/* Barcode & Share Link Stub */}
+                  <div style={{ background: "#0A050E", padding: "8px 10px", borderTop: "1px dashed rgba(255, 255, 255, 0.18)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div style={{ display: "flex", gap: "2px", alignItems: "flex-end", height: "11px" }}>
+                      <span style={{ width: "2px", height: "11px", background: "#FF8A3D" }} />
+                      <span style={{ width: "1px", height: "8px", background: "#FF8A3D" }} />
+                      <span style={{ width: "2.5px", height: "11px", background: "#FF8A3D" }} />
+                      <span style={{ width: "1px", height: "6px", background: "#FF8A3D" }} />
+                      <span style={{ width: "2px", height: "11px", background: "#FF8A3D" }} />
+                      <span style={{ width: "1.5px", height: "9px", background: "#FF8A3D" }} />
+                    </div>
+                    <span style={{ fontSize: "8.5px", color: "#22C55E", fontWeight: 800, display: "flex", alignItems: "center", gap: "3px" }}>
+                      <Check className="w-2.5 h-2.5" /> Instant Share
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Content (Right) */}
-            <div style={{ paddingLeft: "8px" }}>
-              <h3
-                style={{
-                  fontFamily: "var(--font-display), system-ui, sans-serif",
-                  fontSize: "clamp(28px, 3.5vw, 42px)",
-                  fontWeight: 800,
-                  letterSpacing: "-0.03em",
-                  color: "#FFFFFF",
-                  lineHeight: 1.15,
-                  margin: "0 0 16px",
-                }}
-              >
-                Send invites on any platform 📫
-              </h3>
-              <p
-                style={{
-                  fontSize: "17px",
-                  color: "rgba(255, 255, 255, 0.7)",
-                  lineHeight: 1.5,
-                  margin: "0 0 28px",
-                  maxWidth: "460px",
-                }}
-              >
-                Share anywhere: Email, Text, Instagram, WhatsApp, phone contacts and more.
-              </p>
-              <Link
-                href="/apply"
-                style={{
-                  background: "#FF5A1F",
-                  color: "#FFFFFF",
-                  fontSize: "15px",
-                  fontWeight: 800,
-                  padding: "14px 34px",
-                  borderRadius: "0px",
-                  textDecoration: "none",
-                  display: "inline-block",
-                  letterSpacing: "-0.01em",
-                  boxShadow: "0 8px 24px rgba(255, 90, 31, 0.35)",
-                }}
-                className="hover:bg-[#FF7A45] transition-colors cursor-pointer"
-              >
-                Create event
-              </Link>
+              {/* Content (Right) */}
+              <div style={{ paddingLeft: "8px" }}>
+                <h3
+                  style={{
+                    fontFamily: "var(--font-display), system-ui, sans-serif",
+                    fontSize: "clamp(28px, 3.5vw, 42px)",
+                    fontWeight: 800,
+                    letterSpacing: "-0.03em",
+                    color: "#FFFFFF",
+                    lineHeight: 1.15,
+                    margin: "0 0 16px",
+                  }}
+                >
+                  Send invites on any platform 📫
+                </h3>
+                <p
+                  style={{
+                    fontSize: "17px",
+                    color: "rgba(255, 255, 255, 0.75)",
+                    lineHeight: 1.5,
+                    margin: "0 0 24px",
+                    maxWidth: "460px",
+                  }}
+                >
+                  Share anywhere: Email, Text, Instagram, WhatsApp, phone contacts and more. Guests don&apos;t even need an app to RSVP.
+                </p>
+
+                {/* Feature Value Props Pills */}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "28px" }}>
+                  <span style={{ background: "rgba(255, 90, 31, 0.12)", border: "1px solid rgba(255, 90, 31, 0.3)", color: "#FF8A3D", padding: "4px 12px", borderRadius: "999px", fontSize: "12px", fontWeight: 700 }}>
+                    ⚡ 1-Tap WhatsApp Blast
+                  </span>
+                  <span style={{ background: "rgba(255, 255, 255, 0.06)", border: "1px solid rgba(255, 255, 255, 0.12)", color: "#FFFFFF", padding: "4px 12px", borderRadius: "999px", fontSize: "12px", fontWeight: 700 }}>
+                    📲 No App Required for Guests
+                  </span>
+                  <span style={{ background: "rgba(255, 255, 255, 0.06)", border: "1px solid rgba(255, 255, 255, 0.12)", color: "#FFFFFF", padding: "4px 12px", borderRadius: "999px", fontSize: "12px", fontWeight: 700 }}>
+                    🔒 Secret Venue Protection
+                  </span>
+                </div>
+
+                <Link
+                  href="/apply"
+                  style={{
+                    background: "#FF5A1F",
+                    color: "#FFFFFF",
+                    fontSize: "15px",
+                    fontWeight: 800,
+                    padding: "14px 34px",
+                    borderRadius: "999px",
+                    textDecoration: "none",
+                    display: "inline-block",
+                    letterSpacing: "-0.01em",
+                    boxShadow: "0 8px 26px rgba(255, 90, 31, 0.4)",
+                    transition: "all 0.2s ease",
+                  }}
+                  className="hover:bg-[#FF7A45] hover:scale-105 transition-all cursor-pointer"
+                >
+                  Create event
+                </Link>
+              </div>
             </div>
           </div>
 
-          {/* Sub-row 2: Get a shareable photo album */}
+          {/* Sub-row 2 Banner Card: Get a shareable photo album (IMAGE 1 ELEVATED EXACT MATCH) */}
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-              gap: "48px",
-              alignItems: "center",
+              background: "linear-gradient(145deg, #130D1C 0%, #0A0612 100%)",
+              border: "1.5px solid rgba(255, 255, 255, 0.18)",
+              borderRadius: "32px",
+              padding: "42px 36px",
+              boxShadow: "0 28px 70px rgba(0, 0, 0, 0.55), 0 0 45px rgba(255, 90, 31, 0.08)",
+              position: "relative",
+              overflow: "hidden",
             }}
           >
-            {/* Content (Left) */}
-            <div style={{ paddingRight: "8px" }}>
-              <h3
-                style={{
-                  fontFamily: "var(--font-display), system-ui, sans-serif",
-                  fontSize: "clamp(28px, 3.5vw, 42px)",
-                  fontWeight: 800,
-                  letterSpacing: "-0.03em",
-                  color: "#FFFFFF",
-                  lineHeight: 1.15,
-                  margin: "0 0 16px",
-                }}
-              >
-                Get a shareable photo album 🤳
-              </h3>
-              <p
-                style={{
-                  fontSize: "17px",
-                  color: "rgba(255, 255, 255, 0.7)",
-                  lineHeight: 1.5,
-                  margin: "0 0 28px",
-                  maxWidth: "460px",
-                }}
-              >
-                Look back on memories and add your snaps to the album—guests can add too!
-              </p>
-              <Link
-                href="/apply"
-                style={{
-                  background: "#FF5A1F",
-                  color: "#FFFFFF",
-                  fontSize: "15px",
-                  fontWeight: 800,
-                  padding: "14px 34px",
-                  borderRadius: "0px",
-                  textDecoration: "none",
-                  display: "inline-block",
-                  letterSpacing: "-0.01em",
-                  boxShadow: "0 8px 24px rgba(255, 90, 31, 0.35)",
-                }}
-                className="hover:bg-[#FF7A45] transition-colors cursor-pointer"
-              >
-                Create event
-              </Link>
-            </div>
-
-            {/* Visual Box (Right): Flash photography album with reaction pills */}
+            {/* Subtle radial ambient glow inside card */}
             <div
               style={{
-                height: "360px",
-                position: "relative",
-                display: "flex",
+                position: "absolute",
+                top: "-20%",
+                right: "-10%",
+                width: "450px",
+                height: "450px",
+                background: "radial-gradient(circle, rgba(255, 90, 31, 0.14) 0%, transparent 70%)",
+                pointerEvents: "none",
+              }}
+            />
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                gap: "48px",
                 alignItems: "center",
-                justifyContent: "center",
+                position: "relative",
+                zIndex: 2,
               }}
             >
-              {/* Top Speech Bubble Pill: "Add your photos to the album ⚡" in Dark Theme */}
-              <div
-                style={{
-                  position: "absolute",
-                  top: "14px",
-                  left: "14px",
-                  background: "#180E1C",
-                  border: "1px solid rgba(255, 90, 31, 0.45)",
-                  color: "#FFFFFF",
-                  fontSize: "13px",
-                  fontWeight: 800,
-                  padding: "9px 18px",
-                  borderRadius: "999px",
-                  boxShadow: "0 10px 24px rgba(0, 0, 0, 0.6)",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  zIndex: 10,
-                  transform: "rotate(-5deg)",
-                }}
-              >
-                <span>Add your photos to the album</span>
-                <span style={{ color: "#FF8A3D" }}>⚡</span>
+              {/* Content (Left) */}
+              <div style={{ paddingRight: "8px" }}>
+                <h3
+                  style={{
+                    fontFamily: "var(--font-display), system-ui, sans-serif",
+                    fontSize: "clamp(28px, 3.5vw, 42px)",
+                    fontWeight: 800,
+                    letterSpacing: "-0.03em",
+                    color: "#FFFFFF",
+                    lineHeight: 1.15,
+                    margin: "0 0 16px",
+                  }}
+                >
+                  Get a shareable photo album 🤳
+                </h3>
+                <p
+                  style={{
+                    fontSize: "17px",
+                    color: "rgba(255, 255, 255, 0.75)",
+                    lineHeight: 1.5,
+                    margin: "0 0 24px",
+                    maxWidth: "460px",
+                  }}
+                >
+                  Look back on memories and add your snaps to the album — guests can add too!
+                </p>
+
+                {/* Feature Value Props Pills */}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "28px" }}>
+                  <span style={{ background: "rgba(255, 90, 31, 0.12)", border: "1px solid rgba(255, 90, 31, 0.3)", color: "#FF8A3D", padding: "4px 12px", borderRadius: "999px", fontSize: "12px", fontWeight: 700 }}>
+                    📸 Original 4K Quality
+                  </span>
+                  <span style={{ background: "rgba(255, 255, 255, 0.06)", border: "1px solid rgba(255, 255, 255, 0.12)", color: "#FFFFFF", padding: "4px 12px", borderRadius: "999px", fontSize: "12px", fontWeight: 700 }}>
+                    ⚡ Guests Upload Without Signup
+                  </span>
+                  <span style={{ background: "rgba(255, 255, 255, 0.06)", border: "1px solid rgba(255, 255, 255, 0.12)", color: "#FFFFFF", padding: "4px 12px", borderRadius: "999px", fontSize: "12px", fontWeight: 700 }}>
+                    🔒 Private Link for Your Crew
+                  </span>
+                </div>
+
+                <Link
+                  href="/apply"
+                  style={{
+                    background: "#FF5A1F",
+                    color: "#FFFFFF",
+                    fontSize: "15px",
+                    fontWeight: 800,
+                    padding: "14px 34px",
+                    borderRadius: "999px",
+                    textDecoration: "none",
+                    display: "inline-block",
+                    letterSpacing: "-0.01em",
+                    boxShadow: "0 8px 26px rgba(255, 90, 31, 0.4)",
+                    transition: "all 0.2s ease",
+                  }}
+                  className="hover:bg-[#FF7A45] hover:scale-105 transition-all cursor-pointer"
+                >
+                  Create event
+                </Link>
               </div>
 
-              {/* Photo Collage Grid */}
+              {/* Visual Box (Right): Flash photography album with reaction pills (IMAGE 1 EXACT DESIGN) */}
               <div
                 style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: "10px",
-                  width: "310px",
-                  height: "300px",
+                  height: "380px",
+                  position: "relative",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
               >
-                {/* Photo 1 (Top Left) */}
-                <div style={{ position: "relative", borderRadius: "14px", overflow: "hidden", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 8px 20px rgba(0,0,0,0.6)" }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/images/partiful-photo-girls.jpg" alt="Party moment" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                {/* Top Speech Bubble Pill: "Add your photos to the album ⚡" (Tilted Pill from Image 1) */}
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "14px",
+                    left: "14px",
+                    background: "rgba(24, 14, 28, 0.95)",
+                    border: "1.5px solid rgba(255, 90, 31, 0.5)",
+                    color: "#FFFFFF",
+                    fontSize: "13px",
+                    fontWeight: 800,
+                    padding: "9px 18px",
+                    borderRadius: "999px",
+                    boxShadow: "0 12px 28px rgba(0, 0, 0, 0.7), 0 0 20px rgba(255, 90, 31, 0.2)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    zIndex: 10,
+                    transform: "rotate(-5deg)",
+                    backdropFilter: "blur(12px)",
+                  }}
+                >
+                  <span>Add your photos to the album</span>
+                  <span style={{ color: "#FF8A3D" }}>⚡</span>
                 </div>
 
-                {/* Photo 2 (Top Right) */}
-                <div style={{ position: "relative", borderRadius: "14px", overflow: "hidden", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 8px 20px rgba(0,0,0,0.6)" }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/images/padel-squad.jpg" alt="Party friend squad" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  {/* Floating Heart reaction badge */}
-                  <div style={{ position: "absolute", top: "10px", right: "8px", background: "rgba(18, 12, 22, 0.92)", border: "1px solid rgba(255, 90, 31, 0.4)", color: "#FFFFFF", padding: "3px 8px", borderRadius: "999px", fontSize: "11px", fontWeight: 800, boxShadow: "0 4px 10px rgba(0,0,0,0.4)", display: "flex", alignItems: "center", gap: "4px" }}>
-                    <span>❤️</span> 12
+                {/* Photo Collage Grid (Image 1 Exact 2x2 Layout) */}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "12px",
+                    width: "320px",
+                    height: "310px",
+                  }}
+                >
+                  {/* Photo 1 (Top Left): Girls Laughing */}
+                  <div
+                    style={{
+                      position: "relative",
+                      borderRadius: "16px",
+                      overflow: "hidden",
+                      border: "1.5px solid rgba(255,255,255,0.14)",
+                      boxShadow: "0 10px 24px rgba(0,0,0,0.65)",
+                    }}
+                    className="hover:scale-[1.03] transition-transform duration-300"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="/images/partiful-photo-girls.jpg"
+                      alt="Party moment"
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
                   </div>
-                </div>
 
-                {/* Photo 3 (Bottom Left) */}
-                <div style={{ position: "relative", borderRadius: "14px", overflow: "hidden", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 8px 20px rgba(0,0,0,0.6)" }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/images/chai-cafe.jpg" alt="Party dancing" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  {/* Floating In-Love reaction badge */}
-                  <div style={{ position: "absolute", bottom: "10px", left: "8px", background: "rgba(18, 12, 22, 0.92)", border: "1px solid rgba(255, 90, 31, 0.4)", color: "#FFFFFF", padding: "3px 8px", borderRadius: "999px", fontSize: "11px", fontWeight: 800, boxShadow: "0 4px 10px rgba(0,0,0,0.4)", display: "flex", alignItems: "center", gap: "4px" }}>
-                    <span>😍</span> 8
+                  {/* Photo 2 (Top Right): Padel squad with Heart Reaction Badge */}
+                  <div
+                    style={{
+                      position: "relative",
+                      borderRadius: "16px",
+                      overflow: "hidden",
+                      border: "1.5px solid rgba(255,255,255,0.14)",
+                      boxShadow: "0 10px 24px rgba(0,0,0,0.65)",
+                    }}
+                    className="hover:scale-[1.03] transition-transform duration-300"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="/images/padel-squad.jpg"
+                      alt="Party friend squad"
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                    {/* Floating Heart reaction badge (Image 1 Match: ❤️ 12) */}
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "10px",
+                        right: "8px",
+                        background: "rgba(18, 12, 22, 0.94)",
+                        border: "1.2px solid rgba(255, 90, 31, 0.5)",
+                        color: "#FFFFFF",
+                        padding: "3px 9px",
+                        borderRadius: "999px",
+                        fontSize: "11px",
+                        fontWeight: 800,
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.6)",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        backdropFilter: "blur(8px)",
+                      }}
+                    >
+                      <span>❤️</span> 12
+                    </div>
                   </div>
-                </div>
 
-                {/* Photo 4 (Bottom Right with +20 overlay) */}
-                <div style={{ position: "relative", borderRadius: "14px", overflow: "hidden", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 8px 20px rgba(0,0,0,0.6)" }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/images/hero-rooftop.jpg" alt="More party photos" style={{ width: "100%", height: "100%", objectFit: "cover", filter: "blur(2px) brightness(0.7)" }} />
-                  <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#FFFFFF", fontSize: "20px", fontWeight: 900 }}>
-                    +20
+                  {/* Photo 3 (Bottom Left): Chai Cafe with Smiling Reaction Badge */}
+                  <div
+                    style={{
+                      position: "relative",
+                      borderRadius: "16px",
+                      overflow: "hidden",
+                      border: "1.5px solid rgba(255,255,255,0.14)",
+                      boxShadow: "0 10px 24px rgba(0,0,0,0.65)",
+                    }}
+                    className="hover:scale-[1.03] transition-transform duration-300"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="/images/chai-cafe.jpg"
+                      alt="Party hangout"
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                    {/* Floating In-Love reaction badge (Image 1 Match: 😍 8) */}
+                    <div
+                      style={{
+                        position: "absolute",
+                        bottom: "10px",
+                        left: "8px",
+                        background: "rgba(18, 12, 22, 0.94)",
+                        border: "1.2px solid rgba(255, 90, 31, 0.5)",
+                        color: "#FFFFFF",
+                        padding: "3px 9px",
+                        borderRadius: "999px",
+                        fontSize: "11px",
+                        fontWeight: 800,
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.6)",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        backdropFilter: "blur(8px)",
+                      }}
+                    >
+                      <span>😍</span> 8
+                    </div>
                   </div>
-                  {/* Floating Fire reaction badge */}
-                  <div style={{ position: "absolute", bottom: "-6px", left: "14px", background: "rgba(18, 12, 22, 0.92)", border: "1px solid rgba(255, 90, 31, 0.4)", color: "#FFFFFF", padding: "3px 8px", borderRadius: "999px", fontSize: "11px", fontWeight: 800, boxShadow: "0 4px 10px rgba(0,0,0,0.4)", display: "flex", alignItems: "center", gap: "4px" }}>
-                    <span>🔥</span> 13
+
+                  {/* Photo 4 (Bottom Right): Rooftop Party with +20 overlay & Fire Reaction Badge */}
+                  <div
+                    style={{
+                      position: "relative",
+                      borderRadius: "16px",
+                      overflow: "hidden",
+                      border: "1.5px solid rgba(255,255,255,0.14)",
+                      boxShadow: "0 10px 24px rgba(0,0,0,0.65)",
+                    }}
+                    className="hover:scale-[1.03] transition-transform duration-300"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="/images/hero-rooftop.jpg"
+                      alt="More party photos"
+                      style={{ width: "100%", height: "100%", objectFit: "cover", filter: "blur(2.5px) brightness(0.65)" }}
+                    />
+                    <div
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#FFFFFF",
+                        fontSize: "22px",
+                        fontWeight: 900,
+                        letterSpacing: "-0.02em",
+                      }}
+                    >
+                      +20
+                    </div>
+                    {/* Floating Fire reaction badge (Image 1 Match: 🔥 13) */}
+                    <div
+                      style={{
+                        position: "absolute",
+                        bottom: "8px",
+                        left: "10px",
+                        background: "rgba(18, 12, 22, 0.94)",
+                        border: "1.2px solid rgba(255, 90, 31, 0.5)",
+                        color: "#FFFFFF",
+                        padding: "3px 9px",
+                        borderRadius: "999px",
+                        fontSize: "11px",
+                        fontWeight: 800,
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.6)",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        backdropFilter: "blur(8px)",
+                      }}
+                    >
+                      <span>🔥</span> 13
+                    </div>
                   </div>
                 </div>
               </div>
@@ -4460,17 +3626,79 @@ export default function LandingPageClient() {
         </div>
       </section>
 
-      {/* ── 9. "REAL REVIEWS, FROM REAL USERS" (BLACK & ORANGE THEMED CLONE) ─── */}
+
+      {/* ── SECTION FINISHED DIVIDER LINE ── */}
+      <div
+        style={{
+          width: "100%",
+          display: "flex",
+          justifyContent: "center",
+          padding: "16px 24px",
+          position: "relative",
+          zIndex: 10,
+        }}
+        aria-hidden="true"
+      >
+        <div
+          style={{
+            width: "100%",
+            maxWidth: "1180px",
+            height: "1px",
+            background: "linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.15) 20%, rgba(255, 90, 31, 0.35) 50%, rgba(255, 255, 255, 0.15) 80%, transparent 100%)",
+          }}
+        />
+      </div>
+
+      {/* ── 9. "REAL REVIEWS, FROM REAL USERS" (ANIMATED DYNAMIC MARQUEE SHOWCASE) ─── */}
       <section
         id="reviews-section"
         style={{
           background: "#060408",
           color: "#FFFFFF",
-          padding: "96px 24px 110px",
+          padding: "96px 24px 100px",
           borderTop: "1px solid rgba(255, 255, 255, 0.08)",
           position: "relative",
+          overflow: "hidden",
         }}
       >
+        {/* Subtle Geometric Dotted Texture Overlay */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            backgroundImage: "radial-gradient(rgba(255, 255, 255, 0.18) 1.25px, transparent 1.25px)",
+            backgroundSize: "22px 22px",
+            backgroundPosition: "center",
+            pointerEvents: "none",
+            zIndex: 0,
+            opacity: 0.85,
+          }}
+          aria-hidden="true"
+        />
+        {/* Scoped Keyframes to guarantee 100% animation execution */}
+        <style dangerouslySetInnerHTML={{ __html: `
+          @keyframes reviewScrollUp {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-50%); }
+          }
+          @keyframes reviewScrollDown {
+            0% { transform: translateY(-50%); }
+            100% { transform: translateY(0); }
+          }
+          .review-track-up {
+            animation: reviewScrollUp 24s linear infinite !important;
+            will-change: transform;
+          }
+          .review-track-down {
+            animation: reviewScrollDown 28s linear infinite !important;
+            will-change: transform;
+          }
+          .reviews-marquee-box:hover .review-track-up,
+          .reviews-marquee-box:hover .review-track-down {
+            animation-play-state: paused !important;
+          }
+        `}} />
+
         <div
           style={{
             maxWidth: "1200px",
@@ -4478,10 +3706,10 @@ export default function LandingPageClient() {
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
             gap: "54px",
-            alignItems: "flex-start",
+            alignItems: "center",
           }}
         >
-          {/* Left Column: Rating Badge, Heading, Subtitle & CTA */}
+          {/* Left Column: Rating Badge, Clean Aligned Heading, Subtitle & CTA */}
           <div style={{ maxWidth: "460px" }}>
             {/* Rating pill */}
             <div
@@ -4489,23 +3717,23 @@ export default function LandingPageClient() {
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "8px",
-                border: "1px solid rgba(255, 90, 31, 0.35)",
-                background: "rgba(255, 255, 255, 0.05)",
-                padding: "6px 14px",
+                border: "1px solid rgba(255, 90, 31, 0.4)",
+                background: "rgba(255, 90, 31, 0.12)",
+                padding: "6px 16px",
                 borderRadius: "999px",
-                boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
-                marginBottom: "24px",
+                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.4)",
+                marginBottom: "20px",
               }}
             >
               <div style={{ display: "flex", gap: "2px", color: "#FF9500", fontSize: "13px" }}>
                 {"★★★★★"}
               </div>
               <span style={{ fontSize: "13.5px", fontWeight: 700, color: "#FFFFFF" }}>
-                5.0 • 217K Ratings
+                5.0 • 217K Verified Ratings
               </span>
             </div>
 
-            {/* Display Heading */}
+            {/* Display Heading (Cleanly Aligned) */}
             <h2
               style={{
                 fontFamily: "var(--font-display), system-ui, sans-serif",
@@ -4513,7 +3741,7 @@ export default function LandingPageClient() {
                 fontWeight: 800,
                 letterSpacing: "-0.035em",
                 color: "#FFFFFF",
-                lineHeight: 1.08,
+                lineHeight: 1.1,
                 margin: "0 0 16px",
               }}
             >
@@ -4523,16 +3751,16 @@ export default function LandingPageClient() {
             {/* Description */}
             <p
               style={{
-                fontSize: "18px",
-                color: "rgba(255, 255, 255, 0.7)",
-                lineHeight: 1.5,
-                margin: "0 0 32px",
+                fontSize: "17px",
+                color: "rgba(255, 255, 255, 0.72)",
+                lineHeight: 1.55,
+                margin: "0 0 28px",
               }}
             >
-              Don&apos;t just take our word for it. See what our users say.
+              Don&apos;t just take our word for it. See what our growing party community has to say.
             </p>
 
-            {/* Sharp Orange CTA Button */}
+            {/* Rounded Pill CTA Button */}
             <Link
               href="/apply"
               style={{
@@ -4540,442 +3768,1426 @@ export default function LandingPageClient() {
                 color: "#FFFFFF",
                 fontSize: "15px",
                 fontWeight: 800,
-                padding: "14px 36px",
-                borderRadius: "0px",
+                padding: "14px 34px",
+                borderRadius: "999px",
                 textDecoration: "none",
-                display: "inline-block",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
                 letterSpacing: "-0.01em",
                 boxShadow: "0 8px 24px rgba(255, 90, 31, 0.35)",
+                transition: "all 0.2s ease",
               }}
-              className="hover:bg-[#FF7A45] transition-colors cursor-pointer"
+              className="hover:bg-[#FF7A45] hover:scale-105 transition-all cursor-pointer"
             >
-              Try it out
+              <span>Try it out</span>
+              <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
 
-          {/* Right Column: 8 User Reviews in 2-Column Dark Grid */}
+          {/* Right Column: Animated Dual-Column Review Marquee with Top & Bottom Fade Mask */}
           <div
+            className="reviews-marquee-box"
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-              gap: "16px",
+              height: "440px",
+              position: "relative",
+              overflow: "hidden",
+              maskImage: "linear-gradient(to bottom, transparent 0%, black 14%, black 86%, transparent 100%)",
+              WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 14%, black 86%, transparent 100%)",
             }}
           >
-            {/* Review 1 */}
             <div
               style={{
-                background: "#110D18",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
-                borderRadius: "14px",
-                padding: "18px 20px",
-                boxShadow: "0 4px 18px rgba(0, 0, 0, 0.5)",
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "16px",
+                height: "100%",
               }}
-              className="hover:border-[#FF5A1F]/40 transition-colors"
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
-                <span style={{ fontSize: "14.5px", fontWeight: 800, color: "#FFFFFF" }}>A must</span>
-                <span style={{ fontSize: "11.5px", color: "rgba(255, 255, 255, 0.45)" }}>May 29 • r3boi</span>
-              </div>
-              <div style={{ color: "#FF8A3D", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
-              <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
-                I don&apos;t even hang out with my friends if they don&apos;t send me the partiful first
-              </p>
-            </div>
+              {/* Animated Track 1 (Upward Scroll) */}
+              <div
+                className="review-track-up"
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "16px",
+                }}
+              >
+                {/* Review 1 */}
+                <div style={{ background: "linear-gradient(145deg, #130D1C 0%, #0A0612 100%)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "18px", padding: "18px 20px", boxShadow: "0 6px 20px rgba(0, 0, 0, 0.5)" }} className="hover:border-[#FF5A1F]/50 transition-colors">
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
+                    <span style={{ fontSize: "14px", fontWeight: 800, color: "#FFFFFF" }}>A must</span>
+                    <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.45)" }}>May 29 • r3boi</span>
+                  </div>
+                  <div style={{ color: "#FF9500", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
+                  <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
+                    I don&apos;t even hang out with my friends if they don&apos;t send me the Solo-No-More link first.
+                  </p>
+                </div>
 
-            {/* Review 2 */}
-            <div
-              style={{
-                background: "#110D18",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
-                borderRadius: "14px",
-                padding: "18px 20px",
-                boxShadow: "0 4px 18px rgba(0, 0, 0, 0.5)",
-              }}
-              className="hover:border-[#FF5A1F]/40 transition-colors"
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
-                <span style={{ fontSize: "14.5px", fontWeight: 800, color: "#FFFFFF" }}>Best Party/Event App</span>
-                <span style={{ fontSize: "11.5px", color: "rgba(255, 255, 255, 0.45)" }}>Nov 14 • MarpZilla</span>
-              </div>
-              <div style={{ color: "#FF8A3D", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
-              <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
-                By far the best app for events. Puts Facebook events or evite to shame.
-              </p>
-            </div>
+                {/* Review 3 */}
+                <div style={{ background: "linear-gradient(145deg, #130D1C 0%, #0A0612 100%)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "18px", padding: "18px 20px", boxShadow: "0 6px 20px rgba(0, 0, 0, 0.5)" }} className="hover:border-[#FF5A1F]/50 transition-colors">
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
+                    <span style={{ fontSize: "14px", fontWeight: 800, color: "#FFFFFF" }}>Best App Ever</span>
+                    <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.45)" }}>Mar 25 • charleigh</span>
+                  </div>
+                  <div style={{ color: "#FF9500", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
+                  <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
+                    If Solo-No-More has one million users I am one. The group planning vibe and ease is unmatched.
+                  </p>
+                </div>
 
-            {/* Review 3 */}
-            <div
-              style={{
-                background: "#110D18",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
-                borderRadius: "14px",
-                padding: "18px 20px",
-                boxShadow: "0 4px 18px rgba(0, 0, 0, 0.5)",
-              }}
-              className="hover:border-[#FF5A1F]/40 transition-colors"
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
-                <span style={{ fontSize: "14.5px", fontWeight: 800, color: "#FFFFFF" }}>Best App Ever</span>
-                <span style={{ fontSize: "11.5px", color: "rgba(255, 255, 255, 0.45)" }}>Mar 25 • ch_ch_charleigh</span>
-              </div>
-              <div style={{ color: "#FF8A3D", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
-              <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
-                If partiful has one million users I am one. If partiful has one thousand users I am one. If partiful has one hundred user I am one. If partiful has no users then I am not around anymore.
-              </p>
-            </div>
+                {/* Review 5 */}
+                <div style={{ background: "linear-gradient(145deg, #130D1C 0%, #0A0612 100%)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "18px", padding: "18px 20px", boxShadow: "0 6px 20px rgba(0, 0, 0, 0.5)" }} className="hover:border-[#FF5A1F]/50 transition-colors">
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
+                    <span style={{ fontSize: "14px", fontWeight: 800, color: "#FFFFFF" }}>The rare *perfect* app</span>
+                    <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.45)" }}>Jun 11 • LibertyLikes</span>
+                  </div>
+                  <div style={{ color: "#FF9500", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
+                  <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
+                    Solo-No-More sets out to do one thing — coordinate parties with zero friction. And it does that perfectly.
+                  </p>
+                </div>
 
-            {/* Review 4 */}
-            <div
-              style={{
-                background: "#110D18",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
-                borderRadius: "14px",
-                padding: "18px 20px",
-                boxShadow: "0 4px 18px rgba(0, 0, 0, 0.5)",
-              }}
-              className="hover:border-[#FF5A1F]/40 transition-colors"
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
-                <span style={{ fontSize: "14.5px", fontWeight: 800, color: "#FFFFFF" }}>Finally a good app that&apos;s 100% free</span>
-                <span style={{ fontSize: "11.5px", color: "rgba(255, 255, 255, 0.45)" }}>Nov 7 • Tlackshots girl</span>
-              </div>
-              <div style={{ color: "#FF8A3D", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
-              <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
-                I LOVE THIS APP! It&apos;s 100% free, it&apos;s cute, and innovative! I love that you cna change the theme, the backrounds, add a link for the address and get RSVP&apos;s...
-              </p>
-            </div>
+                {/* Review 7 */}
+                <div style={{ background: "linear-gradient(145deg, #130D1C 0%, #0A0612 100%)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "18px", padding: "18px 20px", boxShadow: "0 6px 20px rgba(0, 0, 0, 0.5)" }} className="hover:border-[#FF5A1F]/50 transition-colors">
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
+                    <span style={{ fontSize: "14px", fontWeight: 800, color: "#FFFFFF" }}>I love Solo-No-More</span>
+                    <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.45)" }}>Nov 18 • Juliette Legault</span>
+                  </div>
+                  <div style={{ color: "#FF9500", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
+                  <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
+                    Helped me coordinate a rooftop party for my bf. I love how it makes planning social nights so easy!
+                  </p>
+                </div>
 
-            {/* Review 5 */}
-            <div
-              style={{
-                background: "#110D18",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
-                borderRadius: "14px",
-                padding: "18px 20px",
-                boxShadow: "0 4px 18px rgba(0, 0, 0, 0.5)",
-              }}
-              className="hover:border-[#FF5A1F]/40 transition-colors"
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
-                <span style={{ fontSize: "14.5px", fontWeight: 800, color: "#FFFFFF" }}>The rare *perfect* app</span>
-                <span style={{ fontSize: "11.5px", color: "rgba(255, 255, 255, 0.45)" }}>Jun 11 • LibertyLikes</span>
-              </div>
-              <div style={{ color: "#FF8A3D", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
-              <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
-                So many apps try to do too many things and does any one of those things just okay. Partiful sets out to be one thing - the best way to coordinate a party or event. And it is that one thing perfectly.
-              </p>
-            </div>
+                {/* ── DUPLICATE SET 1 FOR PERFECT SEAMLESS INFINITE LOOP ── */}
+                <div style={{ background: "linear-gradient(145deg, #130D1C 0%, #0A0612 100%)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "18px", padding: "18px 20px", boxShadow: "0 6px 20px rgba(0, 0, 0, 0.5)" }} className="hover:border-[#FF5A1F]/50 transition-colors">
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
+                    <span style={{ fontSize: "14px", fontWeight: 800, color: "#FFFFFF" }}>A must</span>
+                    <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.45)" }}>May 29 • r3boi</span>
+                  </div>
+                  <div style={{ color: "#FF9500", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
+                  <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
+                    I don&apos;t even hang out with my friends if they don&apos;t send me the Solo-No-More link first.
+                  </p>
+                </div>
 
-            {/* Review 6 */}
-            <div
-              style={{
-                background: "#110D18",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
-                borderRadius: "14px",
-                padding: "18px 20px",
-                boxShadow: "0 4px 18px rgba(0, 0, 0, 0.5)",
-              }}
-              className="hover:border-[#FF5A1F]/40 transition-colors"
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
-                <span style={{ fontSize: "14.5px", fontWeight: 800, color: "#FFFFFF" }}>The BEST way to wrangle your friends</span>
-                <span style={{ fontSize: "11.5px", color: "rgba(255, 255, 255, 0.45)" }}>Nov 3 • Some party planner</span>
-              </div>
-              <div style={{ color: "#FF8A3D", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
-              <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
-                I rarely write reviews. This app is so great that I specifically came here to tell you about it.
-              </p>
-            </div>
+                <div style={{ background: "linear-gradient(145deg, #130D1C 0%, #0A0612 100%)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "18px", padding: "18px 20px", boxShadow: "0 6px 20px rgba(0, 0, 0, 0.5)" }} className="hover:border-[#FF5A1F]/50 transition-colors">
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
+                    <span style={{ fontSize: "14px", fontWeight: 800, color: "#FFFFFF" }}>Best App Ever</span>
+                    <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.45)" }}>Mar 25 • charleigh</span>
+                  </div>
+                  <div style={{ color: "#FF9500", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
+                  <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
+                    If Solo-No-More has one million users I am one. The group planning vibe and ease is unmatched.
+                  </p>
+                </div>
 
-            {/* Review 7 */}
-            <div
-              style={{
-                background: "#110D18",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
-                borderRadius: "14px",
-                padding: "18px 20px",
-                boxShadow: "0 4px 18px rgba(0, 0, 0, 0.5)",
-              }}
-              className="hover:border-[#FF5A1F]/40 transition-colors"
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
-                <span style={{ fontSize: "14.5px", fontWeight: 800, color: "#FFFFFF" }}>I love partiful</span>
-                <span style={{ fontSize: "11.5px", color: "rgba(255, 255, 255, 0.45)" }}>Nov 18 • Juliette Legault</span>
-              </div>
-              <div style={{ color: "#FF8A3D", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
-              <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
-                helped me coordinate a surprise party for my bf. I love it so much it amkes planning parties so easy !!!
-              </p>
-            </div>
+                <div style={{ background: "linear-gradient(145deg, #130D1C 0%, #0A0612 100%)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "18px", padding: "18px 20px", boxShadow: "0 6px 20px rgba(0, 0, 0, 0.5)" }} className="hover:border-[#FF5A1F]/50 transition-colors">
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
+                    <span style={{ fontSize: "14px", fontWeight: 800, color: "#FFFFFF" }}>The rare *perfect* app</span>
+                    <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.45)" }}>Jun 11 • LibertyLikes</span>
+                  </div>
+                  <div style={{ color: "#FF9500", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
+                  <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
+                    Solo-No-More sets out to do one thing — coordinate parties with zero friction. And it does that perfectly.
+                  </p>
+                </div>
 
-            {/* Review 8 */}
-            <div
-              style={{
-                background: "#110D18",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
-                borderRadius: "14px",
-                padding: "18px 20px",
-                boxShadow: "0 4px 18px rgba(0, 0, 0, 0.5)",
-              }}
-              className="hover:border-[#FF5A1F]/40 transition-colors"
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
-                <span style={{ fontSize: "14.5px", fontWeight: 800, color: "#FFFFFF" }}>Changed my life</span>
-                <span style={{ fontSize: "11.5px", color: "rgba(255, 255, 255, 0.45)" }}>Oct 26 • xjoejoex121</span>
+                <div style={{ background: "linear-gradient(145deg, #130D1C 0%, #0A0612 100%)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "18px", padding: "18px 20px", boxShadow: "0 6px 20px rgba(0, 0, 0, 0.5)" }} className="hover:border-[#FF5A1F]/50 transition-colors">
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
+                    <span style={{ fontSize: "14px", fontWeight: 800, color: "#FFFFFF" }}>I love Solo-No-More</span>
+                    <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.45)" }}>Nov 18 • Juliette Legault</span>
+                  </div>
+                  <div style={{ color: "#FF9500", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
+                  <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
+                    Helped me coordinate a rooftop party for my bf. I love how it makes planning social nights so easy!
+                  </p>
+                </div>
               </div>
-              <div style={{ color: "#FF8A3D", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
-              <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
-                Made so many great memories with friends because of this app. 10/10
-              </p>
+
+              {/* Animated Track 2 (Offset Downward Scroll) */}
+              <div
+                className="review-track-down"
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "16px",
+                }}
+              >
+                {/* Review 2 */}
+                <div style={{ background: "linear-gradient(145deg, #130D1C 0%, #0A0612 100%)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "18px", padding: "18px 20px", boxShadow: "0 6px 20px rgba(0, 0, 0, 0.5)" }} className="hover:border-[#FF5A1F]/50 transition-colors">
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
+                    <span style={{ fontSize: "14px", fontWeight: 800, color: "#FFFFFF" }}>Best Party App</span>
+                    <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.45)" }}>Nov 14 • MarpZilla</span>
+                  </div>
+                  <div style={{ color: "#FF9500", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
+                  <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
+                    By far the best app for events. Puts old event planners or evites to shame.
+                  </p>
+                </div>
+
+                {/* Review 4 */}
+                <div style={{ background: "linear-gradient(145deg, #130D1C 0%, #0A0612 100%)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "18px", padding: "18px 20px", boxShadow: "0 6px 20px rgba(0, 0, 0, 0.5)" }} className="hover:border-[#FF5A1F]/50 transition-colors">
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
+                    <span style={{ fontSize: "14px", fontWeight: 800, color: "#FFFFFF" }}>100% free & cute</span>
+                    <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.45)" }}>Nov 7 • Tlackshots</span>
+                  </div>
+                  <div style={{ color: "#FF9500", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
+                  <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
+                    I LOVE THIS APP! It&apos;s cute, modern, and innovative. The RSVP flow is effortless.
+                  </p>
+                </div>
+
+                {/* Review 6 */}
+                <div style={{ background: "linear-gradient(145deg, #130D1C 0%, #0A0612 100%)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "18px", padding: "18px 20px", boxShadow: "0 6px 20px rgba(0, 0, 0, 0.5)" }} className="hover:border-[#FF5A1F]/50 transition-colors">
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
+                    <span style={{ fontSize: "14px", fontWeight: 800, color: "#FFFFFF" }}>Best friend planner</span>
+                    <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.45)" }}>Nov 3 • PartyPlanner</span>
+                  </div>
+                  <div style={{ color: "#FF9500", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
+                  <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
+                    I rarely write reviews. This app is so great that I specifically came here to tell everyone.
+                  </p>
+                </div>
+
+                {/* Review 8 */}
+                <div style={{ background: "linear-gradient(145deg, #130D1C 0%, #0A0612 100%)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "18px", padding: "18px 20px", boxShadow: "0 6px 20px rgba(0, 0, 0, 0.5)" }} className="hover:border-[#FF5A1F]/50 transition-colors">
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
+                    <span style={{ fontSize: "14px", fontWeight: 800, color: "#FFFFFF" }}>Changed my life</span>
+                    <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.45)" }}>Oct 26 • xjoejoex121</span>
+                  </div>
+                  <div style={{ color: "#FF9500", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
+                  <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
+                    Made so many great memories with friends because of this app. 10/10 recommendation!
+                  </p>
+                </div>
+
+                {/* ── DUPLICATE SET 2 FOR PERFECT SEAMLESS INFINITE LOOP ── */}
+                <div style={{ background: "linear-gradient(145deg, #130D1C 0%, #0A0612 100%)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "18px", padding: "18px 20px", boxShadow: "0 6px 20px rgba(0, 0, 0, 0.5)" }} className="hover:border-[#FF5A1F]/50 transition-colors">
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
+                    <span style={{ fontSize: "14px", fontWeight: 800, color: "#FFFFFF" }}>Best Party App</span>
+                    <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.45)" }}>Nov 14 • MarpZilla</span>
+                  </div>
+                  <div style={{ color: "#FF9500", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
+                  <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
+                    By far the best app for events. Puts old event planners or evites to shame.
+                  </p>
+                </div>
+
+                <div style={{ background: "linear-gradient(145deg, #130D1C 0%, #0A0612 100%)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "18px", padding: "18px 20px", boxShadow: "0 6px 20px rgba(0, 0, 0, 0.5)" }} className="hover:border-[#FF5A1F]/50 transition-colors">
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
+                    <span style={{ fontSize: "14px", fontWeight: 800, color: "#FFFFFF" }}>100% free & cute</span>
+                    <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.45)" }}>Nov 7 • Tlackshots</span>
+                  </div>
+                  <div style={{ color: "#FF9500", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
+                  <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
+                    I LOVE THIS APP! It&apos;s cute, modern, and innovative. The RSVP flow is effortless.
+                  </p>
+                </div>
+
+                <div style={{ background: "linear-gradient(145deg, #130D1C 0%, #0A0612 100%)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "18px", padding: "18px 20px", boxShadow: "0 6px 20px rgba(0, 0, 0, 0.5)" }} className="hover:border-[#FF5A1F]/50 transition-colors">
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
+                    <span style={{ fontSize: "14px", fontWeight: 800, color: "#FFFFFF" }}>Best friend planner</span>
+                    <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.45)" }}>Nov 3 • PartyPlanner</span>
+                  </div>
+                  <div style={{ color: "#FF9500", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
+                  <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
+                    I rarely write reviews. This app is so great that I specifically came here to tell everyone.
+                  </p>
+                </div>
+
+                <div style={{ background: "linear-gradient(145deg, #130D1C 0%, #0A0612 100%)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "18px", padding: "18px 20px", boxShadow: "0 6px 20px rgba(0, 0, 0, 0.5)" }} className="hover:border-[#FF5A1F]/50 transition-colors">
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
+                    <span style={{ fontSize: "14px", fontWeight: 800, color: "#FFFFFF" }}>Changed my life</span>
+                    <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.45)" }}>Oct 26 • xjoejoex121</span>
+                  </div>
+                  <div style={{ color: "#FF9500", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
+                  <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
+                    Made so many great memories with friends because of this app. 10/10 recommendation!
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── 10. "PHOTO DROPS FROM THE PARTY" (CANDID FLASH PHOTOGRAPHY GALLERY) ── */}
-      <section
-        id="photo-drops-section"
+
+      {/* ── SECTION FINISHED DIVIDER LINE ── */}
+      <div
         style={{
-          padding: "90px 20px 100px",
-          maxWidth: "1240px",
-          margin: "0 auto",
+          width: "100%",
+          display: "flex",
+          justifyContent: "center",
+          padding: "16px 24px",
+          position: "relative",
+          zIndex: 10,
+        }}
+        aria-hidden="true"
+      >
+        <div
+          style={{
+            width: "100%",
+            maxWidth: "1180px",
+            height: "1px",
+            background: "linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.15) 20%, rgba(255, 90, 31, 0.35) 50%, rgba(255, 255, 255, 0.15) 80%, transparent 100%)",
+          }}
+        />
+      </div>
+
+      {/* ── 11. "STORIES FROM THE SQUAD" (PURE PHOTO & VIDEO COLLAGE - STANDARD SIZE) ── */}
+      <section
+        id="review-wall-section"
+        style={{
+          padding: "90px min(4vw, 48px) 100px",
           width: "100%",
           textAlign: "center",
+          background: "#060408",
+          position: "relative",
+          overflow: "hidden",
         }}
       >
-        <div style={{ marginBottom: "44px" }}>
+        {/* Subtle Geometric Dotted Texture Overlay (Zero Orange Shade) */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            backgroundImage: "radial-gradient(rgba(255, 255, 255, 0.18) 1.25px, transparent 1.25px)",
+            backgroundSize: "22px 22px",
+            backgroundPosition: "center",
+            pointerEvents: "none",
+            zIndex: 0,
+            opacity: 0.85,
+          }}
+          aria-hidden="true"
+        />
+
+        <div style={{ maxWidth: "1540px", margin: "0 auto", position: "relative", zIndex: 2 }}>
+          {/* Top Pill Badge: [ 📷 REVIEW WALL ] */}
           <div
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: "6px",
-              background: "rgba(255, 77, 45, 0.1)",
-              border: "1px solid rgba(255, 77, 45, 0.25)",
-              padding: "4px 12px",
+              gap: "8px",
+              background: "rgba(28, 14, 10, 0.85)",
+              border: "1px solid rgba(255, 90, 31, 0.4)",
+              padding: "7px 20px",
               borderRadius: "999px",
               fontSize: "12px",
               fontWeight: 800,
-              color: "#FF8A6E",
-              marginBottom: "14px",
+              letterSpacing: "0.12em",
+              color: "#FF8A3D",
+              marginBottom: "16px",
+              boxShadow: "0 4px 18px rgba(255, 90, 31, 0.2)",
             }}
           >
-            <Camera className="w-3.5 h-3.5 text-[#FF4D2D]" /> CANDID FLASH GALLERY
+            <InstagramIcon className="w-3.5 h-3.5 text-[#FF5A1F]" />
+            <span>REVIEW WALL</span>
           </div>
+
+          {/* Main Headline: Stories from the Squad */}
           <h2
             style={{
               fontFamily: "var(--font-display), system-ui, sans-serif",
-              fontSize: "clamp(28px, 4vw, 48px)",
-              fontWeight: 800,
-              letterSpacing: "-0.03em",
-              margin: "0 0 10px",
+              fontSize: "clamp(34px, 4.8vw, 60px)",
+              fontWeight: 900,
+              letterSpacing: "-0.035em",
+              color: "#FFFFFF",
+              lineHeight: 1.15,
+              margin: "0 0 14px",
             }}
           >
-            Photo drops from the party
+            {reviewWallData?.heading || (
+              <>
+                Stories from the{" "}
+                <span
+                  style={{
+                    background: "linear-gradient(135deg, #FF6F26 0%, #FF5A1F 100%)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                  }}
+                >
+                  Squad
+                </span>
+              </>
+            )}
           </h2>
-          <p style={{ fontSize: "16px", color: "var(--text-secondary)", margin: 0 }}>
-            Real moments from real squads across Karachi.
+
+          {/* Subtitle */}
+          <p
+            style={{
+              fontSize: "16px",
+              color: "rgba(255, 255, 255, 0.72)",
+              margin: "0 0 20px",
+            }}
+          >
+            {reviewWallData?.tagline || "Tag @solonomore on Instagram to get featured on the Review Wall"}
           </p>
-        </div>
 
-        {/* 3 Real Photography Cards Gallery */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "28px" }}>
-          <div style={{ borderRadius: "26px", overflow: "hidden", position: "relative", height: "350px", boxShadow: "0 20px 40px rgba(0,0,0,0.6)" }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/images/hero-rooftop.jpg" alt="Rooftop party Karachi" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            <div style={{ position: "absolute", bottom: "16px", left: "16px", background: "rgba(9, 8, 14, 0.85)", backdropFilter: "blur(10px)", border: "1px solid rgba(255, 255, 255, 0.15)", padding: "7px 16px", borderRadius: "999px", fontSize: "12px", fontWeight: 700, display: "flex", alignItems: "center", gap: "6px" }}>
-              <MapPin className="w-3.5 h-3.5 text-[#FF5A1F]" />
-              <span>Rooftop Sunset · DHA Phase 6</span>
+          {/* Pill Toggle Button: [ STORIES FROM THE LAST EVENT ] */}
+          <div style={{ marginBottom: "38px" }}>
+            <span
+              style={{
+                display: "inline-block",
+                background: "rgba(255, 90, 31, 0.12)",
+                border: "1px solid rgba(255, 90, 31, 0.45)",
+                color: "#FF8A3D",
+                fontSize: "11px",
+                fontWeight: 800,
+                letterSpacing: "0.14em",
+                padding: "7px 22px",
+                borderRadius: "999px",
+                textTransform: "uppercase",
+                boxShadow: "0 0 24px rgba(255, 90, 31, 0.22)",
+              }}
+            >
+              Stories from the last event
+            </span>
+          </div>
+
+          {/* ── STANDARD-SIZE PHOTO & VIDEO COLLAGE (TIGHT MOSAIC GRID: FEW LARGE, FEW MEDIUM, FEW SMALL) ── */}
+          <div className="grid grid-cols-12 gap-3.5 mb-10 text-left auto-rows-[200px] md:auto-rows-[225px]">
+            {/* 1. LARGE FEATURE PHOTO TILE: (Col 1-4, Row 1-2) */}
+            <a
+              href={rSlots[0]?.url || "https://www.instagram.com"}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="col-span-12 sm:col-span-6 lg:col-span-4 row-span-2 rounded-3xl overflow-hidden relative group transition-all duration-300 hover:border-[#FF5A1F] hover:shadow-[0_18px_45px_rgba(255,90,31,0.3)] block cursor-pointer"
+              style={{
+                border: "1.2px solid rgba(255, 255, 255, 0.14)",
+                background: "#140A0D",
+              }}
+            >
+              {/* Full Image */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={rSlots[0]?.image_url || "/images/beach-bonfire.jpg"}
+                alt="French Beach Bonfire Gathering"
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+              />
+
+              {/* Cinematic Vignette Overlay */}
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background: "linear-gradient(180deg, rgba(14,6,9,0.72) 0%, rgba(14,6,9,0.1) 40%, rgba(14,6,9,0.85) 100%)",
+                  pointerEvents: "none",
+                }}
+              />
+
+              {/* Floating Top Elements */}
+              <div style={{ position: "absolute", top: "14px", left: "14px", right: "14px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "rgba(10, 6, 8, 0.8)", backdropFilter: "blur(12px)", padding: "5px 12px 5px 6px", borderRadius: "999px", border: "1px solid rgba(255, 255, 255, 0.14)" }}>
+                  <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: "#FF5A1F", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 800, color: "#FFF" }}>
+                    D
+                  </div>
+                  <span style={{ fontSize: "12px", fontWeight: 800, color: "#FFFFFF", display: "flex", alignItems: "center", gap: "4px" }}>
+                    @danish_beaches <Check className="w-3 h-3 text-[#FF5A1F]" />
+                  </span>
+                </div>
+
+                <span style={{ fontSize: "10px", fontWeight: 800, color: "#FF8A3D", background: "rgba(255,90,31,0.22)", border: "1px solid rgba(255,90,31,0.45)", padding: "4px 10px", borderRadius: "999px" }}>
+                  🔥 FEATURED
+                </span>
+              </div>
+
+              {/* Center Audio Track Badge */}
+              <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", zIndex: 2, pointerEvents: "none" }}>
+                <div style={{ background: "rgba(10, 6, 8, 0.82)", backdropFilter: "blur(12px)", padding: "6px 14px", borderRadius: "999px", fontSize: "11.5px", fontWeight: 700, color: "#FF8A3D", border: "1px solid rgba(255,90,31,0.4)", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <Music className="w-3.5 h-3.5 text-[#FF5A1F]" />
+                  <span>Channo (Acoustic Jam) • 0:42</span>
+                </div>
+              </div>
+
+              {/* Floating Bottom Info & Likes */}
+              <div style={{ position: "absolute", bottom: "14px", left: "14px", right: "14px", zIndex: 2 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+                  <div style={{ background: "rgba(10, 6, 8, 0.82)", backdropFilter: "blur(12px)", padding: "5px 12px", borderRadius: "999px", fontSize: "11px", fontWeight: 700, color: "#FFFFFF", display: "flex", alignItems: "center", gap: "5px", border: "1px solid rgba(255, 255, 255, 0.12)" }}>
+                    <MapPin className="w-3 h-3 text-[#FF5A1F]" />
+                    <span>French Beach Hut #42</span>
+                  </div>
+                  <div style={{ background: "rgba(10, 6, 8, 0.82)", backdropFilter: "blur(12px)", padding: "5px 12px", borderRadius: "999px", fontSize: "11px", fontWeight: 700, color: "#FFFFFF", border: "1px solid rgba(255, 255, 255, 0.12)" }}>
+                    ❤️ 384
+                  </div>
+                </div>
+              </div>
+            </a>
+
+            {/* 2. TALL VIDEO REEL TILE: (Col 5-7, Row 1-2) */}
+            <a
+              href={rSlots[1]?.url || "https://www.instagram.com"}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="col-span-12 sm:col-span-6 lg:col-span-3 row-span-2 rounded-3xl overflow-hidden relative group transition-all duration-300 hover:border-[#FF5A1F] hover:shadow-[0_18px_45px_rgba(255,90,31,0.3)] block cursor-pointer"
+              style={{
+                border: "1.2px solid rgba(255, 255, 255, 0.14)",
+                background: "#081410",
+              }}
+            >
+              {/* Full Image */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={rSlots[1]?.image_url || "/images/padel-squad.jpg"}
+                alt="Velocity Padel Squad Reel"
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+              />
+
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background: "linear-gradient(180deg, rgba(8,20,16,0.72) 0%, rgba(8,20,16,0.1) 40%, rgba(8,20,16,0.85) 100%)",
+                  pointerEvents: "none",
+                }}
+              />
+
+              {/* Floating Top Elements */}
+              <div style={{ position: "absolute", top: "14px", left: "14px", right: "14px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "rgba(10, 6, 8, 0.8)", backdropFilter: "blur(12px)", padding: "5px 12px 5px 6px", borderRadius: "999px", border: "1px solid rgba(255, 255, 255, 0.14)" }}>
+                  <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: "#FF5A1F", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 800, color: "#FFF" }}>
+                    S
+                  </div>
+                  <span style={{ fontSize: "12px", fontWeight: 800, color: "#FFFFFF", display: "flex", alignItems: "center", gap: "4px" }}>
+                    @sara_speed <Check className="w-3 h-3 text-[#FF5A1F]" />
+                  </span>
+                </div>
+
+                <span style={{ fontSize: "10px", fontWeight: 800, color: "#FFFFFF", background: "rgba(255,90,31,0.9)", padding: "4px 10px", borderRadius: "999px", display: "flex", alignItems: "center", gap: "4px" }}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                  REEL 0:15
+                </span>
+              </div>
+
+              {/* Center Glowing Play Button */}
+              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}>
+                <div
+                  style={{
+                    width: "56px",
+                    height: "56px",
+                    borderRadius: "50%",
+                    background: "rgba(18, 9, 7, 0.85)",
+                    border: "2px solid rgba(255, 90, 31, 0.8)",
+                    boxShadow: "0 0 25px rgba(255, 90, 31, 0.5)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "all 0.25s ease",
+                  }}
+                  className="group-hover:scale-110 group-hover:bg-[#FF5A1F] text-white"
+                >
+                  <Play className="w-6 h-6 fill-white text-white ml-0.5" />
+                </div>
+              </div>
+
+              {/* Floating Bottom Info */}
+              <div style={{ position: "absolute", bottom: "14px", left: "14px", right: "14px", zIndex: 2 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+                  <div style={{ background: "rgba(10, 6, 8, 0.82)", backdropFilter: "blur(12px)", padding: "5px 12px", borderRadius: "999px", fontSize: "11px", fontWeight: 700, color: "#FFFFFF", border: "1px solid rgba(255, 255, 255, 0.12)" }}>
+                    📍 Velocity Clifton
+                  </div>
+                  <div style={{ background: "rgba(10, 6, 8, 0.82)", backdropFilter: "blur(12px)", padding: "5px 12px", borderRadius: "999px", fontSize: "11px", fontWeight: 700, color: "#FF8A3D", border: "1px solid rgba(255,90,31,0.3)" }}>
+                    ★ 2.4k views
+                  </div>
+                </div>
+              </div>
+            </a>
+
+            {/* 3. MEDIUM WIDE PHOTO/VIDEO TILE: (Col 8-12, Row 1) */}
+            <a
+              href={rSlots[2]?.url || "https://www.instagram.com"}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="col-span-12 sm:col-span-12 lg:col-span-5 row-span-1 rounded-3xl overflow-hidden relative group transition-all duration-300 hover:border-[#FF5A1F] hover:shadow-[0_18px_45px_rgba(255,90,31,0.3)] block cursor-pointer"
+              style={{
+                border: "1.2px solid rgba(255, 255, 255, 0.14)",
+                background: "#160C14",
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={rSlots[2]?.image_url || "/images/acoustic-jam.jpg"}
+                alt="Secret Loft Acoustic Session"
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+              />
+
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background: "linear-gradient(180deg, rgba(16,8,14,0.72) 0%, rgba(16,8,14,0.1) 40%, rgba(16,8,14,0.85) 100%)",
+                  pointerEvents: "none",
+                }}
+              />
+
+              {/* Floating Top Elements */}
+              <div style={{ position: "absolute", top: "12px", left: "14px", right: "14px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "rgba(10, 6, 8, 0.8)", backdropFilter: "blur(12px)", padding: "4px 12px 4px 6px", borderRadius: "999px", border: "1px solid rgba(255, 255, 255, 0.14)" }}>
+                  <div style={{ width: "22px", height: "22px", borderRadius: "50%", background: "#FF5A1F", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10.5px", fontWeight: 800, color: "#FFF" }}>
+                    Z
+                  </div>
+                  <span style={{ fontSize: "12px", fontWeight: 800, color: "#FFFFFF" }}>@zayd_khi</span>
+                </div>
+
+                <span style={{ fontSize: "10px", fontWeight: 800, color: "#FF8A3D", background: "rgba(255,90,31,0.22)", border: "1px solid rgba(255,90,31,0.45)", padding: "4px 10px", borderRadius: "999px" }}>
+                  🎸 LIVE ACOUSTICS
+                </span>
+              </div>
+
+              {/* Center Play Icon */}
+              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}>
+                <div
+                  style={{
+                    width: "46px",
+                    height: "46px",
+                    borderRadius: "50%",
+                    background: "rgba(18, 9, 7, 0.82)",
+                    border: "2px solid rgba(255, 90, 31, 0.7)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "all 0.25s ease",
+                  }}
+                  className="group-hover:scale-110 group-hover:bg-[#FF5A1F] text-white"
+                >
+                  <Play className="w-5 h-5 fill-white text-white ml-0.5" />
+                </div>
+              </div>
+
+              {/* Floating Bottom Info */}
+              <div style={{ position: "absolute", bottom: "12px", left: "14px", right: "14px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
+                <div style={{ background: "rgba(10, 6, 8, 0.82)", backdropFilter: "blur(12px)", padding: "4px 10px", borderRadius: "999px", fontSize: "11px", fontWeight: 700, color: "#FFFFFF", border: "1px solid rgba(255, 255, 255, 0.12)" }}>
+                  📍 Secret Loft Phase 5
+                </div>
+                <div style={{ background: "rgba(10, 6, 8, 0.82)", backdropFilter: "blur(12px)", padding: "4px 10px", borderRadius: "999px", fontSize: "11px", fontWeight: 700, color: "#FFFFFF", border: "1px solid rgba(255, 255, 255, 0.12)" }}>
+                  ❤️ 445
+                </div>
+              </div>
+            </a>
+
+            {/* 4. MEDIUM PHOTO TILE: (Col 8-10, Row 2) */}
+            <a
+              href={rSlots[3]?.url || "https://www.instagram.com"}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="col-span-12 sm:col-span-6 lg:col-span-3 row-span-1 rounded-3xl overflow-hidden relative group transition-all duration-300 hover:border-[#FF5A1F] hover:shadow-[0_18px_45px_rgba(255,90,31,0.3)] block cursor-pointer"
+              style={{
+                border: "1.2px solid rgba(255, 255, 255, 0.14)",
+                background: "#160C10",
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={rSlots[3]?.image_url || "/images/chai-cafe.jpg"}
+                alt="Chai Cafe Boardgames"
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+              />
+
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background: "linear-gradient(180deg, rgba(16,8,10,0.72) 0%, rgba(16,8,10,0.1) 40%, rgba(16,8,10,0.85) 100%)",
+                  pointerEvents: "none",
+                }}
+              />
+
+              <div style={{ position: "absolute", top: "12px", left: "12px", right: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", background: "rgba(10, 6, 8, 0.8)", backdropFilter: "blur(12px)", padding: "4px 10px 4px 6px", borderRadius: "999px", border: "1px solid rgba(255, 255, 255, 0.14)" }}>
+                  <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: "#FF5A1F", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: 800, color: "#FFF" }}>
+                    A
+                  </div>
+                  <span style={{ fontSize: "11.5px", fontWeight: 800, color: "#FFFFFF" }}>@alizeh_vibe</span>
+                </div>
+                <InstagramIcon className="w-3.5 h-3.5 text-[#FF5A1F]" />
+              </div>
+
+              <div style={{ position: "absolute", bottom: "12px", left: "12px", right: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
+                <div style={{ background: "rgba(10, 6, 8, 0.82)", backdropFilter: "blur(12px)", padding: "4px 10px", borderRadius: "999px", fontSize: "10.5px", fontWeight: 700, color: "#FFFFFF" }}>
+                  📍 Alamgir Clifton
+                </div>
+                <div style={{ background: "rgba(10, 6, 8, 0.82)", backdropFilter: "blur(12px)", padding: "4px 10px", borderRadius: "999px", fontSize: "10.5px", fontWeight: 700, color: "#FFFFFF" }}>
+                  ❤️ 198
+                </div>
+              </div>
+            </a>
+
+            {/* 5. SMALL SNAPSHOT TILE: (Col 11-12, Row 2) */}
+            <a
+              href={rSlots[4]?.url || "https://www.instagram.com"}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="col-span-12 sm:col-span-6 lg:col-span-2 row-span-1 rounded-3xl overflow-hidden relative group transition-all duration-300 hover:border-[#FF5A1F] hover:shadow-[0_18px_45px_rgba(255,90,31,0.3)] block cursor-pointer"
+              style={{
+                border: "1.2px solid rgba(255, 255, 255, 0.14)",
+                background: "#160C10",
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={rSlots[4]?.image_url || "/images/beacon-chai.jpg"}
+                alt="Frere Hall Chai Run"
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+              />
+
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background: "linear-gradient(180deg, rgba(16,8,10,0.72) 0%, rgba(16,8,10,0.1) 40%, rgba(16,8,10,0.85) 100%)",
+                  pointerEvents: "none",
+                }}
+              />
+
+              <div style={{ position: "absolute", top: "12px", left: "12px", right: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", background: "rgba(10, 6, 8, 0.8)", backdropFilter: "blur(12px)", padding: "4px 10px 4px 6px", borderRadius: "999px", border: "1px solid rgba(255, 255, 255, 0.14)" }}>
+                  <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: "#FF5A1F", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: 800, color: "#FFF" }}>
+                    H
+                  </div>
+                  <span style={{ fontSize: "11px", fontWeight: 800, color: "#FFFFFF" }}>@hamza_clicks</span>
+                </div>
+              </div>
+
+              <div style={{ position: "absolute", bottom: "12px", left: "12px", right: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
+                <div style={{ background: "rgba(10, 6, 8, 0.82)", backdropFilter: "blur(12px)", padding: "4px 8px", borderRadius: "999px", fontSize: "10px", fontWeight: 700, color: "#FFFFFF" }}>
+                  📍 Frere Hall
+                </div>
+                <div style={{ background: "rgba(10, 6, 8, 0.82)", backdropFilter: "blur(12px)", padding: "4px 8px", borderRadius: "999px", fontSize: "10px", fontWeight: 700, color: "#FFFFFF" }}>
+                  ❤️ 142
+                </div>
+              </div>
+            </a>
+
+            {/* 6. VIDEO REEL TILE: (Col 1-3, Row 3) */}
+            <a
+              href={rSlots[5]?.url || "https://www.instagram.com"}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="col-span-12 sm:col-span-6 lg:col-span-3 row-span-1 rounded-3xl overflow-hidden relative group transition-all duration-300 hover:border-[#FF5A1F] hover:shadow-[0_18px_45px_rgba(255,90,31,0.3)] block cursor-pointer"
+              style={{
+                border: "1.2px solid rgba(255, 255, 255, 0.14)",
+                background: "#0E1210",
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={rSlots[5]?.image_url || "/images/beacon-padel.jpg"}
+                alt="Legends Arena Match"
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+              />
+
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background: "linear-gradient(180deg, rgba(8,18,14,0.72) 0%, rgba(8,18,14,0.1) 40%, rgba(8,18,14,0.85) 100%)",
+                  pointerEvents: "none",
+                }}
+              />
+
+              <div style={{ position: "absolute", top: "12px", left: "12px", right: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", background: "rgba(10, 6, 8, 0.8)", backdropFilter: "blur(12px)", padding: "4px 10px 4px 6px", borderRadius: "999px", border: "1px solid rgba(255, 255, 255, 0.14)" }}>
+                  <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: "#FF5A1F", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: 800, color: "#FFF" }}>
+                    B
+                  </div>
+                  <span style={{ fontSize: "11.5px", fontWeight: 800, color: "#FFFFFF" }}>@bilal_smash</span>
+                </div>
+                <span style={{ fontSize: "9.5px", fontWeight: 800, color: "#FFFFFF", background: "rgba(255,90,31,0.9)", padding: "3px 8px", borderRadius: "999px" }}>
+                  🎥 MATCH
+                </span>
+              </div>
+
+              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}>
+                <div
+                  style={{
+                    width: "44px",
+                    height: "44px",
+                    borderRadius: "50%",
+                    background: "rgba(18, 9, 7, 0.82)",
+                    border: "2px solid rgba(255, 90, 31, 0.7)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                  className="group-hover:scale-110 group-hover:bg-[#FF5A1F] text-white transition-transform"
+                >
+                  <Play className="w-5 h-5 fill-white text-white ml-0.5" />
+                </div>
+              </div>
+
+              <div style={{ position: "absolute", bottom: "12px", left: "12px", right: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
+                <div style={{ background: "rgba(10, 6, 8, 0.82)", backdropFilter: "blur(12px)", padding: "4px 8px", borderRadius: "999px", fontSize: "10.5px", fontWeight: 700, color: "#FFFFFF" }}>
+                  📍 Legends Arena
+                </div>
+                <div style={{ background: "rgba(10, 6, 8, 0.82)", backdropFilter: "blur(12px)", padding: "4px 8px", borderRadius: "999px", fontSize: "10.5px", fontWeight: 700, color: "#FFFFFF" }}>
+                  ❤️ 215
+                </div>
+              </div>
+            </a>
+
+            {/* 7. SMALL SNAPSHOT: Sunset Rooftop BBQ (Col 4-5, Row 3) */}
+            <div
+              className="col-span-6 sm:col-span-3 lg:col-span-2 row-span-1 rounded-3xl overflow-hidden relative group transition-all duration-300 hover:border-[#FF5A1F] hover:shadow-[0_18px_45px_rgba(255,90,31,0.3)]"
+              style={{
+                border: "1.2px solid rgba(255, 255, 255, 0.14)",
+                background: "#160C10",
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/images/hero-rooftop.jpg"
+                alt="Sunset Rooftop BBQ"
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+              />
+
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background: "linear-gradient(180deg, rgba(16,8,10,0.72) 0%, rgba(16,8,10,0.1) 40%, rgba(16,8,10,0.85) 100%)",
+                  pointerEvents: "none",
+                }}
+              />
+
+              <div style={{ position: "absolute", top: "12px", left: "12px", right: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", background: "rgba(10, 6, 8, 0.8)", backdropFilter: "blur(12px)", padding: "4px 10px 4px 6px", borderRadius: "999px", border: "1px solid rgba(255, 255, 255, 0.14)" }}>
+                  <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: "#FF5A1F", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: 800, color: "#FFF" }}>
+                    M
+                  </div>
+                  <span style={{ fontSize: "11px", fontWeight: 800, color: "#FFFFFF" }}>@maya.khi</span>
+                </div>
+              </div>
+
+              <div style={{ position: "absolute", bottom: "12px", left: "12px", right: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
+                <div style={{ background: "rgba(10, 6, 8, 0.82)", backdropFilter: "blur(12px)", padding: "4px 8px", borderRadius: "999px", fontSize: "10px", fontWeight: 700, color: "#FFFFFF" }}>
+                  📍 Phase 6
+                </div>
+                <div style={{ background: "rgba(10, 6, 8, 0.82)", backdropFilter: "blur(12px)", padding: "4px 8px", borderRadius: "999px", fontSize: "10px", fontWeight: 700, color: "#FFFFFF" }}>
+                  ❤️ 267
+                </div>
+              </div>
+            </div>
+
+            {/* 8. SMALL SNAPSHOT: Burns Road Night Crawl (Col 6-7, Row 3) */}
+            <div
+              className="col-span-6 sm:col-span-3 lg:col-span-2 row-span-1 rounded-3xl overflow-hidden relative group transition-all duration-300 hover:border-[#FF5A1F] hover:shadow-[0_18px_45px_rgba(255,90,31,0.3)]"
+              style={{
+                border: "1.2px solid rgba(255, 255, 255, 0.14)",
+                background: "#160C10",
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/images/partiful-photo-girls.jpg"
+                alt="Burns Road Street Food"
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+              />
+
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background: "linear-gradient(180deg, rgba(16,8,10,0.72) 0%, rgba(16,8,10,0.1) 40%, rgba(16,8,10,0.85) 100%)",
+                  pointerEvents: "none",
+                }}
+              />
+
+              <div style={{ position: "absolute", top: "12px", left: "12px", right: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", background: "rgba(10, 6, 8, 0.8)", backdropFilter: "blur(12px)", padding: "4px 10px 4px 6px", borderRadius: "999px", border: "1px solid rgba(255, 255, 255, 0.14)" }}>
+                  <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: "#FF5A1F", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: 800, color: "#FFF" }}>
+                    N
+                  </div>
+                  <span style={{ fontSize: "11px", fontWeight: 800, color: "#FFFFFF" }}>@nida_eats</span>
+                </div>
+              </div>
+
+              <div style={{ position: "absolute", bottom: "12px", left: "12px", right: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
+                <div style={{ background: "rgba(10, 6, 8, 0.82)", backdropFilter: "blur(12px)", padding: "4px 8px", borderRadius: "999px", fontSize: "10px", fontWeight: 700, color: "#FFFFFF" }}>
+                  📍 Burns Road
+                </div>
+                <div style={{ background: "rgba(10, 6, 8, 0.82)", backdropFilter: "blur(12px)", padding: "4px 8px", borderRadius: "999px", fontSize: "10px", fontWeight: 700, color: "#FFFFFF" }}>
+                  ❤️ 188
+                </div>
+              </div>
+            </div>
+
+            {/* 9. MEDIUM WIDE VIDEO REEL TILE: Warehouse DJ Set (Col 8-12, Row 3) */}
+            <div
+              className="col-span-12 sm:col-span-12 lg:col-span-5 row-span-1 rounded-3xl overflow-hidden relative group transition-all duration-300 hover:border-[#FF5A1F] hover:shadow-[0_18px_45px_rgba(255,90,31,0.3)]"
+              style={{
+                border: "1.2px solid rgba(255, 255, 255, 0.14)",
+                background: "#160C14",
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/images/beacon-now-26.jpg"
+                alt="Warehouse Underground Music"
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+              />
+
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background: "linear-gradient(180deg, rgba(16,8,14,0.72) 0%, rgba(16,8,14,0.1) 40%, rgba(16,8,14,0.85) 100%)",
+                  pointerEvents: "none",
+                }}
+              />
+
+              <div style={{ position: "absolute", top: "12px", left: "14px", right: "14px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "rgba(10, 6, 8, 0.8)", backdropFilter: "blur(12px)", padding: "4px 12px 4px 6px", borderRadius: "999px", border: "1px solid rgba(255, 255, 255, 0.14)" }}>
+                  <div style={{ width: "22px", height: "22px", borderRadius: "50%", background: "#FF5A1F", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10.5px", fontWeight: 800, color: "#FFF" }}>
+                    O
+                  </div>
+                  <span style={{ fontSize: "12px", fontWeight: 800, color: "#FFFFFF" }}>@omar_now</span>
+                </div>
+
+                <span style={{ fontSize: "10px", fontWeight: 800, color: "#FF8A3D", background: "rgba(255,90,31,0.22)", border: "1px solid rgba(255,90,31,0.45)", padding: "4px 10px", borderRadius: "999px" }}>
+                  🎵 DJ SET
+                </span>
+              </div>
+
+              {/* Center Play Icon */}
+              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}>
+                <div
+                  style={{
+                    width: "46px",
+                    height: "46px",
+                    borderRadius: "50%",
+                    background: "rgba(18, 9, 7, 0.82)",
+                    border: "2px solid rgba(255, 90, 31, 0.7)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "all 0.25s ease",
+                  }}
+                  className="group-hover:scale-110 group-hover:bg-[#FF5A1F] text-white"
+                >
+                  <Play className="w-5 h-5 fill-white text-white ml-0.5" />
+                </div>
+              </div>
+
+              <div style={{ position: "absolute", bottom: "12px", left: "14px", right: "14px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
+                <div style={{ background: "rgba(10, 6, 8, 0.82)", backdropFilter: "blur(12px)", padding: "4px 10px", borderRadius: "999px", fontSize: "11px", fontWeight: 700, color: "#FFFFFF", border: "1px solid rgba(255, 255, 255, 0.12)" }}>
+                  📍 Warehouse 10 Korangi
+                </div>
+                <div style={{ background: "rgba(10, 6, 8, 0.82)", backdropFilter: "blur(12px)", padding: "4px 10px", borderRadius: "999px", fontSize: "11px", fontWeight: 700, color: "#FFFFFF", border: "1px solid rgba(255, 255, 255, 0.12)" }}>
+                  ❤️ 320
+                </div>
+              </div>
             </div>
           </div>
 
-          <div style={{ borderRadius: "26px", overflow: "hidden", position: "relative", height: "350px", boxShadow: "0 20px 40px rgba(0,0,0,0.6)" }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/images/padel-squad.jpg" alt="Padel night match" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            <div style={{ position: "absolute", bottom: "16px", left: "16px", background: "rgba(9, 8, 14, 0.85)", backdropFilter: "blur(10px)", border: "1px solid rgba(255, 255, 255, 0.15)", padding: "7px 16px", borderRadius: "999px", fontSize: "12px", fontWeight: 700, display: "flex", alignItems: "center", gap: "6px" }}>
-              <Zap className="w-3.5 h-3.5 text-[#FF5A1F]" />
-              <span>Midnight Padel · Velocity Clifton</span>
-            </div>
-          </div>
-
-          <div style={{ borderRadius: "26px", overflow: "hidden", position: "relative", height: "350px", boxShadow: "0 20px 40px rgba(0,0,0,0.6)" }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/images/chai-cafe.jpg" alt="Chai and games hangout" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            <div style={{ position: "absolute", bottom: "16px", left: "16px", background: "rgba(9, 8, 14, 0.85)", backdropFilter: "blur(10px)", border: "1px solid rgba(255, 255, 255, 0.15)", padding: "7px 16px", borderRadius: "999px", fontSize: "12px", fontWeight: 700, display: "flex", alignItems: "center", gap: "6px" }}>
-              <Flame className="w-3.5 h-3.5 text-[#FF8A3D]" />
-              <span>Boardgames & Chai · E-Street</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── 11. FOOTER (BLACK & ORANGE THEMED CLONE OF IMAGE 5) ─────────────── */}
-      <footer
-        style={{
-          borderTop: "1px solid rgba(255, 255, 255, 0.08)",
-          background: "#060408",
-          color: "#FFFFFF",
-          padding: "72px 24px 44px",
-        }}
-      >
-        <div
-          style={{
-            maxWidth: "1200px",
-            margin: "0 auto",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            flexWrap: "wrap",
-            gap: "48px",
-            marginBottom: "56px",
-          }}
-        >
-          {/* Left Brand: Iconic Partiful Logo in Black & Orange */}
-          <div style={{ minWidth: "160px" }}>
-            <Link
-              href="/"
+          {/* Bottom Pill Action: [ 📷 Tag @solonomore on your post and we'll showcase you here! ] */}
+          <div style={{ display: "flex", justifyContent: "center" }}>
+            <a
+              href="https://instagram.com"
+              target="_blank"
+              rel="noopener noreferrer"
               style={{
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "10px",
-                textDecoration: "none",
+                background: "rgba(24, 12, 10, 0.9)",
+                border: "1px solid rgba(255, 90, 31, 0.45)",
                 color: "#FFFFFF",
+                fontSize: "14px",
+                fontWeight: 700,
+                padding: "12px 28px",
+                borderRadius: "999px",
+                textDecoration: "none",
+                boxShadow: "0 8px 24px rgba(0, 0, 0, 0.5), 0 0 22px rgba(255, 90, 31, 0.2)",
+                transition: "all 0.25s ease",
               }}
+              className="hover:scale-105 hover:border-[#FF5A1F] hover:shadow-[0_10px_32px_rgba(255,90,31,0.4)]"
             >
-              {/* Partiful ? Logo Emblem with Orange Border & Symbol */}
-              <div
-                style={{
-                  width: "28px",
-                  height: "28px",
-                  borderRadius: "50%",
-                  border: "2.5px solid #FF5A1F",
-                  background: "#120A16",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontWeight: 900,
-                  fontSize: "17px",
-                  color: "#FF5A1F",
-                  lineHeight: 1,
-                  boxShadow: "0 2px 8px rgba(255, 90, 31, 0.3)",
-                }}
-              >
-                ?
-              </div>
-              <span
-                style={{
-                  fontFamily: "var(--font-display), system-ui, sans-serif",
-                  fontSize: "24px",
-                  fontWeight: 800,
-                  letterSpacing: "-0.04em",
-                  color: "#FFFFFF",
-                }}
-              >
-                partiful
-              </span>
+              <InstagramIcon className="w-4 h-4 text-[#FF5A1F]" />
+              <span>Tag @solonomore on your post and we&apos;ll showcase you here!</span>
+            </a>
+          </div>
+        </div>
+      </section>
+
+
+      {/* ── SECTION FINISHED DIVIDER LINE ── */}
+      <div
+        style={{
+          width: "100%",
+          display: "flex",
+          justifyContent: "center",
+          padding: "16px 24px",
+          position: "relative",
+          zIndex: 10,
+        }}
+        aria-hidden="true"
+      >
+        <div
+          style={{
+            width: "100%",
+            maxWidth: "1180px",
+            height: "1px",
+            background: "linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.15) 20%, rgba(255, 90, 31, 0.35) 50%, rgba(255, 255, 255, 0.15) 80%, transparent 100%)",
+          }}
+        />
+      </div>
+
+      {/* ── 11. SPICY HIGH-ENERGY ORANGE CTA SECTION ── */}
+      <section
+        id="party-cta-section"
+        style={{
+          width: "100%",
+          borderRadius: "clamp(32px, 4vw, 56px) clamp(32px, 4vw, 56px) 0 0",
+          background: "linear-gradient(135deg, #FF6F26 0%, #FF5A1F 40%, #E6450A 75%, #BD3000 100%)",
+          padding: "100px min(4vw, 48px) 80px",
+          textAlign: "center",
+          position: "relative",
+          overflow: "hidden",
+          marginTop: "24px",
+        }}
+      >
+        {/* Subtle Geometric Dotted Texture Overlay */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            backgroundImage: "radial-gradient(rgba(255, 255, 255, 0.24) 1.25px, transparent 1.25px)",
+            backgroundSize: "22px 22px",
+            backgroundPosition: "center",
+            pointerEvents: "none",
+            zIndex: 1,
+            opacity: 0.85,
+          }}
+          aria-hidden="true"
+        />
+
+        <div style={{ maxWidth: "820px", margin: "0 auto", position: "relative", zIndex: 2 }}>
+          {/* Bold, Commanding Display Headline */}
+          <h2
+            style={{
+              fontFamily: "var(--font-display), system-ui, sans-serif",
+              fontSize: "clamp(38px, 5.5vw, 68px)",
+              fontWeight: 900,
+              letterSpacing: "-0.04em",
+              color: "#FFFFFF",
+              lineHeight: 1.08,
+              margin: "0 0 18px",
+              textShadow: "0 3px 25px rgba(0, 0, 0, 0.22)",
+            }}
+          >
+            Let&apos;s get the party started.
+          </h2>
+
+          {/* Punchy Subtitle with High Legibility */}
+          <p
+            style={{
+              fontSize: "clamp(17px, 2.2vw, 21px)",
+              color: "rgba(255, 255, 255, 0.95)",
+              fontWeight: 500,
+              lineHeight: 1.5,
+              maxWidth: "600px",
+              margin: "0 auto 42px",
+              textShadow: "0 2px 10px rgba(0, 0, 0, 0.15)",
+            }}
+          >
+            Find us on any browser, iPhone, and Android. Zero ghosting, pure human connection.
+          </p>
+
+          {/* CTA Action Buttons */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexWrap: "wrap",
+              gap: "18px",
+            }}
+          >
+            <Link
+              href="/apply"
+              style={{
+                background: "#0E0714",
+                color: "#FFFFFF",
+                fontSize: "16px",
+                fontWeight: 800,
+                padding: "16px 40px",
+                borderRadius: "999px",
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "10px",
+                letterSpacing: "-0.01em",
+                boxShadow: "0 14px 40px rgba(0, 0, 0, 0.45)",
+                transition: "all 0.25s ease",
+              }}
+              className="hover:scale-105 hover:bg-[#1A0E24] cursor-pointer"
+            >
+              <Users className="w-4 h-4 text-[#FF8A3D]" />
+              <span>Join community</span>
+            </Link>
+
+            <Link
+              href="/apply"
+              style={{
+                background: "rgba(255, 255, 255, 0.96)",
+                color: "#0E0714",
+                fontSize: "16px",
+                fontWeight: 800,
+                padding: "16px 40px",
+                borderRadius: "999px",
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "10px",
+                letterSpacing: "-0.01em",
+                boxShadow: "0 14px 35px rgba(0, 0, 0, 0.18)",
+                transition: "all 0.25s ease",
+              }}
+              className="hover:scale-105 hover:bg-white cursor-pointer"
+            >
+              <Calendar className="w-4 h-4 text-[#FF5A1F]" />
+              <span>Create your event</span>
             </Link>
           </div>
 
-          {/* Right Navigation: 5 Distinct Columns (Image 5 Layout in Dark Theme) */}
+          <div
+            style={{
+              marginTop: "32px",
+              fontSize: "13px",
+              fontWeight: 700,
+              color: "rgba(255, 255, 255, 0.9)",
+              letterSpacing: "0.02em",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "6px",
+            }}
+          >
+            <span>⚡</span>
+            <span>420+ real gatherings live this weekend across Karachi</span>
+          </div>
+        </div>
+      </section>
+
+
+      {/* ── SECTION FINISHED DIVIDER LINE ── */}
+      <div
+        style={{
+          width: "100%",
+          display: "flex",
+          justifyContent: "center",
+          padding: "16px 24px",
+          position: "relative",
+          zIndex: 10,
+        }}
+        aria-hidden="true"
+      >
+        <div
+          style={{
+            width: "100%",
+            maxWidth: "1180px",
+            height: "1px",
+            background: "linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.15) 20%, rgba(255, 90, 31, 0.35) 50%, rgba(255, 255, 255, 0.15) 80%, transparent 100%)",
+          }}
+        />
+      </div>
+
+      {/* ── 12. OLD STYLE OF FOOTER (BLACK BG & DOTTED TEXTURE - 100% READABLE) ── */}
+      <footer
+        style={{
+          background: "#060408",
+          color: "#FFFFFF",
+          padding: "64px min(5vw, 64px) 44px",
+          position: "relative",
+          borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+          overflow: "hidden",
+        }}
+      >
+        {/* Subtle Geometric Dotted Texture Overlay */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            backgroundImage: "radial-gradient(rgba(255, 255, 255, 0.18) 1.25px, transparent 1.25px)",
+            backgroundSize: "22px 22px",
+            backgroundPosition: "center",
+            pointerEvents: "none",
+            zIndex: 0,
+            opacity: 0.85,
+          }}
+          aria-hidden="true"
+        />
+
+        {/* Giant Faint Background Watermark Text */}
+        <div
+          style={{
+            position: "absolute",
+            bottom: "30px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            fontSize: "clamp(90px, 15vw, 220px)",
+            fontWeight: 900,
+            letterSpacing: "-0.04em",
+            color: "rgba(255, 255, 255, 0.03)",
+            whiteSpace: "nowrap",
+            pointerEvents: "none",
+            userSelect: "none",
+            zIndex: 0,
+            fontFamily: "var(--font-display), system-ui, sans-serif",
+            lineHeight: 1,
+          }}
+        >
+          SOLO NO MORE
+        </div>
+
+        <div
+          style={{
+            maxWidth: "1400px",
+            margin: "0 auto",
+            position: "relative",
+            zIndex: 1,
+            width: "100%",
+          }}
+        >
+          {/* Main 4 Columns Grid (Direct Open Layout, Zero Dark Card Box) */}
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
-              gap: "36px",
-              flexGrow: 1,
-              maxWidth: "880px",
+              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+              gap: "clamp(36px, 4vw, 56px)",
+              marginBottom: "48px",
+              width: "100%",
             }}
           >
-            {/* Column 1: Download */}
+            {/* Column 1: Brand Box & Bio & Instagram */}
             <div>
-              <div style={{ fontSize: "13px", fontWeight: 700, color: "#FFFFFF", marginBottom: "16px" }}>
-                Download
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
+                <div
+                  style={{
+                    background: "#1A0E08",
+                    border: "2px solid #FF5A1F",
+                    boxShadow: "0 0 18px rgba(255, 90, 31, 0.4), inset 0 0 10px rgba(255, 90, 31, 0.2)",
+                    borderRadius: "10px",
+                    padding: "6px 12px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontWeight: 900,
+                    fontSize: "20px",
+                    color: "#FF5A1F",
+                    letterSpacing: "0.05em",
+                  }}
+                >
+                  SNM
+                </div>
+                <div>
+                  <div
+                    style={{
+                      fontFamily: "var(--font-display), system-ui, sans-serif",
+                      fontSize: "20px",
+                      fontWeight: 800,
+                      letterSpacing: "-0.02em",
+                      color: "#FFFFFF",
+                      lineHeight: 1.1,
+                    }}
+                  >
+                    SOLO-NO-MORE
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "11px",
+                      fontWeight: 800,
+                      letterSpacing: "0.18em",
+                      color: "#FF8A3D",
+                      marginTop: "3px",
+                    }}
+                  >
+                    GATHERINGS
+                  </div>
+                </div>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px", fontSize: "13px", color: "rgba(255, 255, 255, 0.65)" }}>
-                <a href="#download" className="hover:text-[#FF5A1F] transition-colors" style={{ color: "inherit", textDecoration: "none" }}>App on iOS</a>
-                <a href="#download" className="hover:text-[#FF5A1F] transition-colors" style={{ color: "inherit", textDecoration: "none" }}>App on Android</a>
+
+              <p
+                style={{
+                  fontSize: "14px",
+                  color: "rgba(255, 255, 255, 0.7)",
+                  lineHeight: 1.6,
+                  margin: "0 0 24px",
+                  maxWidth: "360px",
+                }}
+              >
+                Your gateway to exclusive events, premium experiences, and unforgettable moments in Karachi. Join the revolution.
+              </p>
+
+              <a
+                href="https://instagram.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "10px",
+                  border: "1.2px solid rgba(255, 255, 255, 0.22)",
+                  background: "rgba(255, 255, 255, 0.08)",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#FFFFFF",
+                  transition: "all 0.2s ease",
+                  textDecoration: "none",
+                }}
+                className="hover:border-[#FF5A1F] hover:text-[#FF5A1F] hover:shadow-[0_0_16px_rgba(255,90,31,0.45)]"
+                aria-label="Instagram"
+              >
+                <InstagramIcon className="w-4 h-4" />
+              </a>
+            </div>
+
+            {/* Column 2: Quick Links */}
+            <div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  fontSize: "15px",
+                  fontWeight: 800,
+                  color: "#FFFFFF",
+                  marginBottom: "20px",
+                }}
+              >
+                <Ticket className="w-4 h-4 text-[#FF5A1F]" />
+                <span>Explore</span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px", fontSize: "14px", color: "rgba(255, 255, 255, 0.7)" }}>
+                <Link href="/events" className="hover:text-[#FF8A3D] transition-colors" style={{ color: "inherit", textDecoration: "none" }}>Browse Events</Link>
+                <Link href="/how-it-works" className="hover:text-[#FF8A3D] transition-colors" style={{ color: "inherit", textDecoration: "none" }}>How Beacon Works</Link>
+                <Link href="/memberships" className="hover:text-[#FF8A3D] transition-colors" style={{ color: "inherit", textDecoration: "none" }}>Memberships &amp; Packages</Link>
+                <Link href="/about" className="hover:text-[#FF8A3D] transition-colors" style={{ color: "inherit", textDecoration: "none" }}>About Our Mission</Link>
+                <Link href="/contact" className="hover:text-[#FF8A3D] transition-colors" style={{ color: "inherit", textDecoration: "none" }}>Contact Us</Link>
               </div>
             </div>
 
-            {/* Column 2: Company */}
+            {/* Column 3: Partners & Legal */}
             <div>
-              <div style={{ fontSize: "13px", fontWeight: 700, color: "#FFFFFF", marginBottom: "16px" }}>
-                Company
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  fontSize: "15px",
+                  fontWeight: 800,
+                  color: "#FFFFFF",
+                  marginBottom: "20px",
+                }}
+              >
+                <Crown className="w-4 h-4 text-[#FF5A1F]" />
+                <span>Partners &amp; Legal</span>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px", fontSize: "13px", color: "rgba(255, 255, 255, 0.65)" }}>
-                <a href="#about" className="hover:text-[#FF5A1F] transition-colors" style={{ color: "inherit", textDecoration: "none" }}>About</a>
-                <a href="#press" className="hover:text-[#FF5A1F] transition-colors" style={{ color: "inherit", textDecoration: "none" }}>Press</a>
-                <a href="#careers" className="hover:text-[#FF5A1F] transition-colors" style={{ color: "inherit", textDecoration: "none" }}>Careers</a>
-                <a href="#terms" className="hover:text-[#FF5A1F] transition-colors" style={{ color: "inherit", textDecoration: "none" }}>Terms & Conditions</a>
-                <a href="#privacy" className="hover:text-[#FF5A1F] transition-colors" style={{ color: "inherit", textDecoration: "none" }}>Privacy Policy</a>
-                <a href="#cookies" className="hover:text-[#FF5A1F] transition-colors" style={{ color: "inherit", textDecoration: "none" }}>Cookie Policy</a>
-                <a href="#community" className="hover:text-[#FF5A1F] transition-colors" style={{ color: "inherit", textDecoration: "none" }}>Community Guidelines</a>
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px", fontSize: "14px", color: "rgba(255, 255, 255, 0.7)" }}>
+                <Link href="/partners" className="hover:text-[#FF8A3D] transition-colors" style={{ color: "inherit", textDecoration: "none" }}>Partner Registration</Link>
+                <Link href="/sell-tickets" className="hover:text-[#FF8A3D] transition-colors" style={{ color: "inherit", textDecoration: "none" }}>Sell Your Tickets &amp; Host</Link>
+                <Link href="/terms" className="hover:text-[#FF8A3D] transition-colors" style={{ color: "inherit", textDecoration: "none" }}>Terms of Service</Link>
+                <Link href="/privacy-and-refund" className="hover:text-[#FF8A3D] transition-colors" style={{ color: "inherit", textDecoration: "none" }}>Privacy &amp; Refund Policy</Link>
               </div>
             </div>
 
-            {/* Column 3: Product */}
+            {/* Column 4: Get in Touch */}
             <div>
-              <div style={{ fontSize: "13px", fontWeight: 700, color: "#FFFFFF", marginBottom: "16px" }}>
-                Product
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  fontSize: "15px",
+                  fontWeight: 800,
+                  color: "#FFFFFF",
+                  marginBottom: "20px",
+                }}
+              >
+                <Music className="w-4 h-4 text-[#FF5A1F]" />
+                <span>Get in Touch</span>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px", fontSize: "13px", color: "rgba(255, 255, 255, 0.65)" }}>
-                <a href="#organizers" className="hover:text-[#FF5A1F] transition-colors" style={{ color: "inherit", textDecoration: "none" }}>For Organizers</a>
-                <a href="#tickets" className="hover:text-[#FF5A1F] transition-colors" style={{ color: "inherit", textDecoration: "none" }}>Sell Tickets</a>
-                <a href="#events-section" className="hover:text-[#FF5A1F] transition-colors" style={{ color: "inherit", textDecoration: "none" }}>Explore Events</a>
-                <a href="#blog" className="hover:text-[#FF5A1F] transition-colors" style={{ color: "inherit", textDecoration: "none" }}>Blog</a>
-              </div>
-            </div>
-
-            {/* Column 4: Socials */}
-            <div>
-              <div style={{ fontSize: "13px", fontWeight: 700, color: "#FFFFFF", marginBottom: "16px" }}>
-                Socials
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px", fontSize: "13px", color: "rgba(255, 255, 255, 0.65)" }}>
-                <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="hover:text-[#FF5A1F] transition-colors" style={{ color: "inherit", textDecoration: "none" }}>Instagram</a>
-                <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="hover:text-[#FF5A1F] transition-colors" style={{ color: "inherit", textDecoration: "none" }}>Twitter</a>
-                <a href="https://tiktok.com" target="_blank" rel="noopener noreferrer" className="hover:text-[#FF5A1F] transition-colors" style={{ color: "inherit", textDecoration: "none" }}>TikTok</a>
-                <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="hover:text-[#FF5A1F] transition-colors" style={{ color: "inherit", textDecoration: "none" }}>LinkedIn</a>
-                <a href="https://substack.com" target="_blank" rel="noopener noreferrer" className="hover:text-[#FF5A1F] transition-colors" style={{ color: "inherit", textDecoration: "none" }}>Substack</a>
-              </div>
-            </div>
-
-            {/* Column 5: Support */}
-            <div>
-              <div style={{ fontSize: "13px", fontWeight: 700, color: "#FFFFFF", marginBottom: "16px" }}>
-                Support
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px", fontSize: "13px", color: "rgba(255, 255, 255, 0.65)" }}>
-                <a href="#contact" className="hover:text-[#FF5A1F] transition-colors" style={{ color: "inherit", textDecoration: "none" }}>Contact</a>
-                <a href="#help" className="hover:text-[#FF5A1F] transition-colors" style={{ color: "inherit", textDecoration: "none" }}>Help Center</a>
+              <div style={{ display: "flex", flexDirection: "column", gap: "16px", fontSize: "14px", color: "rgba(255, 255, 255, 0.7)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <Mail className="w-4 h-4 text-[#FF5A1F] shrink-0" />
+                  <a href="mailto:hello.solonomore@gmail.com" style={{ color: "inherit", textDecoration: "none" }} className="hover:text-[#FF8A3D] transition-colors">
+                    hello.solonomore@gmail.com
+                  </a>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <Smartphone className="w-4 h-4 text-[#FF5A1F] shrink-0" />
+                  <span>+92 300 1234567</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: "10px", lineHeight: 1.5 }}>
+                  <MapPin className="w-4 h-4 text-[#FF5A1F] shrink-0 mt-1" />
+                  <span>
+                    Sajid Moosani, 1st Floor, 4th Zamzama Lane,<br />
+                    Zamzama Commercial Area,<br />
+                    Defence Phase V, Karachi, 75600
+                  </span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Footer Sub-Bar: Copyright + Skin Switcher */}
-        <div
-          style={{
-            maxWidth: "1200px",
-            margin: "0 auto",
-            paddingTop: "24px",
-            borderTop: "1px solid rgba(255, 255, 255, 0.08)",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: "16px",
-            fontSize: "12.5px",
-            color: "rgba(255, 255, 255, 0.45)",
-          }}
-        >
-          <div>© 2026 Partiful / Solo-No-More. All rights reserved.</div>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <span>Visual Skin:</span>
-            <ThemeToggle />
+          {/* Bottom Bar */}
+          <div
+            style={{
+              paddingTop: "24px",
+              borderTop: "1px solid rgba(255, 255, 255, 0.12)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "18px",
+              fontSize: "13px",
+              color: "rgba(255, 255, 255, 0.6)",
+            }}
+          >
+            <div>© 2026 Solo-No-More. All rights reserved. Find Your People IRL.</div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+              <button
+                onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  background: "transparent",
+                  border: "none",
+                  color: "rgba(255, 255, 255, 0.8)",
+                  fontSize: "13px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  padding: 0,
+                }}
+                className="hover:text-white group"
+              >
+                <span>Back to Top ⚡</span>
+                <div
+                  style={{
+                    width: "38px",
+                    height: "38px",
+                    borderRadius: "50%",
+                    background: "linear-gradient(135deg, #FF6F26 0%, #FF5A1F 100%)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    boxShadow: "0 4px 18px rgba(255, 90, 31, 0.45)",
+                    transition: "transform 0.2s ease, box-shadow 0.2s ease",
+                  }}
+                  className="group-hover:scale-110 group-hover:shadow-[0_6px_28px_rgba(255,90,31,0.85)]"
+                >
+                  <ArrowRight className="w-4 h-4 -rotate-90 text-white" />
+                </div>
+              </button>
+            </div>
           </div>
         </div>
       </footer>
-
     </div>
   );
 }

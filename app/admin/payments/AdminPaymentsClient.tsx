@@ -1,7 +1,19 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { reviewPaymentSubmissionAction } from "@/app/actions/billing";
+
+import {
+  CreditCard,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Check,
+  X,
+  AlertCircle,
+  Sparkles,
+} from "lucide-react";
 
 interface PaymentItem {
   id: string;
@@ -60,51 +72,66 @@ export default function AdminPaymentsClient({ initialPayments }: { initialPaymen
   const pendingCount = payments.filter((p) => p.status === "pending").length;
 
   return (
-    <div style={{ padding: "24px" }}>
+    <div className="p-6 md:p-10 max-w-7xl mx-auto space-y-6">
       {/* Header */}
-      <div className="nokia-panel-sunken" style={{ padding: "16px", marginBottom: "20px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
-          <div>
-            <h1 className="font-pixel text-accent" style={{ fontSize: "14px", margin: 0, letterSpacing: "0.08em" }}>
-              💳 PAYMENTS & BILLING VERIFICATION
-            </h1>
-            <p className="font-mono text-muted" style={{ fontSize: "11px", margin: "4px 0 0 0" }}>
-              Review Raast, SadaPay, and Bank IBFT transaction proofs submitted by members.
-            </p>
+      <div className="relative rounded-3xl bg-gradient-to-r from-white/[0.04] to-white/[0.01] border border-white/10 p-6 md:p-8 overflow-hidden backdrop-blur-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[#FF6F26] animate-pulse" />
+            <span className="text-xs font-bold uppercase tracking-wider text-[#FF6F26]">
+              Financial Settlement & Ledger
+            </span>
           </div>
-          <div className="nokia-badge nokia-badge-warning" style={{ fontSize: "9px" }}>
-            {pendingCount} PENDING VERIFICATIONS
-          </div>
+          <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">
+            Payments & Billing Verification
+          </h1>
+          <p className="text-xs md:text-sm text-zinc-400">
+            Review Raast, SadaPay, and Bank IBFT transaction proofs submitted by members.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Link
+            href="/admin/bookings"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-white/10 hover:bg-white/15 text-white border border-white/20 transition-colors"
+          >
+            <span>View Member Bookings &rarr;</span>
+          </Link>
+          <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-[#FF6F26]/10 text-[#FF6F26] border border-[#FF6F26]/30">
+            <Clock className="w-3.5 h-3.5" />
+            {pendingCount} Pending Verification
+          </span>
         </div>
       </div>
 
       {message && (
         <div
-          className="nokia-panel-raised"
-          style={{
-            borderColor: message.type === "success" ? "var(--accent-success)" : "var(--accent-danger)",
-            padding: "12px",
-            marginBottom: "16px",
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-          }}
+          className={`p-4 rounded-2xl text-xs flex items-center gap-2.5 border ${
+            message.type === "success"
+              ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
+              : "bg-rose-500/10 border-rose-500/30 text-rose-300"
+          }`}
         >
-          <span className={`font-pixel ${message.type === "success" ? "text-success" : "text-danger"}`}>
-            [{message.type === "success" ? "✓" : "✕"}]
-          </span>
-          <span className="font-mono" style={{ fontSize: "11px" }}>{message.text}</span>
+          {message.type === "success" ? (
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          ) : (
+            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+          )}
+          <span>{message.text}</span>
         </div>
       )}
 
       {/* Filter Tabs */}
-      <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
+      <div className="flex items-center gap-1.5 p-1 bg-white/[0.03] border border-white/10 rounded-2xl w-fit overflow-x-auto">
         {(["pending", "approved", "rejected", "all"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setFilter(tab)}
-            className={`nokia-btn font-pixel ${filter === tab ? "nokia-btn-primary" : ""}`}
-            style={{ fontSize: "8px", padding: "6px 12px", textTransform: "uppercase" }}
+            className={`px-4 py-1.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all ${
+              filter === tab
+                ? "bg-gradient-to-r from-[#FF6F26] to-[#FF5A1F] text-white shadow-[0_0_15px_rgba(255,111,38,0.3)]"
+                : "text-zinc-400 hover:text-white"
+            }`}
           >
             {tab} ({tab === "all" ? payments.length : payments.filter((p) => p.status === tab).length})
           </button>
@@ -113,14 +140,15 @@ export default function AdminPaymentsClient({ initialPayments }: { initialPaymen
 
       {/* Payments List */}
       {filtered.length === 0 ? (
-        <div className="nokia-panel text-center" style={{ padding: "32px" }}>
-          <div className="font-lcd text-muted" style={{ fontSize: "20px" }}>NO TRANSACTIONS FOUND</div>
-          <p className="font-mono text-muted" style={{ fontSize: "11px", marginTop: "8px" }}>
+        <div className="rounded-3xl border border-white/10 bg-white/[0.02] p-12 text-center backdrop-blur-md">
+          <CreditCard className="w-8 h-8 text-zinc-600 mx-auto mb-3" />
+          <div className="text-sm font-semibold text-white">No Transactions Found</div>
+          <p className="text-xs text-zinc-500 mt-1">
             No payment submissions currently match the &quot;{filter}&quot; filter.
           </p>
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        <div className="space-y-3">
           {filtered.map((p) => {
             const userName = p.profiles?.full_name || "Unknown Member";
             const userCity = p.profiles?.city || "Karachi";
@@ -134,95 +162,97 @@ export default function AdminPaymentsClient({ initialPayments }: { initialPaymen
             return (
               <div
                 key={p.id}
-                className="nokia-panel"
-                style={{
-                  padding: "16px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "10px",
-                  borderLeft:
-                    p.status === "approved"
-                      ? "4px solid var(--accent-success)"
-                      : p.status === "rejected"
-                      ? "4px solid var(--accent-danger)"
-                      : "4px solid var(--accent-warning)",
-                }}
+                className="rounded-3xl border border-white/10 bg-white/[0.02] p-5 md:p-6 backdrop-blur-md space-y-4 hover:border-white/20 transition-all"
               >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "8px" }}>
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <span className="font-pixel text-accent" style={{ fontSize: "10px" }}>
-                        {userName.toUpperCase()}
-                      </span>
-                      <span className="nokia-badge" style={{ fontSize: "7px" }}>{userCity}</span>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#FF6F26]/20 to-[#FF5A1F]/10 border border-[#FF6F26]/30 flex items-center justify-center text-[#FF6F26] font-bold text-sm">
+                      {userName.slice(0, 1).toUpperCase()}
                     </div>
-                    <div className="font-mono text-muted" style={{ fontSize: "10px", marginTop: "4px" }}>
-                      User ID: {p.user_id} • Submitted: {dateStr}
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-white text-sm">
+                          {userName}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/5 text-zinc-400 border border-white/10">
+                          {userCity}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-zinc-500 font-mono mt-0.5">
+                        User ID: {p.user_id} • {dateStr}
+                      </div>
                     </div>
                   </div>
 
-                  <div style={{ textAlign: "right" }}>
-                    <div className="font-lcd text-accent" style={{ fontSize: "22px", lineHeight: 1 }}>
+                  <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center">
+                    <div className="text-xl md:text-2xl font-black text-white tracking-tight">
                       PKR {p.amount_pkr?.toLocaleString() || "1,500"}
                     </div>
                     <span
-                      className={`nokia-badge ${
+                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider mt-1 ${
                         p.status === "approved"
-                          ? "nokia-badge-success"
+                          ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
                           : p.status === "rejected"
-                          ? "nokia-badge-danger"
-                          : "nokia-badge-warning"
+                          ? "bg-rose-500/10 text-rose-300 border border-rose-500/20"
+                          : "bg-amber-500/10 text-amber-300 border border-amber-500/20"
                       }`}
-                      style={{ fontSize: "7px", marginTop: "4px" }}
                     >
-                      {p.status.toUpperCase()}
+                      {p.status}
                     </span>
                   </div>
                 </div>
 
-                <div className="nokia-panel-sunken" style={{ padding: "10px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "10px", fontSize: "11px" }}>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 rounded-2xl bg-white/[0.02] border border-white/5 text-xs">
                   <div>
-                    <span className="text-muted" style={{ fontSize: "9px", display: "block" }}>TARGET TIER:</span>
-                    <span className="font-pixel text-accent" style={{ fontSize: "9px" }}>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 block">
+                      Target Tier
+                    </span>
+                    <span className="font-bold text-[#FF6F26] mt-0.5 block">
                       ★ {p.tier_requested?.toUpperCase()}
                     </span>
                   </div>
                   <div>
-                    <span className="text-muted" style={{ fontSize: "9px", display: "block" }}>CHANNEL:</span>
-                    <span className="font-bold">{p.payment_method?.toUpperCase()}</span>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 block">
+                      Channel
+                    </span>
+                    <span className="font-semibold text-zinc-300 mt-0.5 block">
+                      {p.payment_method?.toUpperCase()}
+                    </span>
                   </div>
                   <div>
-                    <span className="text-muted" style={{ fontSize: "9px", display: "block" }}>TRANSACTION ID / TID:</span>
-                    <span className="font-mono text-warning font-bold" style={{ letterSpacing: "1px" }}>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 block">
+                      Transaction Ref / TID
+                    </span>
+                    <span className="font-mono font-bold text-amber-300 mt-0.5 block tracking-wider">
                       {p.transaction_ref}
                     </span>
                   </div>
                 </div>
 
                 {p.admin_notes && (
-                  <div className="font-mono text-muted" style={{ fontSize: "10px" }}>
-                    Admin Notes: {p.admin_notes}
+                  <div className="text-xs text-zinc-400 italic">
+                    Note: {p.admin_notes}
                   </div>
                 )}
 
                 {/* Actions for pending items */}
                 {p.status === "pending" && (
-                  <div style={{ display: "flex", gap: "8px", marginTop: "6px" }}>
+                  <div className="flex items-center gap-2.5 pt-1">
                     <button
                       onClick={() => handleReview(p.id, "approved")}
                       disabled={processingId === p.id}
-                      className="nokia-btn nokia-btn-success font-pixel"
-                      style={{ fontSize: "8px", padding: "8px 14px", flex: 1 }}
+                      className="flex-1 py-2.5 px-4 rounded-xl text-xs font-bold bg-gradient-to-r from-[#FF6F26] to-[#FF5A1F] text-white hover:brightness-110 shadow-[0_0_20px_rgba(255,111,38,0.25)] transition-all flex items-center justify-center gap-2"
                     >
-                      {processingId === p.id ? "PROCESSING..." : "✓ APPROVE & ACTIVATE TIER"}
+                      <Check className="w-3.5 h-3.5" />
+                      <span>{processingId === p.id ? "Processing..." : "Approve & Activate Tier"}</span>
                     </button>
                     <button
                       onClick={() => handleReview(p.id, "rejected")}
                       disabled={processingId === p.id}
-                      className="nokia-btn font-pixel text-danger"
-                      style={{ fontSize: "8px", padding: "8px 14px", borderColor: "var(--accent-danger)" }}
+                      className="py-2.5 px-4 rounded-xl text-xs font-semibold text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 transition-all flex items-center gap-1.5"
                     >
-                      ✕ REJECT
+                      <X className="w-3.5 h-3.5" />
+                      <span>Reject</span>
                     </button>
                   </div>
                 )}
@@ -234,3 +264,4 @@ export default function AdminPaymentsClient({ initialPayments }: { initialPaymen
     </div>
   );
 }
+

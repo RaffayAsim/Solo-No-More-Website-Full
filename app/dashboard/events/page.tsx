@@ -1,73 +1,63 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { getSessionUserSecurely } from "@/lib/supabase/session";
 import EventsBoardClient from "./EventsBoardClient";
 import type { OfficialEvent } from "@/lib/supabase/types";
 
-/**
- * Securely get the logged in user ID via server cookie
- */
-async function getSessionUser() {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get("sb-dmmgzpiskyocdsxamrgf-auth-token");
+import { parseEventDescription } from "@/lib/event-metadata";
 
-  if (!sessionCookie?.value) return null;
-
-  try {
-    let raw = sessionCookie.value;
-    if (raw.startsWith("base64-")) {
-      raw = Buffer.from(raw.slice(7), "base64").toString("utf-8");
-    }
-    const parsed = JSON.parse(raw);
-    const accessToken = Array.isArray(parsed) ? parsed[0] : parsed.access_token;
-    if (!accessToken) return null;
-
-    const { data, error } = await supabaseAdmin.auth.getUser(accessToken);
-    if (error || !data.user) return null;
-
-    return data.user;
-  } catch {
-    return null;
-  }
-}
+export const dynamic = "force-dynamic";
 
 export default async function EventsPage() {
-  const user = await getSessionUser();
-  if (!user) {
+  const auth = await getSessionUserSecurely();
+  if ("error" in auth) {
     redirect("/login");
   }
 
-  // 1. Fetch user subscription tier
-  const { data: profile } = await (supabaseAdmin
-    .from("profiles") as any)
-    .select("subscription_tier")
-    .eq("id", user.id)
-    .single();
+  // Parallel fetch: user tier, all events, and user's claimed tickets
+  const [profileRes, eventsRes, ticketsRes] = await Promise.all([
+    (supabaseAdmin
+      .from("profiles") as any)
+      .select("subscription_tier, is_partner")
+      .eq("id", auth.userId)
+      .maybeSingle(),
+    (supabaseAdmin
+      .from("official_events") as any)
+      .select("*")
+      .order("scheduled_at", { ascending: true }),
+    (supabaseAdmin
+      .from("event_tickets") as any)
+      .select("event_id")
+      .eq("user_id", auth.userId),
+  ]);
 
-  const currentTier = profile?.subscription_tier || "none";
+  const currentTier = profileRes?.data?.subscription_tier || "none";
+  const userEmail = auth.email || "";
+  const isPartner = Boolean(profileRes?.data?.is_partner || profileRes?.data?.subscription_tier === "partner");
+  const isAdmin = profileRes?.data?.subscription_tier === "admin" || userEmail.toLowerCase() === "admin@solonomore.com" || userEmail.toLowerCase() === "raffay@solonomore.com";
+  const isArtist = profileRes?.data?.subscription_tier === "artist" || userEmail.toLowerCase().includes("artist") || userEmail.toLowerCase().includes("dj");
+  const isRestrictedRole = isPartner || isAdmin || isArtist;
+  const roleLabel = isPartner ? "Partner" : isAdmin ? "Admin" : isArtist ? "Artist" : "";
 
-  // 2. Fetch all official events ordered by date
-  const { data: events } = await (supabaseAdmin
-    .from("official_events") as any)
-    .select("*")
-    .order("scheduled_at", { ascending: true });
-
-  const officialEvents: OfficialEvent[] = events || [];
-
-  // 3. Fetch claimed tickets for this user
-  const { data: tickets } = await (supabaseAdmin
-    .from("event_tickets") as any)
-    .select("event_id")
-    .eq("user_id", user.id)
-    .eq("ticket_status", "active");
-
-  const claimedEventIds = (tickets || []).map((t: any) => t.event_id as string);
+  const rawEvents: OfficialEvent[] = eventsRes?.data || [];
+  // Only verified & published events are showcased to members
+  const officialEvents: OfficialEvent[] = rawEvents.filter((ev) => {
+    try {
+      const { metadata } = parseEventDescription(ev.description);
+      return metadata.status !== "pending_review" && metadata.status !== "draft";
+    } catch {
+      return true;
+    }
+  });
+  const claimedEventIds: string[] = (ticketsRes?.data || []).map((t: any) => t.event_id);
 
   return (
     <EventsBoardClient
       events={officialEvents}
       currentTier={currentTier}
       claimedEventIds={claimedEventIds}
+      isRestrictedRole={isRestrictedRole}
+      roleLabel={roleLabel}
     />
   );
 }

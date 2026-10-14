@@ -3,86 +3,87 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import VibeProfileView from "./VibeProfileView";
 import { getSessionUserSecurely } from "@/lib/supabase/session";
 
+export const dynamic = "force-dynamic";
+
 interface ProfilePageProps {
   params: Promise<{ id: string }>;
 }
 
-/**
- * Securely get the logged in user ID via server cookie
- */
-async function getSessionUser() {
-  const result = await getSessionUserSecurely();
-  if ("error" in result) return null;
-  return { id: result.userId, email: result.email, user_metadata: result.user_metadata };
-}
-
 export default async function ProfileIdPage({ params }: ProfilePageProps) {
-  const user = await getSessionUser();
-  if (!user) {
+  const auth = await getSessionUserSecurely();
+  if ("error" in auth) {
     redirect("/login");
   }
 
   const { id: profileId } = await params;
+  const currentUserId = auth.userId;
 
-  // Fetch target profile using admin client (bypasses select RLS restriction)
-  const { data: profile } = await (supabaseAdmin
-    .from("profiles") as any)
-    .select("id, full_name, bio, social_link, subscription_tier, account_status, no_show_strikes, city, avatar_icon, is_partner, business_name, vibe_tags, is_active_seeker, seeker_updated_at, created_at")
-    .eq("id", profileId)
-    .maybeSingle();
+  if (profileId === currentUserId) {
+    redirect("/dashboard/profile");
+  }
+
+  // Parallel fetch: profile, friendship, hosted beacons, joined applications, endorsements
+  const [profileRes, friendshipRes, hostedRes, joinedRes, endorsementsRes] = await Promise.all([
+    (supabaseAdmin
+      .from("profiles") as any)
+      .select("id, full_name, bio, social_link, subscription_tier, account_status, no_show_strikes, city, avatar_icon, is_partner, business_name, vibe_tags, is_active_seeker, seeker_updated_at, created_at")
+      .eq("id", profileId)
+      .maybeSingle(),
+    (supabaseAdmin
+      .from("friends") as any)
+      .select("id, user_id_1, user_id_2, status")
+      .or(`and(user_id_1.eq.${currentUserId},user_id_2.eq.${profileId}),and(user_id_1.eq.${profileId},user_id_2.eq.${currentUserId})`)
+      .maybeSingle(),
+    (supabaseAdmin
+      .from("beacons") as any)
+      .select("id, title, category, status, scheduled_at, created_at, host_id, total_slots, filled_slots")
+      .eq("host_id", profileId)
+      .order("created_at", { ascending: false }),
+    (supabaseAdmin
+      .from("beacon_applications") as any)
+      .select(`
+        id,
+        status,
+        created_at,
+        beacons ( id, title, category, status, scheduled_at, host_id, total_slots, filled_slots )
+      `)
+      .eq("applicant_id", profileId)
+      .order("created_at", { ascending: false }),
+    (supabaseAdmin
+      .from("squad_endorsements") as any)
+      .select("id")
+      .eq("recipient_id", profileId),
+  ]);
+
+  const profile = profileRes?.data;
 
   if (!profile) {
     return (
-      <main style={{ minHeight: "100vh", background: "var(--bg-base)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
-        <div style={{ maxWidth: "400px", width: "100%" }}>
-          <div className="nokia-panel" style={{ padding: 0 }}>
-            <div style={{ background: "var(--accent-danger)", color: "white", padding: "8px 16px", borderBottom: "2px solid var(--border-strong)" }}>
-              <span className="font-pixel" style={{ fontSize: "8px" }}>✕ PROFILE NOT FOUND</span>
-            </div>
-            <div style={{ padding: "20px", textAlign: "center" }}>
-              <div className="nokia-lcd" style={{ fontSize: "32px", marginBottom: "12px", display: "inline-block" }}>???</div>
-              <p style={{ fontSize: "11px", color: "var(--text-muted)", marginBottom: "16px", lineHeight: "1.5" }}>
-                This profile does not exist or has been deactivated.
-              </p>
-              <a href="/dashboard" className="nokia-btn nokia-btn-primary" style={{ display: "inline-flex", textDecoration: "none", fontSize: "8px" }}>
-                ◀ BACK TO LOBBY
-              </a>
-            </div>
-          </div>
+      <main className="min-h-screen bg-[#060408] flex items-center justify-center p-6 text-white">
+        <div className="max-w-md w-full text-center p-8 rounded-2xl bg-white/[0.03] border border-white/10 backdrop-blur-xl">
+          <div className="text-3xl mb-4 font-bold text-[#FF6F26]">Profile Not Found</div>
+          <p className="text-sm text-neutral-400 mb-6">
+            This profile does not exist or has been deactivated.
+          </p>
+          <a
+            href="/dashboard"
+            className="inline-flex items-center px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-[#FF6F26] to-[#FF5A1F] text-white shadow-lg shadow-[#FF6F26]/20 hover:brightness-110"
+          >
+            Return to Lobby
+          </a>
         </div>
       </main>
     );
   }
 
-  // Fetch current friendship status if any between user and profile
-  const { data: friendship } = await (supabaseAdmin
-    .from("friends") as any)
-    .select("id, user_id_1, user_id_2, status")
-    .or(`and(user_id_1.eq.${user.id},user_id_2.eq.${profileId}),and(user_id_1.eq.${profileId},user_id_2.eq.${user.id})`)
-    .maybeSingle();
+  const friendship = friendshipRes?.data || null;
+  const hostedBeacons = hostedRes?.data || [];
+  const joinedApplications = joinedRes?.data || [];
 
-  // 1. Fetch hosted beacons
-  const { data: hostedBeacons } = await (supabaseAdmin
-    .from("beacons") as any)
-    .select("id, title, category, status, scheduled_at, created_at, host_id, total_slots, filled_slots")
-    .eq("host_id", profileId)
-    .order("created_at", { ascending: false });
-
-  // 2. Fetch guest beacon applications
-  const { data: joinedApplications } = await (supabaseAdmin
-    .from("beacon_applications") as any)
-    .select(`
-      id,
-      status,
-      created_at,
-      beacons ( id, title, category, status, scheduled_at, host_id, total_slots, filled_slots )
-    `)
-    .eq("applicant_id", profileId)
-    .order("created_at", { ascending: false });
-
-  // 3. Fetch event feedback ratings received by this user (where they were host)
-  const hostedBeaconIds = (hostedBeacons || []).map((b: any) => b.id);
+  // Ratings calculation
+  const hostedBeaconIds = hostedBeacons.map((b: any) => b.id);
   let ratings: string[] = [];
+
   if (hostedBeaconIds.length > 0) {
     const { data: feedback } = await (supabaseAdmin
       .from("event_feedback") as any)
@@ -93,40 +94,36 @@ export default async function ProfileIdPage({ params }: ProfilePageProps) {
     }
   }
 
-  // 3b. Fetch peer squad endorsements received by this user and count as vibe_matched
-  const { data: endorsements } = await (supabaseAdmin
-    .from("squad_endorsements") as any)
-    .select("id")
-    .eq("recipient_id", profileId);
-  if (endorsements && endorsements.length > 0) {
-    ratings = [...ratings, ...endorsements.map(() => "vibe_matched")];
+  if (endorsementsRes?.data && endorsementsRes.data.length > 0) {
+    ratings = [...ratings, ...endorsementsRes.data.map(() => "vibe_matched")];
   }
 
-  // 4. Mutual friends computation
+  // Mutual friends computation (only if looking at someone else)
   let mutualFriendsProfiles: any[] = [];
   let mutualFriendsCount = 0;
 
-  if (user.id !== profileId) {
-    const { data: viewerFriends } = await (supabaseAdmin
-      .from("friends") as any)
-      .select("user_id_1, user_id_2")
-      .eq("status", "accepted")
-      .or(`user_id_1.eq.${user.id},user_id_2.eq.${user.id}`);
-
-    const { data: ownerFriends } = await (supabaseAdmin
-      .from("friends") as any)
-      .select("user_id_1, user_id_2")
-      .eq("status", "accepted")
-      .or(`user_id_1.eq.${profileId},user_id_2.eq.${profileId}`);
+  if (currentUserId !== profileId) {
+    const [viewerFriendsRes, ownerFriendsRes] = await Promise.all([
+      (supabaseAdmin
+        .from("friends") as any)
+        .select("user_id_1, user_id_2")
+        .eq("status", "accepted")
+        .or(`user_id_1.eq.${currentUserId},user_id_2.eq.${currentUserId}`),
+      (supabaseAdmin
+        .from("friends") as any)
+        .select("user_id_1, user_id_2")
+        .eq("status", "accepted")
+        .or(`user_id_1.eq.${profileId},user_id_2.eq.${profileId}`),
+    ]);
 
     const getFriendIds = (list: any[], selfId: string) => {
-      return (list || []).map((f) => f.user_id_1 === selfId ? f.user_id_2 : f.user_id_1);
+      return (list || []).map((f) => (f.user_id_1 === selfId ? f.user_id_2 : f.user_id_1));
     };
 
-    const viewerFriendIds = getFriendIds(viewerFriends || [], user.id);
-    const ownerFriendIds = getFriendIds(ownerFriends || [], profileId);
+    const viewerFriendIds = getFriendIds(viewerFriendsRes?.data || [], currentUserId);
+    const ownerFriendIds = getFriendIds(ownerFriendsRes?.data || [], profileId);
 
-    const mutualIds = viewerFriendIds.filter(id => ownerFriendIds.includes(id));
+    const mutualIds = viewerFriendIds.filter((id) => ownerFriendIds.includes(id));
     mutualFriendsCount = mutualIds.length;
 
     if (mutualIds.length > 0) {
@@ -142,10 +139,10 @@ export default async function ProfileIdPage({ params }: ProfilePageProps) {
   return (
     <VibeProfileView
       profile={profile}
-      currentUserId={user.id}
+      currentUserId={currentUserId}
       initialFriendship={friendship}
-      hostedBeacons={hostedBeacons || []}
-      joinedApplications={joinedApplications || []}
+      hostedBeacons={hostedBeacons}
+      joinedApplications={joinedApplications}
       ratings={ratings}
       mutualFriendsCount={mutualFriendsCount}
       mutualFriends={mutualFriendsProfiles}

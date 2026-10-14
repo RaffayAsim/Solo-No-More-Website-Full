@@ -3,6 +3,20 @@
 import { useState } from "react";
 import Link from "next/link";
 import { acceptFriendRequest, removeFriend } from "@/app/actions/friends";
+import {
+  Users,
+  UserCheck,
+  UserPlus,
+  UserX,
+  Check,
+  X,
+  Sparkles,
+  Clock,
+  AlertCircle,
+  ArrowRight,
+  ShieldCheck,
+  User
+} from "lucide-react";
 
 interface ProfileItem {
   id: string;
@@ -84,58 +98,64 @@ export default function NetworkHubClient({
   const sentPendingRequests = relations.filter((r) => r.status === "pending" && r.user_id_1 === currentUserId);
 
   return (
-    <div style={{ padding: "16px" }}>
-      {/* ── Header Bevel Panel ──────────────────────────────────────────────── */}
-      <div className="nokia-panel-sunken" style={{ padding: "16px", marginBottom: "20px" }}>
-        <h1 className="font-pixel text-accent" style={{ fontSize: "14px", margin: 0, letterSpacing: "0.08em" }}>
-          ▣ NETWORK HUB
-        </h1>
-        <p className="font-mono text-muted" style={{ fontSize: "11px", margin: "4px 0 0 0" }}>
-          Manage matches, make real-world connections, and expand your circle.
-        </p>
+    <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto space-y-6">
+      {/* ── Modern Header Panel ──────────────────────────────────────────────── */}
+      <div className="relative overflow-hidden rounded-2xl bg-white/[0.03] border border-white/[0.08] backdrop-blur-xl p-6 sm:p-8">
+        <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-[#FF6F26]/15 via-transparent to-transparent blur-3xl pointer-events-none" />
+        <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-[#FF6F26]/10 text-[#FF6F26] border border-[#FF6F26]/20">
+              <Users className="w-3.5 h-3.5" />
+              <span>COMMUNITY CONNECTIONS</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+              Network Hub
+            </h1>
+            <p className="text-sm text-neutral-400 max-w-xl">
+              Manage matches, build real-world connections, and expand your verified inner circle.
+            </p>
+          </div>
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold bg-white/[0.06] hover:bg-white/[0.1] text-white border border-white/10 transition-all hover:scale-[1.02] self-start md:self-auto"
+          >
+            <Sparkles className="w-4 h-4 text-[#FF6F26]" />
+            <span>Discover in Lobby</span>
+          </Link>
+        </div>
       </div>
 
       {/* Global Error message */}
       {errorMsg && (
-        <div className="nokia-panel-raised" style={{ borderColor: "var(--accent-danger)", padding: "12px", marginBottom: "20px", display: "flex", alignItems: "center", gap: "8px" }}>
-          <span className="font-pixel text-danger" style={{ fontSize: "9px" }}>[✕ ERROR]</span>
-          <span className="font-mono text-danger" style={{ fontSize: "11px" }}>{errorMsg}</span>
+        <div className="flex items-center gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          <span>{errorMsg}</span>
         </div>
       )}
 
-      {/* Retro Nokia Tab Selector */}
-      <div style={{ display: "flex", borderBottom: "2px solid var(--border-strong)", gap: "4px", marginBottom: "20px" }}>
+      {/* Modern Filter Tabs */}
+      <div className="flex gap-2 p-1.5 rounded-2xl bg-white/[0.03] border border-white/[0.08] backdrop-blur-md w-fit">
         <button
           onClick={() => setActiveTab("circle")}
-          className="font-pixel"
-          style={{
-            padding: "8px 16px",
-            fontSize: "8px",
-            background: activeTab === "circle" ? "var(--bg-sunken)" : "var(--bg-raised)",
-            color: activeTab === "circle" ? "var(--accent-primary)" : "var(--text-primary)",
-            border: "2px solid var(--border-strong)",
-            borderBottom: activeTab === "circle" ? "2px solid transparent" : "2px solid var(--border-strong)",
-            marginBottom: activeTab === "circle" ? "-2px" : "0",
-            cursor: "pointer",
-          }}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+            activeTab === "circle"
+              ? "bg-gradient-to-r from-[#FF6F26] to-[#FF5A1F] text-white shadow-lg shadow-[#FF6F26]/20"
+              : "text-neutral-400 hover:text-white hover:bg-white/[0.04]"
+          }`}
         >
-          ● CIRCLE ({myCircle.length})
+          <UserCheck className="w-4 h-4" />
+          <span>My Circle ({myCircle.length})</span>
         </button>
         <button
           onClick={() => setActiveTab("pending")}
-          className="font-pixel"
-          style={{
-            padding: "8px 16px",
-            fontSize: "8px",
-            background: activeTab === "pending" ? "var(--bg-sunken)" : "var(--bg-raised)",
-            color: activeTab === "pending" ? "var(--accent-primary)" : "var(--text-primary)",
-            border: "2px solid var(--border-strong)",
-            borderBottom: activeTab === "pending" ? "2px solid transparent" : "2px solid var(--border-strong)",
-            marginBottom: activeTab === "pending" ? "-2px" : "0",
-            cursor: "pointer",
-          }}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+            activeTab === "pending"
+              ? "bg-gradient-to-r from-[#FF6F26] to-[#FF5A1F] text-white shadow-lg shadow-[#FF6F26]/20"
+              : "text-neutral-400 hover:text-white hover:bg-white/[0.04]"
+          }`}
         >
-          ✉ REQUESTS ({pendingRequests.length})
+          <UserPlus className="w-4 h-4" />
+          <span>Requests ({pendingRequests.length})</span>
         </button>
       </div>
 
@@ -144,42 +164,36 @@ export default function NetworkHubClient({
         /* ─── TAB: MY CIRCLE ────────────────────────────────────────────── */
         <div>
           {myCircle.length > 0 ? (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "12px" }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {myCircle.map((relation) => {
                 const friend = getOtherUserProfile(relation);
                 const isFamily = friend.subscription_tier === "family";
                 return (
                   <div
                     key={relation.id}
-                    className="nokia-panel"
-                    style={{ padding: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}
+                    className="group relative overflow-hidden rounded-2xl bg-white/[0.03] border border-white/[0.08] hover:border-[#FF6F26]/40 transition-all duration-300 p-5 backdrop-blur-md flex items-center justify-between gap-4"
                   >
-                    <div style={{ display: "flex", gap: "12px", alignItems: "center", minWidth: 0 }}>
-                      {/* Sunken Avatar Initials Block */}
-                      <div className="nokia-panel-sunken font-pixel text-accent" style={{
-                        width: "36px",
-                        height: "36px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: "12px",
-                        fontWeight: "bold",
-                        flexShrink: 0,
-                      }}>
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 flex items-center justify-center text-white font-bold text-lg flex-shrink-0 group-hover:border-[#FF6F26]/50 transition-colors">
                         {friend.full_name ? friend.full_name.charAt(0).toUpperCase() : "?"}
                       </div>
 
-                      <div style={{ minWidth: 0 }}>
+                      <div className="min-w-0">
                         <Link
                           href={`/profile/${friend.id}`}
-                          className="font-pixel text-accent"
-                          style={{ fontSize: "9px", textDecoration: "none", display: "block", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}
+                          className="font-bold text-white text-sm hover:text-[#FF6F26] transition-colors block truncate"
                         >
-                          {friend.full_name || "ANONYMOUS"}
+                          {friend.full_name || "Anonymous Member"}
                         </Link>
-                        <div style={{ marginTop: "4px" }}>
-                          <span className={`nokia-badge ${isFamily ? "nokia-badge-warning" : "nokia-badge-primary"}`} style={{ fontSize: "6px" }}>
-                            {isFamily ? "♦ FAMILY" : "● MEMBER"}
+                        <div className="mt-1 flex items-center gap-1.5">
+                          <span
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold border ${
+                              isFamily
+                                ? "bg-amber-500/10 border-amber-500/25 text-amber-400"
+                                : "bg-[#FF6F26]/10 border-[#FF6F26]/25 text-[#FF6F26]"
+                            }`}
+                          >
+                            {isFamily ? "VIP Family" : "Member"}
                           </span>
                         </div>
                       </div>
@@ -188,92 +202,85 @@ export default function NetworkHubClient({
                     <button
                       onClick={() => handleDeclineOrRemove(relation.id)}
                       disabled={actionLoadingId === relation.id}
-                      className="nokia-btn nokia-btn-danger"
-                      style={{ padding: "4px 8px", fontSize: "7px" }}
+                      className="p-2 rounded-xl text-neutral-400 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all flex-shrink-0"
+                      title="Remove from circle"
                     >
-                      {actionLoadingId === relation.id ? "..." : "✕ REMOVE"}
+                      <UserX className="w-4 h-4" />
                     </button>
                   </div>
                 );
               })}
             </div>
           ) : (
-            <div className="nokia-panel" style={{ padding: "32px", textAlign: "center" }}>
-              <div className="nokia-lcd" style={{ fontSize: "20px", marginBottom: "16px" }}>
-                EMPTY CIRCLE
+            <div className="text-center py-16 px-6 rounded-2xl bg-white/[0.02] border border-white/[0.08] backdrop-blur-md">
+              <div className="w-16 h-16 mx-auto rounded-2xl bg-[#FF6F26]/10 border border-[#FF6F26]/20 flex items-center justify-center text-[#FF6F26] mb-4">
+                <Users className="w-8 h-8" />
               </div>
-              <p className="font-mono text-muted" style={{ fontSize: "11px", marginBottom: "16px", maxWidth: "400px", marginInline: "auto" }}>
+              <h3 className="text-lg font-bold text-white mb-2">Empty Circle</h3>
+              <p className="text-sm text-neutral-400 max-w-md mx-auto mb-6">
                 Start making connections! Find interesting members in lobby events, add them, and sync up here.
               </p>
-              <Link href="/dashboard" className="nokia-btn nokia-btn-primary">
-                ◀ GO TO LOBBY
+              <Link
+                href="/dashboard"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-[#FF6F26] to-[#FF5A1F] text-white shadow-lg shadow-[#FF6F26]/20 hover:brightness-110 transition-all"
+              >
+                <span>Explore Lobby</span>
+                <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
           )}
         </div>
       ) : (
         /* ─── TAB: PENDING REQUESTS ─────────────────────────────────────── */
-        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-          
+        <div className="space-y-6">
           {/* Received Requests */}
-          <div>
-            <h3 className="font-pixel text-muted" style={{ fontSize: "8px", marginBottom: "12px", letterSpacing: "0.05em" }}>
-              ▶ RECEIVED REQUESTS ({pendingRequests.length})
+          <div className="space-y-3">
+            <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-2">
+              <Clock className="w-4 h-4 text-[#FF6F26]" />
+              <span>Received Requests ({pendingRequests.length})</span>
             </h3>
             {pendingRequests.length > 0 ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <div className="space-y-3">
                 {pendingRequests.map((relation) => {
                   const sender = getOtherUserProfile(relation);
                   return (
                     <div
                       key={relation.id}
-                      className="nokia-panel"
-                      style={{ padding: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", flexWrap: "wrap" }}
+                      className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-4"
                     >
-                      <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-                        <div className="nokia-panel-sunken font-pixel text-accent" style={{
-                          width: "32px",
-                          height: "32px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: "12px",
-                          flexShrink: 0,
-                        }}>
+                      <div className="flex items-center gap-3.5">
+                        <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 flex items-center justify-center text-white font-bold text-base flex-shrink-0">
                           {sender.full_name ? sender.full_name.charAt(0).toUpperCase() : "?"}
                         </div>
                         <div>
                           <Link
                             href={`/profile/${sender.id}`}
-                            className="font-pixel text-accent"
-                            style={{ fontSize: "9px", textDecoration: "none" }}
+                            className="font-bold text-white text-sm hover:text-[#FF6F26] transition-colors"
                           >
-                            {sender.full_name || "ANONYMOUS MEMBER"}
+                            {sender.full_name || "Anonymous Member"}
                           </Link>
-                          <div className="font-mono text-muted" style={{ fontSize: "11px", marginTop: "2px" }}>
-                            wants to connect
+                          <div className="text-xs text-neutral-400 mt-0.5">
+                            Wants to connect with you
                           </div>
                         </div>
                       </div>
 
                       {/* Action buttons */}
-                      <div style={{ display: "flex", gap: "6px" }}>
+                      <div className="flex items-center gap-2 self-end sm:self-auto">
                         <button
                           onClick={() => handleDeclineOrRemove(relation.id)}
                           disabled={actionLoadingId !== null}
-                          className="nokia-btn"
-                          style={{ padding: "4px 8px", fontSize: "7px" }}
+                          className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-white/[0.04] hover:bg-red-500/10 text-neutral-300 hover:text-red-400 border border-white/10 hover:border-red-500/20 transition-all"
                         >
-                          {actionLoadingId === relation.id ? "..." : "✕ DECLINE"}
+                          Decline
                         </button>
-                        
                         <button
                           onClick={() => handleAccept(relation.id)}
                           disabled={actionLoadingId !== null}
-                          className="nokia-btn nokia-btn-primary"
-                          style={{ padding: "4px 8px", fontSize: "7px" }}
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-[#FF6F26] to-[#FF5A1F] text-white shadow-lg shadow-[#FF6F26]/20 hover:brightness-110 transition-all"
                         >
-                          {actionLoadingId === relation.id ? "..." : "✓ ACCEPT"}
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Accept</span>
                         </button>
                       </div>
                     </div>
@@ -281,52 +288,40 @@ export default function NetworkHubClient({
                 })}
               </div>
             ) : (
-              <div className="nokia-panel-sunken font-mono text-muted" style={{ padding: "16px", fontStyle: "italic", textAlign: "center", fontSize: "11px" }}>
+              <div className="p-8 text-center rounded-2xl bg-white/[0.02] border border-white/[0.08] text-xs text-neutral-400">
                 No incoming connection requests.
               </div>
             )}
           </div>
 
-          <hr className="nokia-divider" />
-
           {/* Sent Requests */}
-          <div>
-            <h3 className="font-pixel text-muted" style={{ fontSize: "8px", marginBottom: "12px", letterSpacing: "0.05em" }}>
-              ▶ SENT REQUESTS ({sentPendingRequests.length})
+          <div className="space-y-3 pt-4">
+            <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-2">
+              <UserPlus className="w-4 h-4 text-neutral-400" />
+              <span>Sent Requests ({sentPendingRequests.length})</span>
             </h3>
             {sentPendingRequests.length > 0 ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <div className="space-y-3">
                 {sentPendingRequests.map((relation) => {
                   const recipient = getOtherUserProfile(relation);
                   return (
                     <div
                       key={relation.id}
-                      className="nokia-panel"
-                      style={{ padding: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", opacity: 0.8 }}
+                      className="p-4 sm:p-5 rounded-2xl bg-white/[0.02] border border-white/[0.06] backdrop-blur-md flex items-center justify-between gap-4 opacity-80 hover:opacity-100 transition-opacity"
                     >
-                      <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-                        <div className="nokia-panel-sunken font-pixel" style={{
-                          width: "32px",
-                          height: "32px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: "12px",
-                          color: "var(--text-muted)",
-                          flexShrink: 0,
-                        }}>
+                      <div className="flex items-center gap-3.5">
+                        <div className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-neutral-400 font-bold text-sm flex-shrink-0">
                           {recipient.full_name ? recipient.full_name.charAt(0).toUpperCase() : "?"}
                         </div>
                         <div>
                           <Link
                             href={`/profile/${recipient.id}`}
-                            className="font-pixel text-accent"
-                            style={{ fontSize: "9px", textDecoration: "none" }}
+                            className="font-bold text-white text-sm hover:text-[#FF6F26] transition-colors"
                           >
-                            {recipient.full_name || "ANONYMOUS MEMBER"}
+                            {recipient.full_name || "Anonymous Member"}
                           </Link>
-                          <div className="font-mono text-muted" style={{ fontSize: "11px", marginTop: "2px" }}>
-                            awaiting response...
+                          <div className="text-xs text-neutral-500 mt-0.5">
+                            Awaiting response...
                           </div>
                         </div>
                       </div>
@@ -334,18 +329,17 @@ export default function NetworkHubClient({
                       <button
                         onClick={() => handleDeclineOrRemove(relation.id)}
                         disabled={actionLoadingId === relation.id}
-                        className="nokia-btn"
-                        style={{ padding: "4px 8px", fontSize: "7px" }}
+                        className="px-3.5 py-1.5 rounded-xl text-xs text-neutral-400 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] transition-all"
                       >
-                        {actionLoadingId === relation.id ? "..." : "✕ CANCEL"}
+                        Cancel
                       </button>
                     </div>
                   );
                 })}
               </div>
             ) : (
-              <div className="nokia-panel-sunken font-mono text-muted" style={{ padding: "16px", fontStyle: "italic", textAlign: "center", fontSize: "11px" }}>
-                No sent requests active.
+              <div className="p-8 text-center rounded-2xl bg-white/[0.02] border border-white/[0.08] text-xs text-neutral-400">
+                No sent requests pending.
               </div>
             )}
           </div>

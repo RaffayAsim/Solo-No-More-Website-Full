@@ -132,12 +132,21 @@ export async function submitVibeFeedback(
 }
 
 // ── LAZY TIME ALERTS — Called server-side on dashboard load ──────────────────
+const lastAlertCheckByUser = new Map<string, number>();
+const ALERT_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes cooldown per user
+
 /**
  * Generates all time-based and engagement-based notifications lazily.
  * Idempotent — the unique DB index prevents duplicate alerts per (user, type, beacon).
  * Also auto-completes stale expired beacons.
  */
 export async function writeLazyTimeAlerts(userId: string): Promise<void> {
+  const lastCheck = lastAlertCheckByUser.get(userId) || 0;
+  if (Date.now() - lastCheck < ALERT_COOLDOWN_MS) {
+    return;
+  }
+  lastAlertCheckByUser.set(userId, Date.now());
+
   const now = new Date();
   const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000);
   const twentyFourHoursFromNow = new Date(now.getTime() + 24 * 60 * 60 * 1000);

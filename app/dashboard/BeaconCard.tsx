@@ -1,45 +1,103 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import type { Beacon, BeaconCategory } from "@/lib/supabase/types";
 import { applyToBeacon, withdrawFromBeacon } from "@/app/actions/applications";
-import SquadChatModal from "@/components/SquadChatModal";
+import dynamic from "next/dynamic";
 
-// ── Category meta ─────────────────────────────────────────────────────────────
-const CATEGORY_META: Record<BeaconCategory, { label: string; icon: string; accentVar: string }> = {
-  sports:    { label: "SPORTS",    icon: "◉", accentVar: "var(--accent-success)" },
-  casual:    { label: "CASUAL",    icon: "★", accentVar: "var(--accent-warning)" },
-  nightlife: { label: "NIGHTLIFE", icon: "♦", accentVar: "var(--accent-primary)" },
+const SquadChatModal = dynamic(() => import("@/components/SquadChatModal"), { ssr: false });
+import {
+  Calendar,
+  MapPin,
+  Users,
+  MessageSquare,
+  CheckCircle2,
+  Clock,
+  ArrowRight,
+  Flame,
+  Sparkles,
+  ShieldAlert,
+  Trophy,
+  Coffee,
+  Moon,
+  Coins,
+  HelpCircle,
+} from "lucide-react";
+import { parseBeaconMeta } from "@/lib/beaconBudget";
+
+const CATEGORY_META: Record<
+  BeaconCategory,
+  { label: string; icon: typeof Trophy; bg: string; border: string; color: string }
+> = {
+  sports: {
+    label: "Sports & Padel",
+    icon: Trophy,
+    bg: "rgba(39, 201, 63, 0.12)",
+    border: "rgba(39, 201, 63, 0.28)",
+    color: "#27C93F",
+  },
+  casual: {
+    label: "Chai & Casual",
+    icon: Coffee,
+    bg: "rgba(255, 160, 92, 0.12)",
+    border: "rgba(255, 160, 92, 0.28)",
+    color: "#FFA05C",
+  },
+  nightlife: {
+    label: "Nightlife & Rave",
+    icon: Moon,
+    bg: "rgba(255, 90, 31, 0.15)",
+    border: "rgba(255, 90, 31, 0.35)",
+    color: "#FF8A3D",
+  },
 };
 
 function formatScheduledAt(iso: string | null): string {
-  if (!iso) return "TIME TBD";
+  if (!iso) return "Time TBD";
   const d = new Date(iso);
   return d.toLocaleDateString("en-US", {
-    weekday: "short", month: "short", day: "numeric",
-    hour: "numeric", minute: "2-digit",
-  }).toUpperCase();
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 function SlotDots({ filled, total }: { filled: number; total: number }) {
+  const remaining = Math.max(0, total - filled);
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: "4px", flexWrap: "wrap" }}
-      aria-label={`${filled} of ${total} slots filled`}>
-      {Array.from({ length: total }).map((_, i) => (
-        <span
-          key={i}
-          className="font-lcd"
-          style={{
-            fontSize: "16px",
-            lineHeight: 1,
-            color: i < filled ? "var(--accent-primary)" : "var(--border-mid)",
-          }}
-        >
-          {i < filled ? "●" : "○"}
-        </span>
-      ))}
-      <span className="font-pixel" style={{ marginLeft: "4px", fontSize: "10px", color: "var(--text-muted)" }}>
-        {total - filled} LEFT
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", margin: "10px 0 14px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+        {Array.from({ length: Math.min(total, 12) }).map((_, i) => (
+          <span
+            key={i}
+            style={{
+              width: "7px",
+              height: "7px",
+              borderRadius: "50%",
+              background: i < filled ? "#FF5A1F" : "rgba(255,255,255,0.2)",
+              boxShadow: i < filled ? "0 0 8px rgba(255,90,31,0.6)" : "none",
+              display: "inline-block",
+            }}
+          />
+        ))}
+        {total > 12 && <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.5)" }}>+{total - 12}</span>}
+      </div>
+      <span
+        style={{
+          fontSize: "11px",
+          fontWeight: 800,
+          color: remaining <= 1 ? "#FF6B6B" : "#FFA05C",
+          background: remaining <= 1 ? "rgba(255, 107, 107, 0.15)" : "rgba(255, 90, 31, 0.12)",
+          border: remaining <= 1 ? "1px solid rgba(255, 107, 107, 0.3)" : "1px solid rgba(255, 90, 31, 0.25)",
+          padding: "2px 8px",
+          borderRadius: "6px",
+          letterSpacing: "0.02em",
+        }}
+      >
+        {remaining === 0 ? "Squad Full" : `${remaining} spot${remaining > 1 ? "s" : ""} left`}
       </span>
     </div>
   );
@@ -50,32 +108,58 @@ interface BeaconCardProps {
   onApply?: (beaconId: string) => void;
   isLateNightRadar?: boolean;
   currentUserId?: string;
+  isRestrictedRole?: boolean;
+  roleLabel?: string;
 }
 
-export default function BeaconCard({ beacon, onApply, isLateNightRadar, currentUserId }: BeaconCardProps) {
+export default function BeaconCard({
+  beacon,
+  onApply,
+  isLateNightRadar,
+  currentUserId,
+  isRestrictedRole = false,
+  roleLabel = "",
+}: BeaconCardProps) {
   const [isPending, setIsPending] = useState(false);
   const [appliedStatus, setAppliedStatus] = useState<"none" | "requested" | "error" | "withdrawn">("none");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isHovered, setIsHovered] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [showWithdrawConfirm, setShowWithdrawConfirm] = useState(false);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
 
-  const meta = CATEGORY_META[beacon.category];
+  const meta = CATEGORY_META[beacon.category] || CATEGORY_META.casual;
   const isFull = beacon.filled_slots >= beacon.total_slots;
+  const isHost = currentUserId && beacon.host_id === currentUserId;
 
-  // Check if event is within 2 hours (warn before withdraw)
   const isNearEvent = beacon.scheduled_at
     ? new Date(beacon.scheduled_at).getTime() - Date.now() < 2 * 60 * 60 * 1000
     : false;
 
+  const parsedMeta = parseBeaconMeta(beacon.description);
+  const [showApplyModal, setShowApplyModal] = useState(false);
+  const [applicantAnswer, setApplicantAnswer] = useState("");
+  const [budgetAgreed, setBudgetAgreed] = useState(true);
+
   const handleJoin = async () => {
+    if (isRestrictedRole) {
+      alert(`${roleLabel || "Restricted"} accounts cannot join member hangouts. Hangout participation is reserved for personal member accounts.`);
+      return;
+    }
+    setShowApplyModal(true);
+  };
+
+  const handleJoinSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsPending(true);
     setErrorMessage(null);
     try {
-      const result = await applyToBeacon(beacon.id);
+      const result = await applyToBeacon(beacon.id, {
+        budgetAgreement: parsedMeta.budgetTier,
+        icebreakerAnswer: applicantAnswer.trim() || undefined,
+      });
       if (result.success) {
         setAppliedStatus("requested");
+        setShowApplyModal(false);
         onApply?.(beacon.id);
       } else {
         setErrorMessage(result.error);
@@ -101,225 +185,348 @@ export default function BeaconCard({ beacon, onApply, isLateNightRadar, currentU
         setErrorMessage(result.error);
       }
     } catch {
-      setErrorMessage("Network error. Please try again.");
+      setErrorMessage("Network error withdrawing.");
     } finally {
       setIsWithdrawing(false);
     }
   };
 
-  // Late-Night Radar uses amber accent
-  const accent = isLateNightRadar ? "var(--accent-warning)" : meta.accentVar;
-
   return (
     <article
-      className={beacon.is_partner_offer ? "nokia-panel partner-offer-card retro-corners" : "nokia-panel retro-corners"}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
       style={{
+        background: "linear-gradient(160deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%)",
+        border: "1px solid rgba(255, 255, 255, 0.12)",
+        borderRadius: "22px",
+        padding: "20px",
         display: "flex",
         flexDirection: "column",
-        gap: "10px",
-        padding: "14px",
-        borderColor: isLateNightRadar ? "var(--accent-warning)" : undefined,
-        transform: isHovered ? "translateY(-4px)" : "none",
-        boxShadow: isHovered
-          ? "inset 2px 2px 0 var(--bevel-light), inset -2px -2px 0 var(--bevel-dark), 4px 6px 0 var(--bevel-darkest)"
-          : undefined,
-        transition: "transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275), border-color 0.15s ease",
+        justifyContent: "space-between",
+        backdropFilter: "blur(14px)",
+        boxShadow: "0 14px 40px rgba(0, 0, 0, 0.4)",
+        transition: "transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease",
+        position: "relative",
+        overflow: "hidden",
       }}
+      className="hover:-translate-y-1 hover:border-[#FF5A1F]/50 hover:shadow-[0_20px_50px_rgba(255,90,31,0.18)]"
     >
-      {/* Banner Image */}
-      {beacon.image_url && (
-        <div style={{
-          margin: "-14px -14px 4px -14px",
-          height: "90px",
-          overflow: "hidden",
-          borderBottom: "2px solid var(--border-strong)",
-        }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={beacon.image_url}
-            alt="Promo Banner"
+      <div>
+        {/* Banner image if present */}
+        {beacon.image_url && (
+          <div
             style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              filter: "grayscale(1) contrast(1.3) brightness(0.9)",
-            }}
-          />
-        </div>
-      )}
-
-      {/* Top row — category badge + visibility */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "8px" }}>
-        <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
-          <span
-            className="nokia-badge"
-            style={{
-              background: accent,
-              color: "var(--text-inverse)",
-              borderColor: "var(--border-strong)",
-              fontSize: "10px",
+              margin: "-20px -20px 14px -20px",
+              height: "120px",
+              overflow: "hidden",
+              position: "relative",
             }}
           >
-            {meta.icon} {meta.label}
-          </span>
-          {beacon.application_status === "approved" && (
-            <span
-              className="nokia-badge"
+            <img
+              src={beacon.image_url}
+              alt={beacon.title}
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+            <div
               style={{
-                fontSize: "10px",
-                background: "var(--accent-success)",
-                color: "var(--text-inverse)",
+                position: "absolute",
+                inset: 0,
+                background: "linear-gradient(to top, rgba(14,7,20,0.9) 0%, transparent 70%)",
               }}
-            >
-              ✓ JOINED
-            </span>
-          )}
-          {currentUserId && beacon.host_id === currentUserId && (
-            <span
-              className="nokia-badge"
-              style={{
-                fontSize: "10px",
-                background: "var(--accent-primary)",
-                color: "var(--text-inverse)",
-              }}
-            >
-              ★ HOST
-            </span>
-          )}
-        </div>
-        <span
-          className="nokia-badge"
-          style={{
-            fontSize: "10px",
-            background: beacon.visibility_mode === "friend" ? "var(--accent-primary)" : "var(--bg-sunken)",
-            color: beacon.visibility_mode === "friend" ? "var(--text-inverse)" : "var(--text-muted)",
-          }}
-        >
-          {beacon.visibility_mode === "friend" ? "♥ FRIENDS" : "◈ OPEN"}
-        </span>
-      </div>
-
-      {/* Title */}
-      <h3 className="font-mono" style={{ fontSize: "14px", fontWeight: "bold", lineHeight: "1.4", color: "var(--text-primary)", letterSpacing: "0.02em" }}>
-        {beacon.title.toUpperCase()}
-      </h3>
-
-      {/* Host details with customizable glowing CRT avatar */}
-      <div style={{ display: "flex", alignItems: "center", gap: "6px", margin: "-4px 0 2px 0" }}>
-        <span
-          className="phosphor"
-          style={{
-            fontSize: "14px",
-            lineHeight: 1,
-            textShadow: "0 0 6px var(--accent-primary)",
-            display: "inline-block",
-          }}
-        >
-          {beacon.profiles?.avatar_icon || "👾"}
-        </span>
-        <span style={{ fontSize: "11px", fontWeight: "600", color: "var(--text-muted)", letterSpacing: "0.04em" }}>
-          BY {beacon.profiles?.full_name?.toUpperCase() || "ANONYMOUS"}
-        </span>
-      </div>
-
-      {/* LCD meta row */}
-      <div className="nokia-panel-sunken" style={{ padding: "6px 10px" }}>
-        <div className="font-lcd" style={{ fontSize: "16px", color: accent, letterSpacing: "0.06em", lineHeight: "1.3" }}>
-          {formatScheduledAt(beacon.scheduled_at)}
-        </div>
-        {beacon.location_name && (
-          <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>
-            ▸ {beacon.location_name}
+            />
           </div>
         )}
+
+        {/* Top Badges Row */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginBottom: "12px" }}>
+          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
+            {(() => {
+              const CategoryIcon = meta.icon;
+              return (
+                <span
+                  style={{
+                    fontSize: "11px",
+                    fontWeight: 800,
+                    background: meta.bg,
+                    border: `1px solid ${meta.border}`,
+                    color: meta.color,
+                    padding: "3px 8px",
+                    borderRadius: "6px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "5px",
+                    letterSpacing: "0.02em",
+                  }}
+                >
+                  <CategoryIcon className="w-3 h-3 flex-shrink-0" />
+                  <span>{meta.label}</span>
+                </span>
+              );
+            })()}
+
+            {/* Budget Pact Badge */}
+            <span
+              style={{
+                fontSize: "10px",
+                fontWeight: 800,
+                background: "rgba(255, 160, 92, 0.12)",
+                border: "1px solid rgba(255, 160, 92, 0.28)",
+                color: "#FFA05C",
+                padding: "3px 7px",
+                borderRadius: "6px",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+              }}
+            >
+              <Coins className="w-3 h-3 text-amber-400" />
+              <span>{parsedMeta.budgetTier}</span>
+            </span>
+
+            {beacon.application_status === "approved" && (
+              <span
+                style={{
+                  fontSize: "10px",
+                  fontWeight: 900,
+                  background: "rgba(39, 201, 63, 0.15)",
+                  border: "1px solid rgba(39, 201, 63, 0.35)",
+                  color: "#27C93F",
+                  padding: "3px 7px",
+                  borderRadius: "6px",
+                  letterSpacing: "0.04em",
+                }}
+              >
+                JOINED
+              </span>
+            )}
+
+            {isHost && (
+              <span
+                style={{
+                  fontSize: "10px",
+                  fontWeight: 900,
+                  background: "rgba(255, 90, 31, 0.2)",
+                  border: "1px solid rgba(255, 90, 31, 0.45)",
+                  color: "#FFA05C",
+                  padding: "3px 7px",
+                  borderRadius: "6px",
+                  letterSpacing: "0.04em",
+                }}
+              >
+                HOST
+              </span>
+            )}
+          </div>
+
+          <span
+            style={{
+              fontSize: "10.5px",
+              fontWeight: 700,
+              color: beacon.visibility_mode === "friend" ? "#FF8A3D" : "rgba(255,255,255,0.6)",
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              padding: "2px 8px",
+              borderRadius: "6px",
+              letterSpacing: "0.02em",
+            }}
+          >
+            {beacon.visibility_mode === "friend" ? "Friends" : "Open Radar"}
+          </span>
+        </div>
+
+        {/* Title */}
+        <h3
+          style={{
+            fontSize: "17px",
+            fontWeight: 800,
+            lineHeight: 1.35,
+            color: "#FFFFFF",
+            margin: "0 0 10px",
+            letterSpacing: "-0.01em",
+          }}
+        >
+          {beacon.title}
+        </h3>
+
+        {/* Location & Time info */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "12.5px", color: "rgba(255,255,255,0.7)", marginBottom: "12px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <MapPin className="w-3.5 h-3.5 text-[#FF8A3D] flex-shrink-0" />
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {beacon.location_name}
+            </span>
+            {beacon.google_maps_url && (
+              <a
+                href={beacon.google_maps_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  color: "#FFA05C",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "3px",
+                  marginLeft: "auto",
+                  textDecoration: "underline",
+                }}
+              >
+                Map Pin ↗
+              </a>
+            )}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <Clock className="w-3.5 h-3.5 text-white/50 flex-shrink-0" />
+            <span>{formatScheduledAt(beacon.scheduled_at)}</span>
+          </div>
+        </div>
+
+        {/* Host avatar & name */}
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", paddingTop: "8px", borderTop: "1px solid rgba(255,255,255,0.08)", fontSize: "12px", color: "rgba(255,255,255,0.6)" }}>
+          <span style={{ fontSize: "14px" }}>{beacon.profiles?.avatar_icon || "👤"}</span>
+          <span>Hosted by <strong>{beacon.profiles?.full_name || "Community Host"}</strong></span>
+        </div>
+
+        {/* Slot Progress Dots */}
+        <SlotDots filled={beacon.filled_slots} total={beacon.total_slots} />
       </div>
 
-      {/* Slot dots */}
-      <SlotDots filled={beacon.filled_slots} total={beacon.total_slots} />
-
-      {/* Error */}
+      {/* Error Banner */}
       {errorMessage && (
-        <div className="nokia-panel-sunken" style={{ padding: "6px 10px", borderColor: "var(--accent-danger)" }}>
-          <span className="font-pixel" style={{ fontSize: "10px", color: "var(--accent-danger)" }}>
-            ✕ {errorMessage}
-          </span>
+        <div style={{ background: "rgba(235,57,57,0.15)", border: "1px solid rgba(235,57,57,0.3)", borderRadius: "8px", padding: "6px 10px", color: "#FF6B6B", fontSize: "11px", marginBottom: "8px" }}>
+          {errorMessage}
         </div>
       )}
 
-      {/* Apply / Chat / Withdraw button area */}
+      {/* Action Buttons Area */}
       {onApply && (
-        <>
-          {currentUserId && beacon.host_id === currentUserId ? (
-            // HOST VIEW
-            <button
-              onClick={() => setIsChatOpen(true)}
-              className="nokia-btn nokia-btn-primary"
-              style={{ marginTop: "auto", width: "100%", fontSize: "11px" }}
+        <div style={{ marginTop: "6px" }}>
+          {isHost ? (
+            /* HOST ACTION: Dedicated Squad Chat, Vetting & Edit Workspace */
+            <Link
+              href={`/dashboard/chats?beaconId=${beacon.id}`}
+              style={{
+                width: "100%",
+                background: "linear-gradient(135deg, #FF6F26 0%, #FF5A1F 100%)",
+                color: "#fff",
+                textDecoration: "none",
+                borderRadius: "12px",
+                padding: "11px",
+                fontSize: "13px",
+                fontWeight: 800,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "6px",
+                boxShadow: "0 4px 15px rgba(255, 90, 31, 0.4)",
+              }}
+              className="hover:scale-[1.02] active:scale-98 transition-transform"
             >
-              💬 SQUAD CHAT (HOST)
-            </button>
+              <Users className="w-4 h-4" />
+              <span>Manage Squad &amp; Chat ➔</span>
+            </Link>
           ) : appliedStatus === "withdrawn" ? (
-            // WITHDRAWN STATE
-            <div className="nokia-panel-sunken" style={{ padding: "8px", textAlign: "center" }}>
-              <span className="font-pixel" style={{ fontSize: "10px", color: "var(--text-muted)" }}>⊠ WITHDRAWN FROM SQUAD</span>
+            <div style={{ padding: "10px", background: "rgba(255,255,255,0.06)", borderRadius: "10px", textAlign: "center", fontSize: "12px", color: "rgba(255,255,255,0.6)" }}>
+              Withdrawn from Squad
             </div>
           ) : beacon.application_status === "approved" ? (
-            // APPROVED GUEST VIEW — Chat + Withdraw
-            <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "auto" }}>
-              <button
-                onClick={() => setIsChatOpen(true)}
-                className="nokia-btn nokia-btn-primary"
-                style={{ width: "100%", fontSize: "11px", background: "var(--accent-success)", color: "var(--text-inverse)" }}
+            /* APPROVED GUEST VIEW: Link to Squad Chat + Withdraw option */
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              <Link
+                href={`/dashboard/chats?beaconId=${beacon.id}`}
+                style={{
+                  width: "100%",
+                  background: "linear-gradient(135deg, #27C93F 0%, #1FB837 100%)",
+                  color: "#000",
+                  textDecoration: "none",
+                  borderRadius: "12px",
+                  padding: "10px",
+                  fontSize: "13px",
+                  fontWeight: 900,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px",
+                }}
+                className="hover:scale-[1.02] transition-transform"
               >
-                💬 SQUAD CHAT
-              </button>
+                <MessageSquare className="w-4 h-4" />
+                <span>Open Squad Hub &amp; Chat ➔</span>
+              </Link>
 
-              {/* Withdraw flow */}
               {!showWithdrawConfirm ? (
                 <button
+                  type="button"
                   onClick={() => setShowWithdrawConfirm(true)}
-                  className="nokia-btn"
-                  style={{ width: "100%", fontSize: "10px", opacity: 0.7 }}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "rgba(255,255,255,0.45)",
+                    fontSize: "11px",
+                    cursor: "pointer",
+                    padding: "4px",
+                  }}
+                  className="hover:text-white"
                 >
-                  ⊠ WITHDRAW FROM SQUAD
+                  Withdraw from Hangout
                 </button>
               ) : (
-                <div className="nokia-panel-sunken" style={{ padding: "8px" }}>
+                <div style={{ background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "10px", padding: "8px", textAlign: "center" }}>
                   {isNearEvent && (
-                    <div style={{ marginBottom: "6px" }}>
-                      <span className="font-pixel" style={{ fontSize: "9px", color: "var(--accent-danger)" }}>
-                        ⚠ EVENT IS WITHIN 2H — WITHDRAWING NOW WILL NOTIFY THE HOST!
-                      </span>
+                    <div style={{ fontSize: "10px", color: "#FF6B6B", marginBottom: "4px" }}>
+                      ⚠️ Within 2 hours of meetup!
                     </div>
                   )}
-                  <div className="font-pixel" style={{ fontSize: "10px", marginBottom: "8px", color: "var(--text-muted)" }}>
-                    CONFIRM WITHDRAW?
-                  </div>
                   <div style={{ display: "flex", gap: "6px" }}>
                     <button
+                      type="button"
                       onClick={() => setShowWithdrawConfirm(false)}
-                      className="nokia-btn"
-                      style={{ flex: 1, fontSize: "10px" }}
+                      style={{ flex: 1, background: "rgba(255,255,255,0.1)", border: "none", color: "#fff", padding: "6px", borderRadius: "6px", fontSize: "11px", cursor: "pointer" }}
                     >
-                      ✕ CANCEL
+                      Keep Spot
                     </button>
                     <button
-                      onClick={handleWithdraw}
+                      type="button"
                       disabled={isWithdrawing}
-                      className="nokia-btn nokia-btn-danger"
-                      style={{ flex: 1, fontSize: "10px" }}
+                      onClick={handleWithdraw}
+                      style={{ flex: 1, background: "#FF453A", border: "none", color: "#fff", padding: "6px", borderRadius: "6px", fontSize: "11px", fontWeight: 800, cursor: "pointer" }}
                     >
-                      {isWithdrawing ? "..." : "⊠ CONFIRM"}
+                      {isWithdrawing ? "..." : "Confirm Leave"}
                     </button>
                   </div>
                 </div>
               )}
             </div>
-          ) : (
-            // NON-APPROVED GUEST — Apply button
+          ) : isRestrictedRole ? (
+            /* RESTRICTED ROLES (PARTNER / ADMIN / ARTIST): VIEW ONLY */
             <button
+              type="button"
+              disabled
+              style={{
+                width: "100%",
+                background: "rgba(255, 255, 255, 0.04)",
+                color: "rgba(255, 255, 255, 0.45)",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+                borderRadius: "12px",
+                padding: "11px",
+                fontSize: "12px",
+                fontWeight: 700,
+                cursor: "not-allowed",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "6px",
+              }}
+              title={`${roleLabel || "Staff/Partner"} accounts cannot join member hangouts (View Only mode)`}
+            >
+              <ShieldAlert className="w-4 h-4 text-white/40" />
+              <span>View Only ({roleLabel || "Partner/Staff"})</span>
+            </button>
+          ) : (
+            /* NON-APPROVED GUEST: Join Button */
+            <button
+              type="button"
               onClick={handleJoin}
               disabled={
                 isFull ||
@@ -328,40 +535,50 @@ export default function BeaconCard({ beacon, onApply, isLateNightRadar, currentU
                 beacon.application_status === "pending" ||
                 beacon.application_status === "declined"
               }
-              className={
-                appliedStatus === "requested" || beacon.application_status === "pending"
-                  ? "nokia-btn"
-                  : beacon.application_status === "declined"
-                  ? "nokia-btn"
-                  : isFull
-                  ? "nokia-btn"
-                  : "nokia-btn nokia-btn-primary"
-              }
               style={{
-                marginTop: "auto",
                 width: "100%",
-                fontSize: "11px",
-                opacity: isFull ? 0.5 : 1,
                 background:
                   appliedStatus === "requested" || beacon.application_status === "pending"
-                    ? "var(--accent-success)"
-                    : undefined,
+                    ? "rgba(39, 201, 63, 0.2)"
+                    : isFull
+                    ? "rgba(255,255,255,0.06)"
+                    : "linear-gradient(135deg, #FF6F26 0%, #FF5A1F 100%)",
                 color:
                   appliedStatus === "requested" || beacon.application_status === "pending"
-                    ? "var(--text-inverse)"
-                    : undefined,
+                    ? "#27C93F"
+                    : isFull
+                    ? "rgba(255,255,255,0.4)"
+                    : "#FFFFFF",
+                border:
+                  appliedStatus === "requested" || beacon.application_status === "pending"
+                    ? "1px solid rgba(39, 201, 63, 0.4)"
+                    : "none",
+                borderRadius: "12px",
+                padding: "11px",
+                fontSize: "13px",
+                fontWeight: 800,
+                cursor: isFull ? "not-allowed" : "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "6px",
+                boxShadow: isFull ? "none" : "0 4px 15px rgba(255, 90, 31, 0.35)",
               }}
+              className={isFull ? "" : "hover:scale-[1.02] active:scale-98"}
             >
               {isPending ? (
-                <span className="pixel-blink">▌ SENDING...</span>
+                <span>Requesting...</span>
               ) : appliedStatus === "requested" || beacon.application_status === "pending" ? (
-                "✓ REQUESTED"
+                <span>✓ Request Sent</span>
               ) : beacon.application_status === "declined" ? (
-                "✕ DECLINED"
+                <span>✕ Declined</span>
               ) : isFull ? (
-                "■ FULL"
+                <span>Squad Full</span>
               ) : (
-                "► REQUEST TO JOIN"
+                <>
+                  <span>Request to Join</span>
+                  <ArrowRight className="w-3.5 h-3.5 text-white/80" />
+                </>
               )}
             </button>
           )}
@@ -373,7 +590,98 @@ export default function BeaconCard({ beacon, onApply, isLateNightRadar, currentU
               onClose={() => setIsChatOpen(false)}
             />
           )}
-        </>
+
+          {/* Interactive Squad Apply Modal with Budget Agreement and Icebreaker */}
+          {showApplyModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+              <div className="w-full max-w-md p-6 rounded-3xl border border-white/10 bg-zinc-950 space-y-4 shadow-2xl text-left">
+                <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                  <div className="flex items-center gap-2">
+                    <span className="w-8 h-8 rounded-xl bg-[#FF6F26]/20 border border-[#FF6F26]/30 flex items-center justify-center text-sm">
+                      🔥
+                    </span>
+                    <div>
+                      <h3 className="text-sm font-bold text-white truncate max-w-[260px]">
+                        Join Squad: {beacon.title}
+                      </h3>
+                      <span className="text-[10px] text-zinc-400">
+                        Host: {beacon.profiles?.full_name || "Verified Host"}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowApplyModal(false)}
+                    className="p-1 rounded-lg text-zinc-400 hover:text-white"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <form onSubmit={handleJoinSubmit} className="space-y-4">
+                  {/* Budget Pact Alignment */}
+                  <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 space-y-2">
+                    <div className="flex items-center gap-2 text-xs font-bold text-amber-300">
+                      <Coins className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Meetup Budget Pact</span>
+                    </div>
+                    <p className="text-[11px] text-zinc-300">
+                      {parsedMeta.budgetTier}
+                    </p>
+                    <label className="flex items-center gap-2 text-[11px] text-zinc-300 cursor-pointer pt-1">
+                      <input
+                        type="checkbox"
+                        checked={budgetAgreed}
+                        onChange={(e) => setBudgetAgreed(e.target.checked)}
+                        required
+                        className="rounded accent-[#FF6F26]"
+                      />
+                      <span>I confirm I am comfortable with this expense pact.</span>
+                    </label>
+                  </div>
+
+                  {/* Host's Custom Icebreaker Question */}
+                  {parsedMeta.customQuestion && (
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
+                        <HelpCircle className="w-3.5 h-3.5 text-[#FF6F26]" />
+                        <span>Host Question: &ldquo;{parsedMeta.customQuestion}&rdquo;</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={applicantAnswer}
+                        onChange={(e) => setApplicantAnswer(e.target.value)}
+                        placeholder="Your answer..."
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-xs placeholder:text-zinc-600 focus:outline-none focus:border-[#FF6F26] transition-colors"
+                      />
+                    </div>
+                  )}
+
+                  {/* Info Notice */}
+                  <p className="text-[10px] text-zinc-500">
+                    Your profile vibe and history will be shared with the host during vetting. If approved, you unlock the private squad chat stream!
+                  </p>
+
+                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
+                    <button
+                      type="button"
+                      onClick={() => setShowApplyModal(false)}
+                      className="px-4 py-2 rounded-xl text-xs font-bold text-zinc-400 hover:text-white bg-white/5"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isPending || !budgetAgreed}
+                      className="px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-[#FF6F26] to-[#FF5A1F] text-white hover:brightness-110 shadow-[0_0_15px_rgba(255,111,38,0.3)] transition-all disabled:opacity-40"
+                    >
+                      {isPending ? "Sending..." : "Submit Join Request ➔"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
       )}
     </article>
   );

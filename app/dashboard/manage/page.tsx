@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { getSessionUserSecurely } from "@/lib/supabase/session";
 import type { Beacon, BeaconApplication } from "@/lib/supabase/types";
 import ManageHostDashboard from "./ManageHostDashboard";
 
@@ -9,59 +9,60 @@ export const metadata = {
   description: "Manage your hosted Beacons and connection requests.",
 };
 
-// ─── Secure Session Fetcher ──────────────────────────────────────────────────
-async function getSessionUser() {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get("sb-dmmgzpiskyocdsxamrgf-auth-token");
-
-  if (!sessionCookie?.value) return null;
-
-  try {
-    let raw = sessionCookie.value;
-    if (raw.startsWith("base64-")) {
-      raw = Buffer.from(raw.slice(7), "base64").toString("utf-8");
-    }
-    const parsed = JSON.parse(raw);
-    const accessToken = Array.isArray(parsed) ? parsed[0] : parsed.access_token;
-    if (!accessToken) return null;
-
-    const { data, error } = await supabaseAdmin.auth.getUser(accessToken);
-    if (error || !data.user) return null;
-
-    return data.user;
-  } catch {
-    return null;
-  }
-}
-
 export default async function ManagePage() {
-  // 1. Verify user authentication
-  const user = await getSessionUser();
-  if (!user) {
+  // 1. Verify user authentication with ultra-fast local JWT decoding
+  const sessionResult = await getSessionUserSecurely();
+  if ("error" in sessionResult || !sessionResult.userId) {
     redirect("/login");
   }
+  const userId = sessionResult.userId;
 
-  // 2. Fetch profile and verify approved status
-  const { data: profile } = await (supabaseAdmin
-    .from("profiles")
-    .select("account_status")
-    .eq("id", user.id)
-    .single() as any);
+  // 2. Fetch profile, hosted beacons, and joined beacons in parallel
+  const [profileRes, beaconsRes, guestAppsRes] = await Promise.all([
+    (supabaseAdmin
+      .from("profiles")
+      .select("account_status")
+      .eq("id", userId)
+      .single() as any),
+    (supabaseAdmin
+      .from("beacons")
+      .select("*")
+      .eq("host_id", userId)
+      .order("created_at", { ascending: false }) as any),
+    (supabaseAdmin
+      .from("beacon_applications")
+      .select(`
+        beacon_id,
+        beacons:beacon_id (
+          id,
+          host_id,
+          title,
+          description,
+          category,
+          visibility_mode,
+          total_slots,
+          filled_slots,
+          location_name,
+          scheduled_at,
+          status,
+          created_at,
+          profiles:host_id (
+            full_name
+          )
+        )
+      `)
+      .eq("applicant_id", userId)
+      .eq("status", "approved") as any),
+  ]);
 
+  const profile = profileRes.data;
   if (!profile || profile.account_status !== "approved") {
     redirect("/dashboard");
   }
 
-  // 3. Fetch Beacons hosted by this user
-  const { data: beacons } = await (supabaseAdmin
-    .from("beacons")
-    .select("*")
-    .eq("host_id", user.id)
-    .order("created_at", { ascending: false }) as any);
+  const hostedBeacons: Beacon[] = beaconsRes.data || [];
 
-  const hostedBeacons: Beacon[] = beacons || [];
-
-  // 4. Fetch all applications for hosted beacons, joining with applicant profiles
+  // 3. Fetch applications for hosted beacons if any exist
   let applicationsList: any[] = [];
   if (hostedBeacons.length > 0) {
     const beaconIds = hostedBeacons.map((b) => b.id);
@@ -75,8 +76,12 @@ export default async function ManagePage() {
         created_at,
         flagged_ghost,
         profiles (
+          id,
           full_name,
-          bio
+          bio,
+          phone,
+          city,
+          avatar_icon
         )
       `)
       .in("beacon_id", beaconIds)
@@ -85,33 +90,7 @@ export default async function ManagePage() {
     applicationsList = apps || [];
   }
 
-  // 5. Fetch Beacons that this user has successfully joined and been approved for
-  const { data: guestApps } = await (supabaseAdmin
-    .from("beacon_applications")
-    .select(`
-      beacon_id,
-      beacons:beacon_id (
-        id,
-        host_id,
-        title,
-        description,
-        category,
-        visibility_mode,
-        total_slots,
-        filled_slots,
-        location_name,
-        scheduled_at,
-        status,
-        created_at,
-        profiles:host_id (
-          full_name
-        )
-      )
-    `)
-    .eq("applicant_id", user.id)
-    .eq("status", "approved") as any);
-
-  const joinedBeacons = (guestApps || [])
+  const joinedBeacons = (guestAppsRes.data || [])
     .map((ga: any) => ga.beacons)
     .filter(Boolean);
 
@@ -120,6 +99,8 @@ export default async function ManagePage() {
       beacons={hostedBeacons}
       initialApplications={applicationsList}
       joinedBeacons={joinedBeacons}
+      currentUserId={userId}
     />
   );
 }
+

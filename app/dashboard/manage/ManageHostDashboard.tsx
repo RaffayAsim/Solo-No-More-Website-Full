@@ -1,17 +1,27 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { approveApplicant, declineApplicant, flagNoShow } from "@/app/actions/applications";
-import { cancelBeacon, updateBeaconCapacity } from "@/app/actions/beacons";
 import type { Beacon, BeaconCategory } from "@/lib/supabase/types";
-import SquadChatModal from "@/components/SquadChatModal";
+import {
+  Radio,
+  Users,
+  MessageSquare,
+  Clock,
+  MapPin,
+  Calendar,
+  Sparkles,
+  ArrowRight,
+  ShieldCheck,
+  UserCheck,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react";
 
-// ─── Category Labels ─────────────────────────────────────────────────────────
 const CATEGORY_LABELS: Record<BeaconCategory, string> = {
-  sports: "SPORTS",
-  casual: "CASUAL",
-  nightlife: "NIGHTLIFE",
+  sports: "Sports & Padel",
+  casual: "Chai & Casual",
+  nightlife: "Nightlife & Raves",
 };
 
 function formatScheduledAt(iso: string | null): string {
@@ -26,540 +36,246 @@ function formatScheduledAt(iso: string | null): string {
   });
 }
 
-interface ApplicationWithProfile {
+export interface ApplicationWithProfile {
   id: string;
   beacon_id: string;
   applicant_id: string;
   status: "pending" | "approved" | "declined";
   created_at: string;
-  flagged_ghost?: boolean;
-  profiles: {
-    full_name: string | null;
-    bio: string | null;
-  } | null;
 }
 
-interface JoinedBeaconWithHost extends Beacon {}
+export interface JoinedBeaconWithHost extends Beacon {}
 
-interface ManageHostDashboardProps {
+export interface ManageHostDashboardProps {
   beacons: Beacon[];
   initialApplications: ApplicationWithProfile[];
   joinedBeacons?: JoinedBeaconWithHost[];
+  currentUserId?: string;
 }
 
-// ─── Main Host Dashboard Component ──────────────────────────────────────────
 export default function ManageHostDashboard({
   beacons,
   initialApplications,
   joinedBeacons = [],
 }: ManageHostDashboardProps) {
   const [activeTab, setActiveTab] = useState<"broadcasts" | "squads">("broadcasts");
-  const [applications, setApplications] = useState<ApplicationWithProfile[]>(initialApplications);
-  const [localBeacons, setLocalBeacons] = useState<Beacon[]>(beacons);
-  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  // Capacity editor state: beaconId → temp new value
-  const [capacityEdits, setCapacityEdits] = useState<Record<string, number>>({});
-  const [capacityLoading, setCapacityLoading] = useState<string | null>(null);
-  const [capacityError, setCapacityError] = useState<string | null>(null);
-
-  // Cancel beacon state
-  const [cancellingId, setCancellingId] = useState<string | null>(null);
-  const [cancelError, setCancelError] = useState<string | null>(null);
-
-  // Active chat state
-  const [chatBeaconId, setChatBeaconId] = useState<string | null>(null);
-  const [chatBeaconTitle, setChatBeaconTitle] = useState<string>("");
-
-  const handleFlagNoShow = async (appId: string) => {
-    setActionLoadingId(appId);
-    setErrorMsg(null);
-    try {
-      const result = await flagNoShow(appId);
-      if (result.success) {
-        setApplications((prev) =>
-          prev.map((app) =>
-            app.id === appId ? { ...app, flagged_ghost: true } : app
-          )
-        );
-      } else {
-        setErrorMsg(result.error);
-      }
-    } catch {
-      setErrorMsg("Failed to flag no-show due to a network connection issue.");
-    } finally {
-      setActionLoadingId(null);
-    }
-  };
-
-  const handleApprove = async (appId: string, beaconId: string) => {
-    setActionLoadingId(appId);
-    setErrorMsg(null);
-    try {
-      const result = await approveApplicant(appId);
-      if (result.success) {
-        // 1. Update application status locally
-        setApplications((prev) =>
-          prev.map((app) => (app.id === appId ? { ...app, status: "approved" as const } : app))
-        );
-        // 2. Increment filled slots on corresponding beacon locally
-        setLocalBeacons((prev) =>
-          prev.map((b) =>
-            b.id === beaconId && b.filled_slots < b.total_slots
-              ? { ...b, filled_slots: b.filled_slots + 1 }
-              : b
-          )
-        );
-      } else {
-        setErrorMsg(result.error);
-      }
-    } catch {
-      setErrorMsg("Failed to approve applicant due to a network connection issue.");
-    } finally {
-      setActionLoadingId(null);
-    }
-  };
-
-  const handleDecline = async (appId: string) => {
-    setActionLoadingId(appId);
-    setErrorMsg(null);
-    try {
-      const result = await declineApplicant(appId);
-      if (result.success) {
-        // Update application status locally
-        setApplications((prev) =>
-          prev.map((app) => (app.id === appId ? { ...app, status: "declined" as const } : app))
-        );
-      } else {
-        setErrorMsg(result.error);
-      }
-    } catch {
-      setErrorMsg("Failed to decline applicant due to a network connection issue.");
-    } finally {
-      setActionLoadingId(null);
-    }
-  };
-
-  const handleCancel = async (beaconId: string) => {
-    setCancellingId(beaconId);
-    setCancelError(null);
-    try {
-      const result = await cancelBeacon(beaconId);
-      if (result.success) {
-        setLocalBeacons((prev) =>
-          prev.map((b) => b.id === beaconId ? { ...b, status: "cancelled" as const } : b)
-        );
-      } else {
-        setCancelError(result.error);
-      }
-    } catch {
-      setCancelError("Failed to cancel beacon. Please try again.");
-    } finally {
-      setCancellingId(null);
-    }
-  };
-
-  const handleCapacityUpdate = async (beaconId: string, newTotal: number) => {
-    setCapacityLoading(beaconId);
-    setCapacityError(null);
-    try {
-      const result = await updateBeaconCapacity(beaconId, newTotal);
-      if (result.success) {
-        setLocalBeacons((prev) =>
-          prev.map((b) => b.id === beaconId ? { ...b, total_slots: newTotal } : b)
-        );
-        // Clear the edit state
-        setCapacityEdits((prev) => { const next = { ...prev }; delete next[beaconId]; return next; });
-      } else {
-        setCapacityError(result.error);
-      }
-    } catch {
-      setCapacityError("Failed to update capacity. Please try again.");
-    } finally {
-      setCapacityLoading(null);
-    }
-  };
 
   return (
-    <div style={{ padding: "16px" }}>
-      {/* ── Header Bevel Panel ──────────────────────────────────────────────── */}
-      <div className="nokia-panel-sunken" style={{ padding: "16px", marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+    <div className="w-full max-w-5xl mx-auto space-y-6">
+      {/* ─── Header ─── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-5">
         <div>
-          <h1 className="font-pixel text-accent" style={{ fontSize: "14px", margin: 0, letterSpacing: "0.08em" }}>
-            ▣ COORDINATION & SQUADS
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-[#FF6F26]/10 text-[#FF6F26] border border-[#FF6F26]/30">
+              <Radio className="w-3.5 h-3.5" />
+              My Hosting Summary
+            </span>
+          </div>
+          <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">
+            Hosted Beacons &amp; Broadcasts
           </h1>
-          <p className="font-mono text-muted" style={{ fontSize: "11px", margin: "4px 0 0 0" }}>
-            Manage beacons you broadcast and coordinate with squads you joined.
+          <p className="text-xs md:text-sm text-zinc-400 mt-1 max-w-xl">
+            A clean overview of all your created meetups. Select any meetup to manage applicants, edit plans, and chat with your squad.
           </p>
         </div>
-        <Link href="/dashboard" className="nokia-btn font-pixel" style={{ fontSize: "8px", padding: "6px 12px" }}>
-          ◀ LOBBY FEED
-        </Link>
-      </div>
 
-      {/* Global Error Banner */}
-      {errorMsg && (
-        <div className="nokia-panel-raised" style={{ borderColor: "var(--accent-danger)", padding: "12px", marginBottom: "20px", display: "flex", alignItems: "center", gap: "8px" }}>
-          <span className="font-pixel text-danger" style={{ fontSize: "9px" }}>[✕ ERROR]</span>
-          <span className="font-mono text-danger" style={{ fontSize: "11px" }}>{errorMsg}</span>
+        {/* Tab Switcher */}
+        <div className="flex items-center gap-1.5 bg-white/5 p-1 rounded-2xl border border-white/10 self-start sm:self-auto">
+          <button
+            onClick={() => setActiveTab("broadcasts")}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+              activeTab === "broadcasts"
+                ? "bg-gradient-to-r from-[#FF6F26] to-[#FF5A1F] text-white shadow-[0_0_15px_rgba(255,111,38,0.3)]"
+                : "text-zinc-400 hover:text-white"
+            }`}
+          >
+            <Radio className="w-3.5 h-3.5" />
+            <span>My Broadcasts ({beacons.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("squads")}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+              activeTab === "squads"
+                ? "bg-gradient-to-r from-[#FF6F26] to-[#FF5A1F] text-white shadow-[0_0_15px_rgba(255,111,38,0.3)]"
+                : "text-zinc-400 hover:text-white"
+            }`}
+          >
+            <Users className="w-3.5 h-3.5" />
+            <span>Joined Squads ({joinedBeacons.length})</span>
+          </button>
         </div>
-      )}
-
-      {/* Tab Switcher Grid */}
-      <div style={{ display: "flex", gap: "8px", marginBottom: "20px" }}>
-        <button
-          onClick={() => setActiveTab("broadcasts")}
-          className={activeTab === "broadcasts" ? "nokia-btn nokia-btn-primary" : "nokia-btn"}
-          style={{ flex: 1, padding: "10px", fontSize: "8px", fontFamily: "var(--font-pixel)" }}
-        >
-          ⊙ MY BROADCASTS ({localBeacons.length})
-        </button>
-        <button
-          onClick={() => setActiveTab("squads")}
-          className={activeTab === "squads" ? "nokia-btn nokia-btn-primary" : "nokia-btn"}
-          style={{ flex: 1, padding: "10px", fontSize: "8px", fontFamily: "var(--font-pixel)" }}
-        >
-          👥 MY JOINED SQUADS ({joinedBeacons.length})
-        </button>
       </div>
 
-      {/* Active Tab View */}
+      {/* ─── HOSTED BEACONS OVERVIEW LIST ─── */}
       {activeTab === "broadcasts" ? (
-        /* MY BROADCASTS TAB */
-        localBeacons.length > 0 ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-            {localBeacons.map((beacon) => {
-              const beaconApps = applications.filter((app) => app.beacon_id === beacon.id);
+        beacons.length > 0 ? (
+          <div className="space-y-4">
+            {beacons.map((beacon) => {
+              const pendingCount = initialApplications.filter(
+                (app) => app.beacon_id === beacon.id && app.status === "pending"
+              ).length;
+              const approvedCount = initialApplications.filter(
+                (app) => app.beacon_id === beacon.id && app.status === "approved"
+              ).length;
 
               return (
-                <div key={beacon.id} className="nokia-panel" style={{ padding: "16px" }}>
-                  
-                  {/* Beacon Details Sub-panel */}
-                  <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", borderBottom: "2px solid var(--border-light)", paddingBottom: "12px", marginBottom: "12px" }}>
-                    <div>
-                      <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: "6px" }}>
-                        <span className={`nokia-badge ${
-                          beacon.category === "sports"
-                            ? "nokia-badge-primary"
-                            : beacon.category === "casual"
-                            ? "nokia-badge-warning"
-                            : "nokia-badge-danger"
-                        }`}>
-                          ● {CATEGORY_LABELS[beacon.category]}
+                <div
+                  key={beacon.id}
+                  className="rounded-3xl border border-white/10 bg-white/[0.02] p-5 md:p-6 backdrop-blur-md hover:border-white/20 transition-all space-y-4 shadow-xl"
+                >
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    {/* Beacon Info */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-[#FF6F26]/10 text-[#FF6F26] border border-[#FF6F26]/30">
+                          {CATEGORY_LABELS[beacon.category] || beacon.category}
                         </span>
-                        <span className="font-pixel text-muted" style={{ fontSize: "7px" }}>
-                          {beacon.visibility_mode === "friend" ? "♦ FRIENDS ONLY" : "◈ OPEN TO ALL"}
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-white/5 text-zinc-400 border border-white/10">
+                          {beacon.visibility_mode === "friend" ? "Friends Only" : "Open to All"}
                         </span>
-                      </div>
-                      <h3 className="font-pixel" style={{ fontSize: "11px", margin: 0, textTransform: "uppercase" }}>
-                        {beacon.title}
-                      </h3>
-                      <div className="font-mono text-muted" style={{ fontSize: "11px", marginTop: "6px" }}>
-                        <span>🕐 {formatScheduledAt(beacon.scheduled_at)}</span>
-                        {beacon.location_name && (
-                          <span style={{ marginLeft: "12px" }}>📍 {beacon.location_name}</span>
+                        {beacon.status === "active" ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            Active Meetup
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-500/10 text-zinc-400 border border-zinc-500/20">
+                            {beacon.status}
+                          </span>
                         )}
                       </div>
-                    </div>
 
-                    {/* Capacity + Cancel Controls */}
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "8px" }}>
-                      <button
-                        onClick={() => {
-                          setChatBeaconTitle(beacon.title);
-                          setChatBeaconId(beacon.id);
-                        }}
-                        className="nokia-btn nokia-btn-primary"
-                        style={{ padding: "6px 12px", fontSize: "8px", display: "inline-flex", alignItems: "center", gap: "4px" }}
-                      >
-                        💬 SQUAD CHAT
-                      </button>
+                      <h2 className="text-lg md:text-xl font-bold text-white tracking-tight">
+                        {beacon.title}
+                      </h2>
 
-                      {/* Inline capacity adjuster */}
-                      <div style={{ textAlign: "right" }}>
-                        <div className="font-pixel text-muted" style={{ fontSize: "6px", marginBottom: "4px" }}>SQUAD CAPACITY</div>
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                          <button
-                            className="nokia-btn"
-                            style={{ padding: "2px 8px", fontSize: "12px", lineHeight: 1 }}
-                            disabled={capacityLoading === beacon.id}
-                            onClick={() => {
-                              const current = capacityEdits[beacon.id] ?? beacon.total_slots;
-                              const next = Math.max(beacon.filled_slots, Math.max(1, current - 1));
-                              setCapacityEdits((p) => ({ ...p, [beacon.id]: next }));
-                            }}
-                          >
-                            −
-                          </button>
-                          <span className="font-lcd" style={{ fontSize: "18px", color: "var(--accent-primary)", minWidth: "24px", textAlign: "center" }}>
-                            {capacityEdits[beacon.id] ?? beacon.total_slots}
+                      <div className="flex items-center gap-4 text-xs text-zinc-400 flex-wrap">
+                        <span className="flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5 text-zinc-500" />
+                          {formatScheduledAt(beacon.scheduled_at)}
+                        </span>
+                        {beacon.location_name && (
+                          <span className="flex items-center gap-1.5">
+                            <MapPin className="w-3.5 h-3.5 text-[#FF6F26]" />
+                            {beacon.location_name}
                           </span>
-                          <button
-                            className="nokia-btn"
-                            style={{ padding: "2px 8px", fontSize: "12px", lineHeight: 1 }}
-                            disabled={capacityLoading === beacon.id}
-                            onClick={() => {
-                              const current = capacityEdits[beacon.id] ?? beacon.total_slots;
-                              const next = Math.min(10, current + 1);
-                              setCapacityEdits((p) => ({ ...p, [beacon.id]: next }));
-                            }}
-                          >
-                            +
-                          </button>
-                          {capacityEdits[beacon.id] !== undefined && capacityEdits[beacon.id] !== beacon.total_slots && (
-                            <button
-                              className="nokia-btn nokia-btn-primary"
-                              style={{ padding: "3px 8px", fontSize: "7px" }}
-                              disabled={capacityLoading === beacon.id}
-                              onClick={() => handleCapacityUpdate(beacon.id, capacityEdits[beacon.id])}
-                            >
-                              {capacityLoading === beacon.id ? "..." : "✓ SAVE"}
-                            </button>
-                          )}
-                        </div>
-                        {capacityError && <div className="font-pixel" style={{ fontSize: "6px", color: "var(--accent-danger)", marginTop: "4px", maxWidth: "200px" }}>{capacityError}</div>}
+                        )}
+                        <span className="flex items-center gap-1.5 font-bold text-zinc-300">
+                          <Users className="w-3.5 h-3.5 text-emerald-400" />
+                          {beacon.filled_slots} / {beacon.total_slots} Slots Filled
+                        </span>
                       </div>
 
-                      <div style={{ display: "flex", gap: "4px", marginTop: "2px", justifyContent: "flex-end" }}>
-                        {Array.from({ length: beacon.total_slots }).map((_, idx) => (
-                          <span
-                            key={idx}
-                            style={{
-                              width: "8px",
-                              height: "8px",
-                              border: "1px solid var(--border-strong)",
-                              backgroundColor: idx < beacon.filled_slots ? "var(--accent-primary)" : "var(--bg-sunken)",
-                              display: "inline-block",
-                              borderRadius: "1px",
-                            }}
-                          />
-                        ))}
-                      </div>
-
-                      {/* Cancel button — only when 0 attendees */}
-                      {beacon.filled_slots === 0 && beacon.status === "active" && (
-                        <button
-                          onClick={() => handleCancel(beacon.id)}
-                          disabled={cancellingId === beacon.id}
-                          className="nokia-btn nokia-btn-danger"
-                          style={{ padding: "4px 10px", fontSize: "7px" }}
-                          title="Cancel this beacon. Only available when no one has joined."
-                        >
-                          {cancellingId === beacon.id ? "..." : "⊠ CANCEL BEACON"}
-                        </button>
-                      )}
-                      {beacon.status === "cancelled" && (
-                        <span className="nokia-badge nokia-badge-danger" style={{ fontSize: "7px" }}>⊗ CANCELLED</span>
-                      )}
-                      {cancelError && beacon.filled_slots > 0 && (
-                        <div className="font-pixel" style={{ fontSize: "6px", color: "var(--accent-danger)", maxWidth: "180px", textAlign: "right" }}>{cancelError}</div>
+                      {beacon.description && (
+                        <p className="text-xs text-zinc-400 italic line-clamp-2 pt-1">
+                          &ldquo;{beacon.description}&rdquo;
+                        </p>
                       )}
                     </div>
-                  </div>
 
-                  {/* Applications Section */}
-                  <div style={{ marginTop: "12px" }}>
-                    <h4 className="font-pixel text-muted" style={{ fontSize: "8px", marginBottom: "8px", letterSpacing: "0.05em" }}>
-                      ▶ JOIN REQUESTS ({beaconApps.length})
-                    </h4>
+                    {/* Action & Redirect Button to Squad Chat Workspace */}
+                    <div className="flex flex-col sm:flex-row md:flex-col items-start md:items-end gap-2.5 shrink-0">
+                      {pendingCount > 0 && (
+                        <div className="px-3 py-1 rounded-full text-xs font-black bg-rose-500/20 text-rose-300 border border-rose-500/30 flex items-center gap-1.5 animate-pulse">
+                          <UserCheck className="w-3.5 h-3.5" />
+                          <span>{pendingCount} Join Request{pendingCount > 1 ? "s" : ""} Pending</span>
+                        </div>
+                      )}
 
-                    {beaconApps.length > 0 ? (
-                      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                        {beaconApps.map((app) => (
-                          <div
-                            key={app.id}
-                            className="nokia-panel-sunken"
-                            style={{
-                              padding: "12px",
-                              borderLeft: app.status === "approved"
-                                ? "4px solid var(--accent-success)"
-                                : app.status === "declined"
-                                ? "4px solid var(--accent-danger)"
-                                : "4px solid var(--border-mid)",
-                            }}
-                          >
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
-                              <div style={{ flex: 1 }} className="applicant-profile-col">
-                                <span className="font-pixel text-accent" style={{ fontSize: "8px", display: "block" }}>
-                                  👤 {app.profiles?.full_name || "ANONYMOUS MEMBER"}
-                                </span>
-                                {app.profiles?.bio && (
-                                  <p className="font-mono text-muted" style={{ fontSize: "11px", margin: "4px 0 0 0", fontStyle: "italic" }}>
-                                    &ldquo;{app.profiles.bio}&rdquo;
-                                  </p>
-                                )}
-                              </div>
-
-                              {/* Actions or Badges */}
-                              <div style={{ display: "flex", gap: "8px", alignItems: "center" }} className="applicant-actions">
-                                {app.status === "approved" ? (
-                                  <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                                    <span className="nokia-badge nokia-badge-success">✓ APPROVED</span>
-                                    {app.flagged_ghost ? (
-                                      <span className="nokia-badge nokia-badge-danger">👻 GHOSTED</span>
-                                    ) : (
-                                      <button
-                                        onClick={() => handleFlagNoShow(app.id)}
-                                        disabled={actionLoadingId !== null}
-                                        className="nokia-btn nokia-btn-danger"
-                                        style={{ padding: "4px 8px", fontSize: "7px" }}
-                                        title="Flag applicant as a no-show. Suspends account on 2nd strike."
-                                      >
-                                        {actionLoadingId === app.id ? "..." : "FLAG NO-SHOW 👻"}
-                                      </button>
-                                    )}
-                                  </div>
-                                ) : app.status === "declined" ? (
-                                  <span className="nokia-badge">✕ DECLINED</span>
-                                ) : (
-                                  <>
-                                    <button
-                                      onClick={() => handleDecline(app.id)}
-                                      disabled={actionLoadingId !== null}
-                                      className="nokia-btn"
-                                      style={{ padding: "4px 8px", fontSize: "7px" }}
-                                    >
-                                      {actionLoadingId === app.id ? "..." : "✕ DECLINE"}
-                                    </button>
-
-                                    <button
-                                      onClick={() => handleApprove(app.id, beacon.id)}
-                                      disabled={actionLoadingId !== null || beacon.filled_slots >= beacon.total_slots}
-                                      className="nokia-btn nokia-btn-primary"
-                                      style={{ padding: "4px 8px", fontSize: "7px" }}
-                                    >
-                                      {actionLoadingId === app.id ? "..." : "✓ APPROVE"}
-                                    </button>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="nokia-panel-sunken font-mono text-muted" style={{ padding: "16px", fontStyle: "italic", textAlign: "center", fontSize: "11px" }}>
-                        No join requests yet. When members apply, they will show up here.
-                      </div>
-                    )}
+                      <Link
+                        href={`/dashboard/chats?beaconId=${beacon.id}`}
+                        className="px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-[#FF6F26] to-[#FF5A1F] text-white hover:brightness-110 shadow-[0_0_15px_rgba(255,111,38,0.3)] transition-all flex items-center gap-2"
+                      >
+                        <MessageSquare className="w-4 h-4" />
+                        <span>Manage Beacon &amp; Squad Chat ➔</span>
+                      </Link>
+                    </div>
                   </div>
                 </div>
               );
             })}
           </div>
         ) : (
-          <div className="nokia-panel" style={{ padding: "32px", textAlign: "center" }}>
-            <div className="nokia-lcd" style={{ fontSize: "20px", marginBottom: "16px" }}>
-              EMPTY BROADCASTS
-            </div>
-            <p className="font-mono text-muted" style={{ fontSize: "11px", marginBottom: "16px", maxWidth: "400px", marginInline: "auto" }}>
-              You are not hosting any active Beacons. Broadcast your first Beacon from the Lobby Feed to get matching!
+          <div className="rounded-3xl border border-white/10 bg-white/[0.02] p-12 text-center backdrop-blur-md space-y-4">
+            <Radio className="w-10 h-10 text-zinc-600 mx-auto" />
+            <div className="text-base font-bold text-white">No Active Broadcasts</div>
+            <p className="text-xs text-zinc-400 max-w-sm mx-auto">
+              You haven&apos;t hosted any meetups yet. Broadcast a new beacon from the Lobby Feed to begin matching!
             </p>
-            <Link href="/dashboard" className="nokia-btn nokia-btn-primary">
-              ◀ GO TO LOBBY
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-[#FF6F26] to-[#FF5A1F] text-white hover:brightness-110 shadow-[0_0_15px_rgba(255,111,38,0.3)] transition-all"
+            >
+              <span>Explore Lobby Feed</span>
             </Link>
           </div>
         )
       ) : (
-        /* MY JOINED SQUADS TAB */
+        /* ─── JOINED SQUADS LIST ─── */
         joinedBeacons.length > 0 ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          <div className="space-y-4">
             {joinedBeacons.map((beacon) => (
-              <div key={beacon.id} className="nokia-panel" style={{ padding: "16px" }}>
-                
-                {/* Squad header */}
-                <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", borderBottom: "2px solid var(--border-light)", paddingBottom: "12px", marginBottom: "12px" }}>
+              <div
+                key={beacon.id}
+                className="rounded-3xl border border-white/10 bg-white/[0.02] p-5 md:p-6 backdrop-blur-md space-y-3 hover:border-white/20 transition-all"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-3 border-b border-white/10">
                   <div>
-                    <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: "6px" }}>
-                      <span className={`nokia-badge ${
-                        beacon.category === "sports"
-                          ? "nokia-badge-primary"
-                          : beacon.category === "casual"
-                          ? "nokia-badge-warning"
-                          : "nokia-badge-danger"
-                      }`}>
-                        ● {CATEGORY_LABELS[beacon.category]}
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#FF6F26]/10 text-[#FF6F26] border border-[#FF6F26]/30">
+                        {CATEGORY_LABELS[beacon.category] || beacon.category}
                       </span>
-                      <span className="font-pixel text-accent" style={{ fontSize: "7px" }}>
-                        👤 HOST: {(beacon.profiles as any)?.full_name?.toUpperCase() || "ANONYMOUS"}
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-white/5 text-zinc-400">
+                        Host: {(beacon.profiles as any)?.full_name || "Verified Host"}
                       </span>
                     </div>
-                    <h3 className="font-pixel" style={{ fontSize: "11px", margin: 0, textTransform: "uppercase" }}>
-                      {beacon.title}
-                    </h3>
-                    <div className="font-mono text-muted" style={{ fontSize: "11px", marginTop: "6px" }}>
-                      <span>🕐 {formatScheduledAt(beacon.scheduled_at)}</span>
+                    <h3 className="text-base font-bold text-white">{beacon.title}</h3>
+                    <div className="text-xs text-zinc-400 flex items-center gap-3 flex-wrap mt-1">
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3.5 h-3.5 text-zinc-500" />
+                        {formatScheduledAt(beacon.scheduled_at)}
+                      </span>
                       {beacon.location_name && (
-                        <span style={{ marginLeft: "12px" }}>📍 {beacon.location_name}</span>
+                        <span className="flex items-center gap-1">
+                          <MapPin className="w-3.5 h-3.5 text-[#FF6F26]" />
+                          {beacon.location_name}
+                        </span>
                       )}
                     </div>
                   </div>
 
-                  {/* Joined Squad Chat action & dots */}
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "8px" }}>
-                    <button
-                      onClick={() => {
-                        setChatBeaconTitle(beacon.title);
-                        setChatBeaconId(beacon.id);
-                      }}
-                      className="nokia-btn nokia-btn-primary"
-                      style={{ padding: "6px 12px", fontSize: "8px", display: "inline-flex", alignItems: "center", gap: "4px" }}
-                    >
-                      💬 SQUAD CHAT
-                    </button>
-                    
-                    <div style={{ display: "flex", gap: "4px", justifyContent: "flex-end" }}>
-                      {Array.from({ length: beacon.total_slots }).map((_, idx) => (
-                        <span
-                          key={idx}
-                          style={{
-                            width: "8px",
-                            height: "8px",
-                            border: "1px solid var(--border-strong)",
-                            backgroundColor: idx < beacon.filled_slots ? "var(--accent-primary)" : "var(--bg-sunken)",
-                            display: "inline-block",
-                            borderRadius: "1px",
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </div>
+                  <Link
+                    href={`/dashboard/chats?beaconId=${beacon.id}`}
+                    className="px-4 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-500 to-green-600 text-white hover:brightness-110 shadow-[0_0_15px_rgba(39,201,63,0.25)] transition-all flex items-center gap-1.5 self-start sm:self-auto"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    <span>Enter Squad Chat ➔</span>
+                  </Link>
                 </div>
 
                 {beacon.description && (
-                  <div className="nokia-panel-sunken font-mono text-muted" style={{ padding: "10px", fontSize: "11px", fontStyle: "italic" }}>
+                  <p className="text-xs text-zinc-400 italic">
                     &ldquo;{beacon.description}&rdquo;
-                  </div>
+                  </p>
                 )}
               </div>
             ))}
           </div>
         ) : (
-          <div className="nokia-panel" style={{ padding: "32px", textAlign: "center" }}>
-            <div className="nokia-lcd" style={{ fontSize: "20px", marginBottom: "16px" }}>
-              NO JOINED SQUADS
-            </div>
-            <p className="font-mono text-muted" style={{ fontSize: "11px", marginBottom: "16px", maxWidth: "400px", marginInline: "auto" }}>
-              You are not a member of any approved squads yet. Request to join active Beacons in the Lobby and wait for host approvals!
+          <div className="rounded-3xl border border-white/10 bg-white/[0.02] p-12 text-center backdrop-blur-md space-y-3">
+            <Users className="w-8 h-8 text-zinc-600 mx-auto" />
+            <div className="text-base font-bold text-white">No Joined Squads Yet</div>
+            <p className="text-xs text-zinc-400 max-w-sm mx-auto">
+              You are not a member of any approved squads yet. Request to join active meetups in the Lobby!
             </p>
-            <Link href="/dashboard" className="nokia-btn nokia-btn-primary">
-              ◀ GO TO LOBBY
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-[#FF6F26] to-[#FF5A1F] text-white hover:brightness-110 shadow-[0_0_15px_rgba(255,111,38,0.3)] transition-all"
+            >
+              <span>Browse Lobby</span>
             </Link>
           </div>
         )
-      )}
-
-      {/* Render Squad Coordination Chat Console Overlay */}
-      {chatBeaconId && (
-        <SquadChatModal
-          beaconId={chatBeaconId}
-          beaconTitle={chatBeaconTitle}
-          onClose={() => {
-            setChatBeaconId(null);
-            setChatBeaconTitle("");
-          }}
-        />
       )}
     </div>
   );

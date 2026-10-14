@@ -76,8 +76,25 @@ export default function SquadChatModal({
     return () => clearInterval(interval);
   }, [beaconId]);
 
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const isInitialLoadRef = useRef(true);
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    if (isInitialLoadRef.current) {
+      container.scrollTop = container.scrollHeight;
+      if (messages.length > 0) {
+        isInitialLoadRef.current = false;
+      }
+      return;
+    }
+
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    if (distanceFromBottom < 120) {
+      container.scrollTop = container.scrollHeight;
+    }
   }, [messages]);
 
   const handleSend = async (e: React.FormEvent) => {
@@ -348,7 +365,7 @@ export default function SquadChatModal({
         )}
 
         {/* Message List area */}
-        <div className="nokia-panel-sunken" style={{
+        <div ref={messagesContainerRef} className="nokia-panel-sunken" style={{
           flex: 1,
           overflowY: "auto",
           margin: "12px",

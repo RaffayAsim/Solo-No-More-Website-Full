@@ -376,15 +376,6 @@
   box-shadow: inset 0 0 0 1px rgba(255, 106, 77, 0.35);
 }
 
-[data-theme="partiful"] #desktop-sidebar {
-  background: rgba(15, 11, 21, 0.6) !important;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: none !important;
-  border-right: 1px solid var(--border-light) !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-}
 
 /* ── Mobile bottom nav → floating glass dock ────────────────────────────── */
 [data-theme="partiful"] #mobile-bottom-nav {
@@ -1023,9 +1014,9 @@
 
 /* WOW-Factor Poster Card: Immersive Sharp-Corner Invite Poster */
 .pf-beacon-poster-card {
-  flex: 0 0 270px;
-  width: 270px;
-  height: 390px;
+  flex: 0 0 330px;
+  width: 330px;
+  height: 480px;
   border-radius: 0px !important;
   position: relative;
   overflow: hidden;
@@ -1045,10 +1036,21 @@
   box-shadow: 0 24px 50px -10px rgba(255, 90, 31, 0.4), 0 0 0 1px rgba(255, 90, 31, 0.4);
 }
 
+@keyframes beaconActiveGlow {
+  0%, 100% {
+    border-color: #FF5A1F;
+    box-shadow: 0 25px 60px -10px rgba(255, 90, 31, 0.6), 0 0 24px rgba(255, 90, 31, 0.45);
+  }
+  50% {
+    border-color: #FF8A3D;
+    box-shadow: 0 28px 70px -8px rgba(255, 120, 50, 0.75), 0 0 34px rgba(255, 120, 50, 0.6);
+  }
+}
+
 .pf-beacon-poster-card.is-active-beacon {
-  border: 2.5px solid #FF5A1F;
+  border: 2.5px solid #FF5A1F !important;
   border-radius: 0px !important;
-  box-shadow: 0 25px 60px -10px rgba(255, 90, 31, 0.55), 0 0 24px rgba(255, 90, 31, 0.45);
+  animation: beaconActiveGlow 2.5s ease-in-out infinite;
   transform: translateY(-6px) scale(1.02);
 }
 
@@ -1099,29 +1101,37 @@
   text-transform: uppercase;
 }
 
-/* Sharp-Corner Navigation Buttons */
+/* Navigation Buttons: Perfectly Centered with Rounded Corners */
 .pf-image3-nav-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 0px !important;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px !important;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.24);
-  display: grid;
-  place-items: center;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  margin: 0;
   color: #FFFFFF;
   cursor: pointer;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   z-index: 20;
+}
+.pf-image3-nav-btn svg {
+  display: block;
+  margin: auto;
+  pointer-events: none;
 }
 .pf-image3-nav-btn:hover {
   background: #FF5A1F;
   border-color: #FF5A1F;
   color: #FFFFFF;
-  transform: translateY(-2px);
+  transform: translateY(-2px) scale(1.05);
 }
 .pf-image3-nav-btn:active {
-  transform: translateY(0);
+  transform: translateY(0) scale(0.96);
 }
 
 

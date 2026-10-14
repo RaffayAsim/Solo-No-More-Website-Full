@@ -10,11 +10,12 @@ import {
   submitVibeFeedback,
 } from "@/app/actions/notifications";
 import type { Notification } from "@/lib/supabase/types";
+import { Bell, X, CheckCheck, Sparkles } from "lucide-react";
 
 // ── Icon map for notification types ──────────────────────────────────────────
 const NOTIF_ICON: Record<string, string> = {
   beacon_near_start:       "📶",
-  beacon_no_attendees:     "⚠",
+  beacon_no_attendees:     "⚠️",
   beacon_not_full:         "◉",
   beacon_no_interest:      "😶",
   attendance_reminder:     "📅",
@@ -99,7 +100,6 @@ export default function NotificationBell() {
     await submitVibeFeedback(beaconId, rating);
     setVibeSending(false);
     setVibeBeaconId(null);
-    // Remove vibe check notifications for this beacon from the list
     setNotifications((prev) =>
       prev.filter((n) => !(n.type === "post_event_vibe_check" && n.related_beacon_id === beaconId))
     );
@@ -107,45 +107,49 @@ export default function NotificationBell() {
 
   return (
     <div ref={panelRef} style={{ position: "relative" }}>
-      {/* Bell Button */}
+      {/* Sleek Dock-Styled Bell Button */}
       <button
         onClick={handleOpen}
-        className="nokia-btn"
         id="notification-bell-btn"
+        type="button"
         style={{
-          padding: "3px 10px",
-          fontSize: "11px",
-          fontFamily: "var(--font-pixel)",
-          letterSpacing: "0.06em",
-          color: "var(--statusbar-text)",
-          background: isOpen ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.2)",
-          border: "2px solid var(--border-strong)",
-          position: "relative",
-          display: "flex",
+          display: "inline-flex",
           alignItems: "center",
-          gap: "5px",
+          justifyContent: "center",
+          gap: "6px",
+          padding: "8px 12px",
+          borderRadius: "10px",
+          background: isOpen ? "rgba(255, 90, 31, 0.25)" : "rgba(0, 0, 0, 0.35)",
+          border: isOpen ? "1px solid rgba(255, 90, 31, 0.6)" : "1px solid rgba(255, 255, 255, 0.28)",
+          color: "#FFFFFF",
+          cursor: "pointer",
+          position: "relative",
+          transition: "all 0.15s ease",
+          boxShadow: isOpen ? "0 0 14px rgba(255, 90, 31, 0.35)" : "none",
         }}
         aria-label="Notifications"
+        className="hover:border-[#FF6F26] hover:bg-white/[0.08]"
       >
-        <span style={{ fontSize: "14px", lineHeight: 1 }}>🔔</span>
+        <Bell className="w-4 h-4 text-white" />
         {unreadCount > 0 && (
           <span
             style={{
               position: "absolute",
               top: "-4px",
               right: "-4px",
-              background: "var(--accent-danger)",
+              background: "linear-gradient(135deg, #FF6F26, #FF3B30)",
               color: "white",
-              borderRadius: "50%",
-              width: "16px",
+              borderRadius: "10px",
+              padding: "1px 5px",
+              minWidth: "16px",
               height: "16px",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: "10px",
-              fontFamily: "var(--font-pixel)",
-              fontWeight: "bold",
-              border: "1px solid var(--border-strong)",
+              fontSize: "9.5px",
+              fontWeight: 900,
+              boxShadow: "0 2px 8px rgba(255, 90, 31, 0.6)",
+              border: "1px solid rgba(255, 255, 255, 0.4)",
             }}
           >
             {unreadCount > 9 ? "9+" : unreadCount}
@@ -153,70 +157,136 @@ export default function NotificationBell() {
         )}
       </button>
 
-      {/* Notification Panel */}
+      {/* Floating Luxury Notification Dropdown Panel */}
       {isOpen && (
         <div
-          className="nokia-panel page-swipe"
+          id="notification-panel-dropdown"
           style={{
-            position: "fixed",
-            top: "32px",
-            right: "8px",
-            width: "min(340px, calc(100vw - 16px))",
-            maxHeight: "min(480px, 80vh)",
-            zIndex: 9998,
+            position: "absolute",
+            top: "calc(100% + 10px)",
+            right: 0,
+            width: "360px",
+            maxWidth: "calc(100vw - 28px)",
+            maxHeight: "min(520px, 80vh)",
+            zIndex: 9999,
             display: "flex",
             flexDirection: "column",
             overflow: "hidden",
-            backgroundColor: "var(--bg-base)",
+            background: "rgba(12, 8, 18, 0.98)",
+            backdropFilter: "blur(28px)",
+            WebkitBackdropFilter: "blur(28px)",
+            border: "1px solid rgba(255, 90, 31, 0.4)",
+            borderRadius: "20px",
+            boxShadow:
+              "0 20px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(255, 90, 31, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.15)",
           }}
         >
           {/* Panel Header */}
           <div
             style={{
-              background: "var(--accent-primary)",
-              color: "white",
-              padding: "8px 12px",
+              background: "linear-gradient(135deg, rgba(255, 90, 31, 0.2) 0%, rgba(20, 12, 28, 0.95) 100%)",
+              borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+              padding: "12px 16px",
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              borderBottom: "2px solid var(--border-strong)",
               flexShrink: 0,
             }}
           >
-            <span className="font-pixel" style={{ fontSize: "11px", letterSpacing: "0.08em" }}>
-              🔔 ALERTS &amp; NOTIFICATIONS
-            </span>
-            <button
-              onClick={() => setIsOpen(false)}
-              style={{
-                background: "none",
-                border: "none",
-                color: "white",
-                cursor: "pointer",
-                fontSize: "14px",
-                padding: 0,
-                lineHeight: 1,
-              }}
-            >
-              ✕
-            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <div
+                style={{
+                  width: "28px",
+                  height: "28px",
+                  borderRadius: "8px",
+                  background: "linear-gradient(135deg, #FF6F26, #FF5A1F)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow: "0 2px 8px rgba(255, 90, 31, 0.4)",
+                }}
+              >
+                <Bell className="w-3.5 h-3.5 text-white" />
+              </div>
+              <div>
+                <div style={{ fontSize: "12px", fontWeight: 900, letterSpacing: "0.04em", color: "#FFFFFF", textTransform: "uppercase" }}>
+                  Alerts &amp; Notifications
+                </div>
+                <div style={{ fontSize: "10px", color: "rgba(255, 255, 255, 0.55)", fontWeight: 600 }}>
+                  Solo Radar Intelligence
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              {unreadCount > 0 && (
+                <span
+                  style={{
+                    background: "rgba(255, 90, 31, 0.25)",
+                    border: "1px solid rgba(255, 90, 31, 0.4)",
+                    color: "#FFA05C",
+                    padding: "2px 7px",
+                    borderRadius: "6px",
+                    fontSize: "10px",
+                    fontWeight: 800,
+                  }}
+                >
+                  {unreadCount} new
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                style={{
+                  background: "rgba(255, 255, 255, 0.08)",
+                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  borderRadius: "8px",
+                  color: "#FFFFFF",
+                  cursor: "pointer",
+                  width: "26px",
+                  height: "26px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transition: "background 0.15s ease",
+                }}
+                className="hover:bg-white/20 active:scale-95"
+                aria-label="Close"
+              >
+                <X className="w-3.5 h-3.5 text-white" />
+              </button>
+            </div>
           </div>
 
           {/* Content */}
-          <div style={{ overflowY: "auto", flex: 1 }}>
+          <div style={{ overflowY: "auto", flex: 1, maxHeight: "380px" }}>
             {isLoading ? (
-              <div style={{ padding: "24px", textAlign: "center" }}>
-                <span className="font-lcd pixel-blink" style={{ fontSize: "20px", color: "var(--accent-primary)" }}>
-                  LOADING...
+              <div style={{ padding: "36px", textAlign: "center" }}>
+                <span style={{ fontSize: "13px", fontWeight: 700, color: "#FFA05C" }} className="animate-pulse">
+                  Syncing alerts...
                 </span>
               </div>
             ) : notifications.length === 0 ? (
-              <div style={{ padding: "32px 16px", textAlign: "center" }}>
-                <div className="font-lcd" style={{ fontSize: "24px", color: "var(--text-muted)" }}>
-                  ALL CLEAR
+              <div style={{ padding: "36px 20px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+                <div
+                  style={{
+                    width: "48px",
+                    height: "48px",
+                    borderRadius: "14px",
+                    background: "rgba(255, 255, 255, 0.05)",
+                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Bell className="w-6 h-6 text-[#FFA05C]" />
                 </div>
-                <div className="font-pixel" style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "6px", letterSpacing: "0.06em" }}>
-                  NO NEW NOTIFICATIONS
+                <div style={{ fontSize: "14px", fontWeight: 800, color: "#FFFFFF" }}>
+                  All Caught Up
+                </div>
+                <div style={{ fontSize: "11.5px", color: "rgba(255, 255, 255, 0.6)", maxWidth: "240px", lineHeight: 1.4 }}>
+                  No new notifications right now. Check back when radar invites or squad updates arrive!
                 </div>
               </div>
             ) : (
@@ -227,22 +297,24 @@ export default function NotificationBell() {
                   <div
                     key={notif.id}
                     style={{
-                      padding: "10px 12px",
-                      borderBottom: "1px solid var(--border-light)",
-                      background: notif.is_read ? "transparent" : "var(--accent-glow)",
+                      padding: "12px 16px",
+                      borderBottom: "1px solid rgba(255, 255, 255, 0.06)",
+                      background: notif.is_read ? "transparent" : "rgba(255, 90, 31, 0.06)",
                       cursor: notif.is_read ? "default" : "pointer",
+                      transition: "background 0.15s ease",
                     }}
+                    className={notif.is_read ? "" : "hover:bg-white/[0.04]"}
                     onClick={() => !notif.is_read && handleMarkOne(notif.id)}
                   >
-                    <div style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
+                    <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
                       {/* Icon */}
                       <span
                         style={{
-                          fontSize: "20px",
+                          fontSize: "18px",
                           lineHeight: 1,
                           flexShrink: 0,
-                          marginTop: "1px",
-                          opacity: notif.is_read ? 0.5 : 1,
+                          marginTop: "2px",
+                          opacity: notif.is_read ? 0.6 : 1,
                         }}
                       >
                         {NOTIF_ICON[notif.type] ?? "◈"}
@@ -251,22 +323,20 @@ export default function NotificationBell() {
                       {/* Text */}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div
-                          className="font-pixel"
                           style={{
-                            fontSize: "11px",
-                            letterSpacing: "0.06em",
-                            color: notif.is_read ? "var(--text-muted)" : "var(--text-primary)",
-                            marginBottom: "3px",
+                            fontSize: "12.5px",
+                            fontWeight: notif.is_read ? 600 : 800,
+                            color: notif.is_read ? "rgba(255, 255, 255, 0.7)" : "#FFFFFF",
+                            marginBottom: "2px",
                           }}
                         >
                           {notif.title}
                         </div>
                         <div
-                          className="font-mono"
                           style={{
-                            fontSize: "12px",
-                            color: "var(--text-muted)",
-                            lineHeight: "1.4",
+                            fontSize: "11.5px",
+                            color: "rgba(255, 255, 255, 0.55)",
+                            lineHeight: "1.45",
                             wordBreak: "break-word",
                           }}
                         >
@@ -282,18 +352,26 @@ export default function NotificationBell() {
                                   e.stopPropagation();
                                   setVibeBeaconId(notif.related_beacon_id!);
                                 }}
-                                className="nokia-btn nokia-btn-primary"
-                                style={{ fontSize: "8.5px", padding: "4px 8px" }}
+                                style={{
+                                  background: "linear-gradient(135deg, #FF6F26, #FF5A1F)",
+                                  border: "none",
+                                  color: "white",
+                                  fontSize: "10px",
+                                  fontWeight: 800,
+                                  padding: "4px 10px",
+                                  borderRadius: "6px",
+                                  cursor: "pointer",
+                                }}
                               >
-                                ⭐ RATE THE VIBE
+                                ⭐ Rate the Vibe
                               </button>
                             ) : (
                               <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
                                 {[
-                                  { val: "vibe_matched" as const, label: "⭐ VIBE MATCHED", color: "var(--accent-success)" },
-                                  { val: "meh" as const, label: "😐 MEH", color: "var(--accent-warning)" },
-                                  { val: "no_show_zone" as const, label: "✕ NO SHOWS", color: "var(--accent-danger)" },
-                                ].map(({ val, label, color }) => (
+                                  { val: "vibe_matched" as const, label: "⭐ Vibe Matched", bg: "rgba(39, 201, 63, 0.2)", color: "#27C93F" },
+                                  { val: "meh" as const, label: "😐 Meh", bg: "rgba(255, 149, 0, 0.2)", color: "#FF9500" },
+                                  { val: "no_show_zone" as const, label: "✕ No Shows", bg: "rgba(255, 59, 48, 0.2)", color: "#FF3B30" },
+                                ].map(({ val, label, bg, color }) => (
                                   <button
                                     key={val}
                                     disabled={vibeSending}
@@ -301,8 +379,16 @@ export default function NotificationBell() {
                                       e.stopPropagation();
                                       handleVibeRate(notif.related_beacon_id!, val);
                                     }}
-                                    className="nokia-btn"
-                                    style={{ fontSize: "8.5px", padding: "4px 8px", background: color, color: "var(--text-inverse)", borderColor: "var(--border-strong)" }}
+                                    style={{
+                                      fontSize: "10px",
+                                      fontWeight: 800,
+                                      padding: "4px 8px",
+                                      background: bg,
+                                      color: color,
+                                      border: `1px solid ${color}`,
+                                      borderRadius: "6px",
+                                      cursor: "pointer",
+                                    }}
                                   >
                                     {vibeSending ? "..." : label}
                                   </button>
@@ -314,8 +400,7 @@ export default function NotificationBell() {
 
                         {/* Timestamp */}
                         <div
-                          className="font-mono"
-                          style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "4px", opacity: 0.7 }}
+                          style={{ fontSize: "10px", color: "rgba(255, 255, 255, 0.4)", marginTop: "4px", fontWeight: 600 }}
                         >
                           {timeAgo(notif.created_at)}
                         </div>
@@ -325,10 +410,11 @@ export default function NotificationBell() {
                       {!notif.is_read && (
                         <span
                           style={{
-                            width: "6px",
-                            height: "6px",
+                            width: "7px",
+                            height: "7px",
                             borderRadius: "50%",
-                            background: "var(--accent-primary)",
+                            background: "#FF5A1F",
+                            boxShadow: "0 0 6px rgba(255, 90, 31, 0.8)",
                             flexShrink: 0,
                             marginTop: "4px",
                           }}
@@ -345,16 +431,17 @@ export default function NotificationBell() {
           {notifications.length > 0 && (
             <div
               style={{
-                padding: "8px 12px",
-                borderTop: "2px solid var(--border-light)",
+                padding: "10px 14px",
+                borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+                background: "rgba(0, 0, 0, 0.35)",
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
                 flexShrink: 0,
               }}
             >
-              <span className="font-pixel" style={{ fontSize: "10px", color: "var(--text-muted)" }}>
-                {notifications.filter((n) => !n.is_read).length} UNREAD
+              <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.55)", fontWeight: 600 }}>
+                {notifications.filter((n) => !n.is_read).length} unread
               </span>
               <button
                 onClick={async () => {
@@ -362,10 +449,19 @@ export default function NotificationBell() {
                   setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
                   setUnreadCount(0);
                 }}
-                className="nokia-btn"
-                style={{ fontSize: "10px", padding: "3px 8px" }}
+                style={{
+                  background: "rgba(255, 255, 255, 0.06)",
+                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  color: "#FFFFFF",
+                  padding: "5px 12px",
+                  borderRadius: "8px",
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+                className="hover:bg-white/15"
               >
-                ✓ MARK ALL READ
+                Mark all read
               </button>
             </div>
           )}

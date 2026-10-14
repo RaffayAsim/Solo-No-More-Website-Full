@@ -1,8 +1,41 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createBeacon } from "@/app/actions/beacons";
 import type { BeaconCategory, BeaconVisibility } from "@/lib/supabase/types";
+import {
+  Radio,
+  Sparkles,
+  MapPin,
+  Calendar,
+  Users,
+  Globe,
+  Lock,
+  X,
+  Upload,
+  Clock,
+  Building,
+  CheckCircle2,
+  AlertCircle,
+  Coffee,
+  Flame,
+  Activity,
+  Plus,
+  Minus,
+  Coins,
+  HelpCircle,
+  Navigation,
+  ExternalLink,
+  Compass,
+  Search,
+  Check,
+} from "lucide-react";
+import { BUDGET_TIERS, formatBeaconDescription } from "@/lib/beaconBudget";
+import {
+  searchLocalHotspots,
+  fetchOnlinePlaces,
+  type PlaceSuggestion,
+} from "@/lib/locationPlaces";
 
 interface CreateBeaconModalProps {
   onClose: () => void;
@@ -14,22 +47,22 @@ interface CreateBeaconModalProps {
 const CATEGORIES: {
   value: BeaconCategory;
   label: string;
-  glyph: string;
+  icon: typeof Activity;
 }[] = [
   {
     value: "sports",
-    label: "Sports",
-    glyph: "◈ SPORTS",
+    label: "Sports & Fitness",
+    icon: Activity,
   },
   {
     value: "casual",
-    label: "Casual",
-    glyph: "☕ CASUAL",
+    label: "Coffee & Casual",
+    icon: Coffee,
   },
   {
     value: "nightlife",
-    label: "Nightlife",
-    glyph: "⚡ NIGHTLIFE",
+    label: "Nightlife & Beats",
+    icon: Flame,
   },
 ];
 
@@ -41,39 +74,105 @@ export default function CreateBeaconModal({
 }: CreateBeaconModalProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [budgetTier, setBudgetTier] = useState(BUDGET_TIERS[0].label);
+  const [customQuestion, setCustomQuestion] = useState("");
   const [category, setCategory] = useState<BeaconCategory>("casual");
   const [visibility, setVisibility] = useState<BeaconVisibility>("stranger");
   const [slots, setSlots] = useState(3);
   const [location, setLocation] = useState("");
+  const [googleMapsUrl, setGoogleMapsUrl] = useState("");
+  const [selectedPlace, setSelectedPlace] = useState<PlaceSuggestion | null>(null);
+  const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>(() =>
+    searchLocalHotspots("", defaultCity)
+  );
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isSearchingOnline, setIsSearchingOnline] = useState(false);
+  const locationWrapperRef = useRef<HTMLDivElement>(null);
+
   const [scheduledAt, setScheduledAt] = useState("");
   const [city, setCity] = useState(defaultCity);
   const [imageUrl, setImageUrl] = useState("");
   const [isPartnerOffer, setIsPartnerOffer] = useState(false);
 
-  const [scoutMode, setScoutMode] = useState<"venue" | "neighborhood">("venue");
-  const [scoutDay, setScoutDay] = useState<"today" | "tomorrow">("today");
-  const [scoutTimeBand, setScoutTimeBand] = useState<"evening" | "latenight" | "midnight">("evening");
+  // Live autocomplete places effect
+  useEffect(() => {
+    // 1. Instant local matching (0ms lag)
+    const localMatches = searchLocalHotspots(location, city);
+    setSuggestions(localMatches);
 
-  const calculateFuzzyTimestamp = (day: "today" | "tomorrow", band: "evening" | "latenight" | "midnight") => {
-    const date = new Date();
-    if (day === "tomorrow") {
-      date.setDate(date.getDate() + 1);
+    // 2. Online search fallback
+    if (location.trim().length >= 2) {
+      const timer = setTimeout(async () => {
+        setIsSearchingOnline(true);
+        try {
+          const online = await fetchOnlinePlaces(location, city);
+          if (online && online.length > 0) {
+            setSuggestions((prev) => {
+              const combined = [...prev];
+              for (const item of online) {
+                if (!combined.some((c) => c.name.toLowerCase() === item.name.toLowerCase())) {
+                  combined.push(item);
+                }
+              }
+              return combined.slice(0, 8);
+            });
+          }
+        } finally {
+          setIsSearchingOnline(false);
+        }
+      }, 250);
+
+      return () => clearTimeout(timer);
     }
-    if (band === "evening") {
-      date.setHours(18, 0, 0, 0);
-    } else if (band === "latenight") {
-      date.setHours(22, 0, 0, 0);
-    } else if (band === "midnight") {
-      // Midnight of selected day is technically start of next calendar day at 00:00
-      date.setDate(date.getDate() + 1);
-      date.setHours(0, 0, 0, 0);
-    }
-    return date.toISOString();
+  }, [location, city]);
+
+  // Click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        locationWrapperRef.current &&
+        !locationWrapperRef.current.contains(e.target as Node)
+      ) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleSelectPlace = (place: PlaceSuggestion) => {
+    setLocation(place.name);
+    setGoogleMapsUrl(place.mapsUrl);
+    setSelectedPlace(place);
+    setIsDropdownOpen(false);
+  };
+
+  const handleCustomLocationChoose = () => {
+    if (!location.trim()) return;
+    const q = encodeURIComponent(`${location.trim()}, ${city}`);
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${q}`;
+    setGoogleMapsUrl(mapsUrl);
+    setSelectedPlace({
+      id: "custom",
+      name: location.trim(),
+      area: city,
+      city,
+      mapsUrl,
+    });
+    setIsDropdownOpen(false);
   };
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
 
   // Client-side HTML5 Canvas Image Auto-Compressor
   const compressImage = (file: File): Promise<string> => {
@@ -85,7 +184,7 @@ export default function CreateBeaconModal({
         img.src = event.target?.result as string;
         img.onload = () => {
           const canvas = document.createElement("canvas");
-          const MAX_WIDTH = 400; // Optimal retro display size
+          const MAX_WIDTH = 600;
           const scaleSize = MAX_WIDTH / img.width;
           canvas.width = MAX_WIDTH;
           canvas.height = img.height * scaleSize;
@@ -97,8 +196,7 @@ export default function CreateBeaconModal({
           }
 
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          // Compress quality to 0.4 for extremely low storage weights (~10KB)
-          const dataUrl = canvas.toDataURL("image/jpeg", 0.4);
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.65);
           resolve(dataUrl);
         };
         img.onerror = (err) => reject(err);
@@ -124,16 +222,27 @@ export default function CreateBeaconModal({
     setError(null);
     setIsLoading(true);
 
+    const fullDescription = formatBeaconDescription(
+      description,
+      budgetTier,
+      customQuestion
+    );
+
+    let finalMapsUrl = googleMapsUrl.trim();
+    if (!finalMapsUrl && location.trim()) {
+      const q = encodeURIComponent(`${location.trim()}, ${city}`);
+      finalMapsUrl = `https://www.google.com/maps/search/?api=1&query=${q}`;
+    }
+
     const result = await createBeacon({
       title,
-      description,
+      description: fullDescription || undefined,
       category,
       visibility_mode: visibility,
       total_slots: slots,
-      location_name: location,
-      scheduled_at: (scoutMode === "neighborhood"
-        ? calculateFuzzyTimestamp(scoutDay, scoutTimeBand)
-        : scheduledAt) || undefined,
+      location_name: location.trim(),
+      scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
+      google_maps_url: finalMapsUrl || undefined,
       city,
       image_url: imageUrl || undefined,
       is_partner_offer: isPartnerOffer,
@@ -153,93 +262,45 @@ export default function CreateBeaconModal({
   };
 
   return (
-    /* Backdrop Overlay */
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{
-        background: "rgba(0, 0, 0, 0.65)",
-        backdropFilter: "blur(4px)",
-      }}
+      className="fixed inset-0 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto"
+      style={{ zIndex: 99999, paddingTop: "40px", paddingBottom: "40px" }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      {/* Modal Nokia Panel */}
-      <div
-        className="nokia-panel relative z-10 w-full max-w-md font-mono page-swipe"
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          maxHeight: "90vh",
-          overflow: "hidden",
-          backgroundColor: "var(--bg-base)",
-        }}
-      >
+      <div className="relative w-full max-w-lg overflow-hidden rounded-2xl bg-[#0B080E] border border-white/[0.16] shadow-2xl shadow-black/90 flex flex-col max-h-[88vh] animate-in fade-in zoom-in-95 duration-200">
         {/* Header Bar */}
-        <div
-          style={{
-            background: isPartnerOffer ? "var(--accent-success)" : "var(--accent-primary)",
-            color: isPartnerOffer ? "#111" : "white",
-            padding: "10px 14px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            borderBottom: "2px solid var(--border-strong)",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <span className="font-pixel" style={{ fontSize: "11px" }}>
-              {isPartnerOffer ? "▤ BROADCAST PARTNER OFFER" : "★ POST A BEACON"}
-            </span>
+        <div className="flex items-center justify-between p-5 border-b border-white/[0.1] bg-white/[0.03]">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-[#FF6F26]/15 text-[#FF6F26] border border-[#FF6F26]/30 flex items-center justify-center">
+              <Radio className="w-4 h-4 animate-pulse" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-white">
+                {isPartnerOffer ? "Broadcast Partner Offer" : "Post a Beacon"}
+              </h2>
+              <p className="text-[11px] text-neutral-400">
+                Broadcast your real-time matching frequency
+              </p>
+            </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="font-pixel"
-            style={{
-              background: "none",
-              border: "none",
-              color: isPartnerOffer ? "#111" : "white",
-              cursor: "pointer",
-              fontSize: "12px",
-              padding: "0",
-              lineHeight: 1,
-            }}
+            aria-label="Close modal"
+            className="w-9 h-9 rounded-xl flex items-center justify-center bg-white/[0.08] hover:bg-white/[0.2] border border-white/20 text-white transition-all cursor-pointer shrink-0 group"
           >
-            ✕
+            <span className="text-white text-base font-black leading-none select-none group-hover:scale-110 transition-transform" style={{ color: "#ffffff", fontSize: "16px", lineHeight: 1 }}>
+              ✕
+            </span>
           </button>
         </div>
 
-        {/* Scrollable Form body */}
-        <form
-          onSubmit={handleSubmit}
-          style={{
-            padding: "16px",
-            overflowY: "auto",
-            display: "flex",
-            flexDirection: "column",
-            gap: "14px",
-          }}
-        >
-          <div style={{ textAlign: "center", marginBottom: "4px" }}>
-            <div className="font-lcd" style={{ fontSize: "20px", color: isPartnerOffer ? "var(--accent-success)" : "var(--accent-primary)" }}>
-              {isPartnerOffer ? "PARTNER PROMO BROADCAST" : "NEW VIBE TRANSMISSION"}
-            </div>
-            <p className="font-mono text-muted" style={{ fontSize: "11px", margin: "2px 0 0 0" }}>
-              Broadcast your real-time matching frequency
-            </p>
-          </div>
-
+        {/* Scrollable Form Body */}
+        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-5 flex-1">
           {/* Title */}
           <div>
-            <label
-              className="font-pixel"
-              style={{
-                display: "block",
-                fontSize: "11px",
-                marginBottom: "6px",
-                color: "var(--text-muted)",
-                letterSpacing: "0.08em",
-              }}
-            >
-              ♦ BEACON TITLE
+            <label className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-2">
+              Beacon Title *
             </label>
             <input
               id="beacon-title"
@@ -248,204 +309,181 @@ export default function CreateBeaconModal({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               maxLength={60}
-              placeholder="e.g. PADEL MATCH, CHAI RUN..."
-              className="nokia-input"
+              placeholder="e.g. Padel match at Sunset Club, Midnight Chai run..."
+              className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/10 text-white text-sm focus:outline-none focus:border-[#FF6F26] transition-colors"
             />
-            <div
-              className="font-pixel"
-              style={{
-                fontSize: "10px",
-                color: "var(--text-muted)",
-                marginTop: "4px",
-                textAlign: "right",
-              }}
-            >
-              {title.length}/60 CHARS
+            <div className="text-[10px] text-neutral-500 mt-1 text-right">
+              {title.length}/60 chars
             </div>
           </div>
 
-          {/* IF partner, show Partner Offer checkbox */}
+          {/* Beacon Vibe & Description */}
+          <div>
+            <label className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-2">
+              Meetup Description &amp; Vibe
+            </label>
+            <textarea
+              rows={2}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="What are the plans? Who is this for? Any hangout rules?"
+              className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-white text-xs placeholder:text-neutral-600 focus:outline-none focus:border-[#FF6F26] transition-colors resize-none"
+            />
+          </div>
+
+          {/* Budget / Barter Pact */}
+          <div>
+            <label className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <Coins className="w-3.5 h-3.5 text-amber-400" />
+              <span>Meetup Budget / Barter Pact</span>
+            </label>
+            <select
+              value={budgetTier}
+              onChange={(e) => setBudgetTier(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl bg-[#0E0B12] border border-white/10 text-white text-xs focus:outline-none focus:border-[#FF6F26] transition-colors"
+            >
+              {BUDGET_TIERS.map((tier) => (
+                <option key={tier.id} value={tier.label}>
+                  {tier.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-[10px] text-neutral-400 mt-1">
+              Clear upfront expectations ensure comfortable, zero-awkwardness meetups for all members.
+            </p>
+          </div>
+
+          {/* Host Icebreaker Question (Optional) */}
+          <div>
+            <label className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <HelpCircle className="w-3.5 h-3.5 text-[#FF6F26]" />
+              <span>Host Icebreaker Question (Optional)</span>
+            </label>
+            <input
+              type="text"
+              value={customQuestion}
+              onChange={(e) => setCustomQuestion(e.target.value)}
+              placeholder="e.g. Favorite chai spot? Or skill to share if barter?"
+              className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/10 text-white text-xs placeholder:text-neutral-600 focus:outline-none focus:border-[#FF6F26] transition-colors"
+            />
+          </div>
+
+          {/* Partner Offer Toggle */}
           {isPartner && (
-            <div style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-              padding: "10px",
-              background: "rgba(51, 255, 102, 0.05)",
-              border: "2px dashed var(--accent-success)",
-              borderRadius: "2px",
-            }}>
+            <div className="flex items-center gap-3 p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
               <input
                 id="partner-offer-toggle"
                 type="checkbox"
                 checked={isPartnerOffer}
                 onChange={(e) => setIsPartnerOffer(e.target.checked)}
-                style={{
-                  width: "18px",
-                  height: "18px",
-                  cursor: "pointer",
-                }}
+                className="w-4 h-4 accent-emerald-500 rounded cursor-pointer"
               />
-              <label htmlFor="partner-offer-toggle" className="font-pixel" style={{ fontSize: "11px", color: "var(--accent-success)", cursor: "pointer" }}>
-                ◈ MARK AS BUSINESS PARTNER PROMO OFFER
+              <label htmlFor="partner-offer-toggle" className="text-xs font-semibold text-emerald-400 cursor-pointer">
+                Mark as Business Partner Promo Offer
               </label>
             </div>
           )}
 
           {/* Category */}
           <div>
-            <label
-              className="font-pixel"
-              style={{
-                display: "block",
-                fontSize: "11px",
-                marginBottom: "6px",
-                color: "var(--text-muted)",
-                letterSpacing: "0.08em",
-              }}
-            >
-              ◈ CATEGORY
+            <label className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-2">
+              Category
             </label>
-            <div className="beacon-category-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "6px" }}>
-              {CATEGORIES.map(({ value, label, glyph }) => (
+            <div className="grid grid-cols-3 gap-2">
+              {CATEGORIES.map(({ value, label, icon: Icon }) => (
                 <button
                   key={value}
                   type="button"
                   onClick={() => setCategory(value)}
-                  className={category === value ? "nokia-btn nokia-btn-primary" : "nokia-btn"}
-                  style={{
-                    fontSize: "8.5px",
-                    width: "100%",
-                    padding: "8px 4px",
-                  }}
+                  className={`flex flex-col items-center justify-center gap-1.5 p-3 rounded-xl text-xs font-semibold border transition-all text-center ${
+                    category === value
+                      ? "bg-gradient-to-r from-[#FF6F26] to-[#FF5A1F] text-white border-transparent shadow-lg shadow-[#FF6F26]/20"
+                      : "bg-white/[0.03] border-white/10 text-neutral-300 hover:bg-white/[0.06]"
+                  }`}
                 >
-                  {glyph}
+                  <Icon className="w-4 h-4" />
+                  <span>{label}</span>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Image Banner Compressor Upload */}
+          {/* Banner Image */}
           <div>
-            <label
-              className="font-pixel"
-              style={{
-                display: "block",
-                fontSize: "11px",
-                marginBottom: "6px",
-                color: "var(--text-muted)",
-                letterSpacing: "0.08em",
-              }}
-            >
-              📷 BEACON BANNER IMAGE (AUTO-COMPRESSED)
+            <label className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-2">
+              Banner Image (Auto-Compressed)
             </label>
-            
-            <div style={{ display: "flex", gap: "8px", flexDirection: "column" }}>
-              {/* File Uploader */}
+            <div className="space-y-2">
               <input
                 type="file"
                 accept="image/*"
                 onChange={handleImageUpload}
-                style={{ display: "none" }}
+                className="hidden"
                 id="banner-image-file"
               />
               <label
                 htmlFor="banner-image-file"
-                className="nokia-btn text-center"
-                style={{
-                  padding: "10px",
-                  fontSize: "11px",
-                  cursor: "pointer",
-                  display: "block",
-                  fontFamily: "var(--font-pixel)",
-                }}
+                className="flex items-center justify-center gap-2 w-full p-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-dashed border-white/20 text-xs font-medium text-neutral-300 cursor-pointer transition-colors"
               >
-                {imageUrl ? "✓ BANNER ATTACHED (REPLACE)" : "[ 📷 UPLOAD BANNER ]"}
+                <Upload className="w-4 h-4 text-[#FF6F26]" />
+                <span>{imageUrl ? "✓ Banner Attached (Replace)" : "Upload Banner Image"}</span>
               </label>
 
-              {/* URL Passthrough alternative */}
               <input
                 type="text"
-                placeholder="OR PASTE BANNER URL..."
+                placeholder="Or paste an image URL..."
                 value={imageUrl.startsWith("data:") ? "" : imageUrl}
                 onChange={(e) => setImageUrl(e.target.value)}
-                className="nokia-input"
-                style={{ fontSize: "10px" }}
+                className="w-full px-3.5 py-2 rounded-xl bg-white/[0.02] border border-white/10 text-white text-xs focus:outline-none focus:border-[#FF6F26] transition-colors"
               />
             </div>
-            
             {imageUrl && (
-              <div style={{ marginTop: "10px", overflow: "hidden", border: "2px solid var(--border-light)" }}>
+              <div className="mt-2.5 rounded-xl overflow-hidden border border-white/10 relative h-28">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={imageUrl}
-                  alt="Compressed preview"
-                  style={{
-                    width: "100%",
-                    maxHeight: "100px",
-                    objectFit: "cover",
-                    filter: "grayscale(1) contrast(1.3)",
-                  }}
+                  alt="Banner preview"
+                  className="w-full h-full object-cover"
                 />
-                <div className="font-pixel text-center text-muted" style={{ fontSize: "10px", padding: "4px" }}>
-                  90S LOW-RES CRT DITHER PREVIEW
-                </div>
               </div>
             )}
           </div>
 
-          {/* Visibility toggle */}
+          {/* Visibility Mode */}
           <div>
-            <label
-              className="font-pixel"
-              style={{
-                display: "block",
-                fontSize: "11px",
-                marginBottom: "6px",
-                color: "var(--text-muted)",
-                letterSpacing: "0.08em",
-              }}
-            >
-              ▣ VISIBILITY MODE
+            <label className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-2">
+              Visibility Mode
             </label>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+            <div className="grid grid-cols-2 gap-2">
               {[
                 {
                   value: "stranger" as BeaconVisibility,
-                  label: "STRANGER MODE",
+                  label: "Stranger Mode",
                   sub: "Open to all members",
-                  prefix: "🌐",
+                  icon: Globe,
                 },
                 {
                   value: "friend" as BeaconVisibility,
-                  label: "FRIEND MODE",
+                  label: "Friend Mode",
                   sub: "Accepted friends only",
-                  prefix: "👤",
+                  icon: Lock,
                 },
-              ].map(({ value, label, sub, prefix }) => (
+              ].map(({ value, label, sub, icon: Icon }) => (
                 <button
                   key={value}
                   type="button"
                   onClick={() => setVisibility(value)}
-                  className={visibility === value ? "nokia-panel-sunken text-accent" : "nokia-panel"}
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "flex-start",
-                    justifyContent: "center",
-                    padding: "10px 12px",
-                    textAlign: "left",
-                    cursor: "pointer",
-                    gap: "4px",
-                    borderRadius: "2px",
-                  }}
+                  className={`p-3 rounded-xl border text-left transition-all ${
+                    visibility === value
+                      ? "bg-white/[0.08] border-[#FF6F26] text-white"
+                      : "bg-white/[0.02] border-white/10 text-neutral-400 hover:bg-white/[0.05]"
+                  }`}
                 >
-                  <span className="font-pixel" style={{ fontSize: "8.5px", fontWeight: "bold" }}>
-                    {prefix} {label}
-                  </span>
-                  <span className="font-mono text-muted" style={{ fontSize: "10px" }}>
-                    {sub}
-                  </span>
+                  <div className="flex items-center gap-2 font-bold text-xs text-white">
+                    <Icon className="w-3.5 h-3.5 text-[#FF6F26]" />
+                    <span>{label}</span>
+                  </div>
+                  <div className="text-[11px] text-neutral-400 mt-1">{sub}</div>
                 </button>
               ))}
             </div>
@@ -453,318 +491,231 @@ export default function CreateBeaconModal({
 
           {/* City Selection */}
           <div>
-            <label
-              className="font-pixel"
-              style={{
-                display: "block",
-                fontSize: "11px",
-                marginBottom: "6px",
-                color: "var(--text-muted)",
-                letterSpacing: "0.08em",
-              }}
-            >
-              🏙 BEACON REGION / CITY
+            <label className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-2">
+              Beacon Region / City
             </label>
             <select
               value={city}
               onChange={(e) => setCity(e.target.value)}
-              className="nokia-input"
-              style={{
-                background: "var(--bg-sunken)",
-                color: "var(--text-primary)",
-                border: "2px solid var(--border-strong)",
-                padding: "10px",
-                outline: "none",
-                cursor: "pointer",
-              }}
+              className="w-full px-4 py-3 rounded-xl bg-[#0E0B12] border border-white/10 text-white text-sm focus:outline-none focus:border-[#FF6F26] transition-colors"
             >
-              <option value="Karachi">KARACHI</option>
-              <option value="Lahore">LAHORE</option>
-              <option value="Islamabad">ISLAMABAD</option>
+              <option value="Karachi">Karachi</option>
+              <option value="Lahore">Lahore</option>
+              <option value="Islamabad">Islamabad</option>
             </select>
           </div>
 
-          {/* Slot counter */}
+          {/* Slot Counter */}
           <div>
-            <label
-              className="font-pixel"
-              style={{
-                display: "block",
-                fontSize: "11px",
-                marginBottom: "6px",
-                color: "var(--text-muted)",
-                letterSpacing: "0.08em",
-              }}
-            >
-              ● OPEN SLOTS (CAPACITY)
+            <label className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-2">
+              Open Slots (Capacity)
             </label>
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  border: "2px solid var(--border-strong)",
-                  borderRadius: "2px",
-                  overflow: "hidden",
-                }}
-              >
+            <div className="flex items-center gap-4">
+              <div className="flex items-center rounded-xl bg-white/[0.03] border border-white/10 overflow-hidden">
                 <button
                   type="button"
                   onClick={() => setSlots((s) => Math.max(1, s - 1))}
-                  className="nokia-btn"
-                  style={{ padding: "6px 12px", borderRadius: "0", border: "none" }}
+                  className="px-3.5 py-2.5 text-neutral-400 hover:text-white hover:bg-white/10 transition-colors"
                   aria-label="Decrease slots"
                 >
-                  ◀
+                  <Minus className="w-3.5 h-3.5" />
                 </button>
-                <span
-                  className="font-pixel"
-                  style={{
-                    width: "40px",
-                    textAlign: "center",
-                    fontSize: "10px",
-                    background: "var(--bg-sunken)",
-                    color: "var(--text-primary)",
-                    padding: "6px 0",
-                    fontWeight: "bold",
-                    borderLeft: "2px solid var(--border-strong)",
-                    borderRight: "2px solid var(--border-strong)",
-                  }}
-                >
+                <span className="w-10 text-center font-bold text-white text-sm">
                   {slots}
                 </span>
                 <button
                   type="button"
                   onClick={() => setSlots((s) => Math.min(10, s + 1))}
-                  className="nokia-btn"
-                  style={{ padding: "6px 12px", borderRadius: "0", border: "none" }}
+                  className="px-3.5 py-2.5 text-neutral-400 hover:text-white hover:bg-white/10 transition-colors"
                   aria-label="Increase slots"
                 >
-                  ▶
+                  <Plus className="w-3.5 h-3.5" />
                 </button>
               </div>
 
-              {/* Slot dots preview */}
-              <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+              <div className="flex items-center gap-1.5">
                 {Array.from({ length: 10 }).map((_, i) => (
-                  <span
+                  <div
                     key={i}
-                    className="font-pixel"
-                    style={{
-                      fontSize: "14px",
-                      lineHeight: 1,
-                      color: i < slots ? "var(--accent-primary)" : "var(--border-light)",
-                    }}
-                  >
-                    {i < slots ? "●" : "○"}
-                  </span>
+                    className={`w-2.5 h-2.5 rounded-full transition-colors ${
+                      i < slots ? "bg-[#FF6F26]" : "bg-white/10"
+                    }`}
+                  />
                 ))}
               </div>
             </div>
-            <p className="font-mono text-muted" style={{ fontSize: "10px", marginTop: "6px" }}>
+            <p className="text-[11px] text-neutral-400 mt-1.5">
               {slots} {slots === 1 ? "person" : "people"} joining you
             </p>
           </div>
 
-          {/* Coordination Mode */}
-          <div>
-            <label
-              className="font-pixel"
-              style={{
-                display: "block",
-                fontSize: "11px",
-                marginBottom: "6px",
-                color: "var(--text-muted)",
-                letterSpacing: "0.08em",
-              }}
-            >
-              ◈ COORDINATION MODE
-            </label>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-              <button
-                type="button"
-                onClick={() => setScoutMode("venue")}
-                className={scoutMode === "venue" ? "nokia-btn nokia-btn-primary" : "nokia-btn"}
-                style={{ fontSize: "11px", width: "100%", padding: "10px 4px" }}
-              >
-                SPECIFIC VENUE
-              </button>
-              <button
-                type="button"
-                onClick={() => setScoutMode("neighborhood")}
-                className={scoutMode === "neighborhood" ? "nokia-btn nokia-btn-primary" : "nokia-btn"}
-                style={{ fontSize: "11px", width: "100%", padding: "10px 4px" }}
-              >
-                NEIGHBORHOOD SCOUT
-              </button>
+          {/* Location with Live Google Maps Autocomplete Dropdown */}
+          <div ref={locationWrapperRef} className="relative">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-semibold text-neutral-300 uppercase tracking-wider flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-[#FF6F26]" />
+                <span>Meetup Location</span>
+              </label>
+              {selectedPlace && (
+                <span className="text-[10px] font-bold text-emerald-400 flex items-center gap-1 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                  <Check className="w-2.5 h-2.5" />
+                  <span>Map Pin Linked</span>
+                </span>
+              )}
             </div>
+
+            <div className="relative">
+              <MapPin className="w-4 h-4 text-[#FF6F26] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                id="beacon-location"
+                type="text"
+                value={location}
+                onChange={(e) => {
+                  setLocation(e.target.value);
+                  setSelectedPlace(null);
+                  setIsDropdownOpen(true);
+                }}
+                onFocus={() => setIsDropdownOpen(true)}
+                placeholder="Type venue or area (e.g. Espresso, Beverly Centre, Clifton...)"
+                className="w-full pl-10 pr-10 py-3 rounded-xl bg-white/[0.04] border border-white/10 text-white text-sm focus:outline-none focus:border-[#FF6F26] transition-colors"
+                autoComplete="off"
+              />
+              {location && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLocation("");
+                    setGoogleMapsUrl("");
+                    setSelectedPlace(null);
+                    setIsDropdownOpen(false);
+                  }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-zinc-500 hover:text-white"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Dropdown Menu for Google Maps Place Selection (In-flow so it never clips) */}
+            {isDropdownOpen && (
+              <div className="mt-2 bg-[#120E1A] border border-white/15 rounded-2xl shadow-2xl overflow-hidden max-h-60 overflow-y-auto divide-y divide-white/5 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150">
+                {/* Custom Typed Option */}
+                {location.trim().length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleCustomLocationChoose}
+                    className="w-full px-4 py-2.5 text-left bg-[#FF6F26]/10 hover:bg-[#FF6F26]/20 flex items-center justify-between gap-3 transition-colors border-b border-[#FF6F26]/20"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <Navigation className="w-4 h-4 text-[#FF6F26] shrink-0" />
+                      <div className="text-xs font-bold text-white truncate">
+                        Use &ldquo;{location.trim()}&rdquo;
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-bold text-[#FFA05C] bg-[#FF6F26]/20 px-2 py-0.5 rounded-md shrink-0">
+                      Auto Pin 📍
+                    </span>
+                  </button>
+                )}
+
+                {/* Hotspot & Geocoded Suggestions */}
+                {suggestions.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => handleSelectPlace(item)}
+                    className="w-full px-4 py-2.5 text-left hover:bg-white/10 flex items-start gap-3 transition-colors group"
+                  >
+                    <div className="w-6 h-6 rounded-lg bg-white/5 text-[#FF6F26] border border-white/10 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-[#FF6F26]/15 group-hover:border-[#FF6F26]/30 transition-colors">
+                      <MapPin className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-bold text-white group-hover:text-[#FFA05C] transition-colors truncate">
+                        {item.name}
+                      </div>
+                      <div className="text-[11px] text-zinc-400 truncate">
+                        {item.area}
+                      </div>
+                    </div>
+                    <span className="text-[9px] font-bold text-zinc-500 group-hover:text-zinc-300 uppercase tracking-wider shrink-0 mt-1">
+                      Select Pin ↗
+                    </span>
+                  </button>
+                ))}
+
+                {isSearchingOnline && (
+                  <div className="px-4 py-2 text-[11px] text-zinc-400 italic flex items-center gap-2">
+                    <Search className="w-3 h-3 animate-spin text-[#FF6F26]" />
+                    <span>Searching Google Maps places...</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Selected Place Badge */}
+            {selectedPlace ? (
+              <div className="mt-2 flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-emerald-500/20 text-xs">
+                <div className="flex items-center gap-2 text-zinc-300 min-w-0">
+                  <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span className="text-[11px] truncate">
+                    Pinned: <strong className="text-white">{selectedPlace.name}</strong> ({selectedPlace.area})
+                  </span>
+                </div>
+                <a
+                  href={selectedPlace.mapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[10px] font-bold text-[#FFA05C] hover:underline shrink-0 ml-2"
+                >
+                  View on Maps ↗
+                </a>
+              </div>
+            ) : (
+              <p className="text-[10px] text-neutral-400 mt-1.5">
+                Type your spot and pick from the dropdown to automatically lock in the exact Google Maps pin.
+              </p>
+            )}
           </div>
 
-          {/* Location */}
+          {/* Date & Time */}
           <div>
-            <label
-              className="font-pixel"
-              style={{
-                display: "block",
-                fontSize: "11px",
-                marginBottom: "6px",
-                color: "var(--text-muted)",
-                letterSpacing: "0.08em",
-              }}
-            >
-              ◈ LOCATION
+            <label className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5 text-[#FF6F26]" />
+              <span>Date &amp; Time</span>
             </label>
             <input
-              id="beacon-location"
-              type="text"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder={scoutMode === "neighborhood" ? "e.g., Clifton / DHA Phase 6 (Open Plan)" : "Venue name or area"}
-              className="nokia-input"
+              id="beacon-datetime"
+              type="datetime-local"
+              value={scheduledAt}
+              onChange={(e) => setScheduledAt(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/10 text-white text-sm focus:outline-none focus:border-[#FF6F26] transition-colors [color-scheme:dark]"
             />
           </div>
 
-          {/* Date & Time / Fuzzy Selector */}
-          {scoutMode === "venue" ? (
-            <div>
-              <label
-                className="font-pixel"
-                style={{
-                  display: "block",
-                  fontSize: "11px",
-                  marginBottom: "6px",
-                  color: "var(--text-muted)",
-                  letterSpacing: "0.08em",
-                }}
-              >
-                ▤ DATE & TIME
-              </label>
-              <input
-                id="beacon-datetime"
-                type="datetime-local"
-                value={scheduledAt}
-                onChange={(e) => setScheduledAt(e.target.value)}
-                className="nokia-input"
-                style={{ colorScheme: "dark" }}
-              />
-            </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-              <div>
-                <label
-                  className="font-pixel"
-                  style={{
-                    display: "block",
-                    fontSize: "11px",
-                    marginBottom: "6px",
-                    color: "var(--text-muted)",
-                    letterSpacing: "0.08em",
-                  }}
-                >
-                  ▤ TARGET DAY
-                </label>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-                  <button
-                    type="button"
-                    onClick={() => setScoutDay("today")}
-                    className={scoutDay === "today" ? "nokia-btn nokia-btn-primary" : "nokia-btn"}
-                    style={{ fontSize: "8.5px", width: "100%", padding: "8px 4px" }}
-                  >
-                    TODAY
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setScoutDay("tomorrow")}
-                    className={scoutDay === "tomorrow" ? "nokia-btn nokia-btn-primary" : "nokia-btn"}
-                    style={{ fontSize: "8.5px", width: "100%", padding: "8px 4px" }}
-                  >
-                    TOMORROW
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label
-                  className="font-pixel"
-                  style={{
-                    display: "block",
-                    fontSize: "11px",
-                    marginBottom: "6px",
-                    color: "var(--text-muted)",
-                    letterSpacing: "0.08em",
-                  }}
-                >
-                  🕐 FUZZY TIME BAND
-                </label>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "6px" }}>
-                  <button
-                    type="button"
-                    onClick={() => setScoutTimeBand("evening")}
-                    className={scoutTimeBand === "evening" ? "nokia-btn nokia-btn-primary" : "nokia-btn"}
-                    style={{ fontSize: "7.5px", width: "100%", padding: "8px 2px" }}
-                  >
-                    EVENING (6PM)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setScoutTimeBand("latenight")}
-                    className={scoutTimeBand === "latenight" ? "nokia-btn nokia-btn-primary" : "nokia-btn"}
-                    style={{ fontSize: "7.5px", width: "100%", padding: "8px 2px" }}
-                  >
-                    LATE NIGHT (10PM)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setScoutTimeBand("midnight")}
-                    className={scoutTimeBand === "midnight" ? "nokia-btn nokia-btn-primary" : "nokia-btn"}
-                    style={{ fontSize: "7.5px", width: "100%", padding: "8px 2px" }}
-                  >
-                    MIDNIGHT (12AM)
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Error display */}
           {error && (
-            <div
-              className="nokia-panel-sunken"
-              style={{ padding: "10px 14px", borderColor: "var(--accent-danger)" }}
-            >
-              <span className="font-pixel" style={{ fontSize: "11px", color: "var(--accent-danger)" }}>
-                ✕ ERROR:{" "}
-              </span>
-              <span style={{ fontSize: "11px", color: "var(--accent-danger)" }}>{error}</span>
+            <div className="flex items-center gap-2.5 p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <span>{error}</span>
             </div>
           )}
 
-          <div className="nokia-divider" style={{ margin: "4px 0" }} />
-
           {/* Actions */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+          <div className="grid grid-cols-2 gap-3 pt-2">
             <button
               type="button"
               onClick={onClose}
-              className="nokia-btn"
-              style={{ fontSize: "11px" }}
+              className="py-3 px-4 rounded-xl text-xs font-semibold bg-white/[0.04] hover:bg-white/[0.08] text-neutral-300 transition-colors"
             >
-              ✕ CANCEL
+              Cancel
             </button>
             <button
               id="post-beacon-submit"
               type="submit"
               disabled={isLoading || success}
-              className="nokia-btn nokia-btn-primary"
-              style={{ fontSize: "11px" }}
+              className="py-3 px-4 rounded-xl text-xs font-bold bg-gradient-to-r from-[#FF6F26] to-[#FF5A1F] text-white shadow-lg shadow-[#FF6F26]/20 hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50"
             >
-              {success ? (
-                "✓ POSTED!"
-              ) : isLoading ? (
-                <span className="pixel-blink">▌ POSTING...</span>
-              ) : (
-                "★ POST BEACON"
-              )}
+              {success ? "✓ Posted!" : isLoading ? "Posting..." : "Post Beacon"}
             </button>
           </div>
         </form>

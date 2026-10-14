@@ -46,15 +46,14 @@ export const metadata: Metadata = {
     "Never go out alone again. Join squads for padel, chai runs, gigs and rooftop hangs across Karachi — or host your own in seconds.",
 };
 
-// Applies the saved skin before first paint so there's no flash of the wrong theme.
+// Locks the skin to the modern website theme ('partiful')
 const skinBootScript = `
   try {
-    var s = localStorage.getItem('snm-skin');
-    if (s === 'partiful' || s === 'light' || s === 'dark') {
-      document.documentElement.setAttribute('data-theme', s);
-    }
+    document.documentElement.setAttribute('data-theme', 'partiful');
+    localStorage.setItem('snm-skin', 'partiful');
   } catch (e) {}
 `;
+
 
 export default function RootLayout({
   children,

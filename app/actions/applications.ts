@@ -19,10 +19,18 @@ async function getUserIdSecurely(): Promise<{ userId: string } | { error: string
   return { userId: result.userId };
 }
 
+export interface ApplyBeaconExtra {
+  budgetAgreement?: string;
+  icebreakerAnswer?: string;
+}
+
 /**
  * Server Action: Apply to join a Beacon.
  */
-export async function applyToBeacon(beaconId: string): Promise<ApplicationActionResult> {
+export async function applyToBeacon(
+  beaconId: string,
+  extra?: ApplyBeaconExtra
+): Promise<ApplicationActionResult> {
   const authCheck = await getUserIdSecurely();
   if ("error" in authCheck) {
     return { success: false, error: authCheck.error };
@@ -52,12 +60,19 @@ export async function applyToBeacon(beaconId: string): Promise<ApplicationAction
     return { success: false, error: "This Beacon is already full." };
   }
 
-  // 1b. Check tier participation limits (Explorer: 3 free, Member: 15/mo)
+  // 1b. Check role restrictions: Partners, Admins, Artists cannot join squad hangouts
   const { data: applicantProfile } = await (supabaseAdmin
     .from("profiles") as any)
-    .select("subscription_tier")
+    .select("subscription_tier, is_partner")
     .eq("id", userId)
     .single();
+
+  if (applicantProfile?.is_partner || applicantProfile?.subscription_tier === "admin" || applicantProfile?.subscription_tier === "artist") {
+    return {
+      success: false,
+      error: "Partner, artist, and admin accounts cannot apply to join squad hangouts. Participation is reserved for personal member accounts.",
+    };
+  }
 
   const applicantTier = applicantProfile?.subscription_tier || "none";
 
@@ -108,12 +123,20 @@ export async function applyToBeacon(beaconId: string): Promise<ApplicationAction
     return { success: false, error: "Failed to submit request. Please try again." };
   }
 
-  // Notify the host of a new join request
+  // Notify the host of a new join request with budget pact and icebreaker
+  let notificationBody = "Someone requested to join your squad. Review their vibe in Squad Chats!";
+  if (extra?.budgetAgreement || extra?.icebreakerAnswer) {
+    const parts: string[] = [];
+    if (extra.budgetAgreement) parts.push(`Budget Pact: ${extra.budgetAgreement}`);
+    if (extra.icebreakerAnswer) parts.push(`Icebreaker: "${extra.icebreakerAnswer}"`);
+    notificationBody = parts.join(" • ");
+  }
+
   await writeNotification(
     beacon.host_id,
     "new_request_pending",
     "▶ NEW JOIN REQUEST",
-    `Someone wants to join your beacon. Review them in your dashboard.`,
+    notificationBody,
     beaconId
   );
 
@@ -430,6 +453,84 @@ export async function withdrawFromBeacon(beaconId: string): Promise<ApplicationA
       "spot_available",
       "🔔 A SPOT JUST OPENED UP!",
       `A squad member withdrew from "${beacon.title}" — a slot is available again. Apply now!`,
+      beaconId
+    );
+  }
+
+  return { success: true };
+}
+
+/**
+ * Server Action: Host removes an approved squad member from the beacon.
+ * Decrements filled_slots, reverts application to declined, and alerts member.
+ */
+export async function removeSquadMember(
+  applicationId: string,
+  beaconId: string
+): Promise<ApplicationActionResult> {
+  const authCheck = await getUserIdSecurely();
+  if ("error" in authCheck) return { success: false, error: authCheck.error };
+  const userId = authCheck.userId;
+
+  // 1. Verify host owns beacon
+  const { data: beacon, error: bError } = await (supabaseAdmin
+    .from("beacons") as any)
+    .select("host_id, filled_slots, title")
+    .eq("id", beaconId)
+    .single();
+
+  if (bError || !beacon) return { success: false, error: "Beacon not found." };
+  if (beacon.host_id !== userId) return { success: false, error: "Unauthorized. You are not hosting this Beacon." };
+
+  // 2. Fetch application
+  const { data: app, error: appError } = await (supabaseAdmin
+    .from("beacon_applications") as any)
+    .select("applicant_id, status")
+    .eq("id", applicationId)
+    .single();
+
+  if (appError || !app) return { success: false, error: "Application not found." };
+  if (app.status !== "approved") return { success: false, error: "Member is not currently approved." };
+
+  // 3. Update application status to 'declined'
+  const { error: updateError } = await (supabaseAdmin
+    .from("beacon_applications") as any)
+    .update({ status: "declined" })
+    .eq("id", applicationId);
+
+  if (updateError) return { success: false, error: "Failed to remove squad member." };
+
+  // 4. Decrement filled_slots (floor at 0)
+  const newFilled = Math.max(0, (beacon.filled_slots || 1) - 1);
+  await (supabaseAdmin.from("beacons") as any)
+    .update({ filled_slots: newFilled })
+    .eq("id", beaconId);
+
+  // 5. Notify the removed member
+  await writeNotification(
+    app.applicant_id,
+    "guest_withdrew",
+    "⊠ SQUAD ROSTER UPDATED",
+    `The host adjusted the squad roster for "${beacon.title}". Your spot has been opened up.`,
+    beaconId
+  );
+
+  // 6. Notify top declined applicant that spot opened up
+  const { data: waitlist } = await (supabaseAdmin
+    .from("beacon_applications") as any)
+    .select("applicant_id")
+    .eq("beacon_id", beaconId)
+    .eq("status", "declined")
+    .neq("applicant_id", app.applicant_id)
+    .order("updated_at", { ascending: false })
+    .limit(1);
+
+  if (waitlist && waitlist.length > 0) {
+    await writeNotification(
+      waitlist[0].applicant_id,
+      "spot_available",
+      "🔔 A SPOT OPENED UP!",
+      `A spot is available again on "${beacon.title}". Apply now!`,
       beaconId
     );
   }

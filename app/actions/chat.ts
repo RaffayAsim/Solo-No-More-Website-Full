@@ -76,7 +76,8 @@ export async function getBeaconMessages(beaconId: string): Promise<ChatActionRes
       content,
       created_at,
       profiles:user_id (
-        full_name
+        full_name,
+        avatar_icon
       )
     `)
     .eq("beacon_id", beaconId)
