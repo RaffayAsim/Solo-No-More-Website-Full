@@ -17,10 +17,28 @@ export default async function AdminEventsPage({
   }
 
   // Fetch all official events ordered by scheduled time (latest first)
-  const { data: events } = await (supabaseAdmin
-    .from("official_events") as any)
-    .select("*")
-    .order("scheduled_at", { ascending: false });
+  const [{ data: events }, { data: tickets }] = await Promise.all([
+    (supabaseAdmin.from("official_events") as any)
+      .select("*")
+      .order("scheduled_at", { ascending: false }),
+    (supabaseAdmin.from("event_tickets") as any)
+      .select(`
+        id,
+        event_id,
+        user_id,
+        ticket_status,
+        created_at,
+        profiles (
+          full_name,
+          city
+        )
+      `),
+  ]);
 
-  return <EventsManagerClient initialEvents={events || []} />;
+  return (
+    <EventsManagerClient
+      initialEvents={events || []}
+      initialTickets={tickets || []}
+    />
+  );
 }

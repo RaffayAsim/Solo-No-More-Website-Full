@@ -43,12 +43,14 @@ const PARTNER_NAV_ITEMS = [
   { label: "Promos & Offers", short: "Promos", icon: Tag, href: "/dashboard/partner?tab=offers" },
   { label: "Brand Events", short: "Events", icon: Calendar, href: "/dashboard/partner?tab=events" },
   { label: "Venue Profile", short: "Venue", icon: Building2, href: "/dashboard/partner?tab=store" },
+  { label: "Venue Managers", short: "Managers", icon: Users, href: "/dashboard/partner?tab=team" },
 ];
 
 const ARTIST_NAV_ITEMS = [
   { label: "Gigs Overview", short: "Overview", icon: Calendar, href: "/dashboard/artist" },
   { label: "Door Scanner", short: "Scanner", icon: Ticket, href: "/dashboard/artist?tab=gigs" },
   { label: "List New Gig", short: "List Gig", icon: Plus, href: "/dashboard/artist?tab=create" },
+  { label: "Gate Managers", short: "Managers", icon: Users, href: "/dashboard/artist?tab=team" },
   { label: "Sound EPK", short: "EPK", icon: Headphones, href: "/dashboard/artist?tab=profile" },
   { label: "Settlement", short: "Payouts", icon: Wallet, href: "/dashboard/artist?tab=settlement" },
 ];
@@ -242,30 +244,41 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       />
 
       {/* ── FLOATING CENTERED CURVED LUXURY DOCK (TOP ISLAND) ─────────────── */}
-      <header
-        id="floating-top-dock"
+      <div
         style={{
           position: "sticky",
-          top: "14px",
+          top: 0,
           zIndex: 40,
-          width: "calc(100% - clamp(20px, 3vw, 48px))",
-          maxWidth: "1600px",
-          margin: "12px auto 0",
-          background: "rgba(10, 6, 16, 0.9)",
-          backdropFilter: "blur(24px)",
-          WebkitBackdropFilter: "blur(24px)",
-          border: isPartnerRoute ? "1px solid rgba(255, 111, 38, 0.45)" : "1px solid rgba(255, 90, 31, 0.35)",
-          borderRadius: "26px",
-          padding: "8px 18px",
-          boxShadow: isPartnerRoute
-            ? "0 16px 40px rgba(0, 0, 0, 0.7), 0 0 32px rgba(255, 111, 38, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15)"
-            : "0 16px 40px rgba(0, 0, 0, 0.65), 0 0 28px rgba(255, 90, 31, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.15)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "12px",
+          width: "100%",
+          paddingTop: "10px",
+          paddingBottom: "8px",
+          background: "linear-gradient(180deg, rgba(6, 4, 8, 0.95) 0%, rgba(6, 4, 8, 0.85) 60%, rgba(6, 4, 8, 0) 100%)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
         }}
       >
+        <header
+          id="floating-top-dock"
+          style={{
+            position: "relative",
+            width: "calc(100% - clamp(20px, 3vw, 48px))",
+            maxWidth: "1600px",
+            margin: "0 auto",
+            background: "rgba(10, 6, 16, 0.94)",
+            backdropFilter: "blur(24px)",
+            WebkitBackdropFilter: "blur(24px)",
+            border: isPartnerRoute ? "1px solid rgba(255, 111, 38, 0.45)" : "1px solid rgba(255, 90, 31, 0.35)",
+            borderRadius: "26px",
+            padding: "8px 18px",
+            boxShadow: isPartnerRoute
+              ? "0 16px 40px rgba(0, 0, 0, 0.7), 0 0 32px rgba(255, 111, 38, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15)"
+              : "0 16px 40px rgba(0, 0, 0, 0.65), 0 0 28px rgba(255, 90, 31, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.15)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "12px",
+          }}
+        >
         {/* Left: Brand + Status */}
         <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
           <Link
@@ -441,6 +454,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <SignOutButton />
         </div>
       </header>
+    </div>
 
       {/* ── EXPANSIVE FULL-WIDTH MAIN DASHBOARD CANVAS ─────────────────────── */}
       <main

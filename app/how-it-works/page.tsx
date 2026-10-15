@@ -132,7 +132,7 @@ export default function HowItWorksPage() {
                     borderRadius: "32px",
                     padding: "clamp(26px, 4vw, 48px)",
                     display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
                     gap: "36px",
                     alignItems: "center",
                     boxShadow: "0 24px 60px rgba(0,0,0,0.5), 0 0 40px rgba(255,90,31,0.35)",

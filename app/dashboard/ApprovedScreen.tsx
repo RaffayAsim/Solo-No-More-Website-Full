@@ -12,6 +12,9 @@ import { parseEventDescription } from "@/lib/event-metadata";
 
 const CreateBeaconModal = dynamic(() => import("./CreateBeaconModal"), { ssr: false });
 const VipTicketPassModal = dynamic(() => import("@/components/VipTicketPassModal"), { ssr: false });
+import CompleteProfileModal from "@/components/CompleteProfileModal";
+import EventBookingModal from "@/components/events/EventBookingModal";
+import { checkProfileCompleteness } from "@/lib/profile-completeness";
 import {
   Compass,
   Radio,
@@ -36,7 +39,9 @@ import {
   TrendingUp,
   Activity,
   MessageSquare,
+  Share2,
 } from "lucide-react";
+import UniversalShareModal from "@/components/share/UniversalShareModal";
 
 interface ApprovedScreenProps {
   name: string;
@@ -96,6 +101,10 @@ export default function ApprovedScreen({
   const [hostedBeacons, setHostedBeacons] = useState<any[]>(initialHostedBeacons);
   const [isBeaconModalOpen, setIsBeaconModalOpen] = useState(false);
   const [selectedTicketForModal, setSelectedTicketForModal] = useState<any | null>(null);
+  const [eventToShare, setEventToShare] = useState<OfficialEvent | null>(null);
+  const [bookingEventForModal, setBookingEventForModal] = useState<OfficialEvent | null>(null);
+  const [showProfileCompleteModal, setShowProfileCompleteModal] = useState(false);
+  const [completenessActionContext, setCompletenessActionContext] = useState("participating");
 
   // Filter States
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -150,32 +159,18 @@ export default function ApprovedScreen({
     router.refresh();
   };
 
-  const handleBookEvent = async (event: OfficialEvent) => {
+  const handleBookEvent = (event: OfficialEvent) => {
     if (isRestrictedRole) {
       alert(`${roleLabel || "Restricted"} accounts cannot book attendee event passes. Ticket purchasing is reserved for personal member accounts.`);
       return;
     }
-    setBookingLoadingId(event.id);
-    try {
-      const res = await buyTicketDevInstantAction(event.id);
-      if (res.success) {
-        setBookingSuccessMsg(`Pass confirmed for "${event.title}"! Ticket added to your Booking Requests.`);
-        // Optimistically add to tickets list
-        const newTicket = {
-          id: `tkt-${Date.now()}`,
-          event_id: event.id,
-          ticket_status: "active",
-          created_at: new Date().toISOString(),
-          official_events: event,
-        };
-        setTickets((prev) => [newTicket, ...prev]);
-        setTimeout(() => setBookingSuccessMsg(null), 4000);
-      }
-    } catch {
-      // Ignored
-    } finally {
-      setBookingLoadingId(null);
+    const completeness = checkProfileCompleteness(profile);
+    if (!completeness.isComplete) {
+      setCompletenessActionContext("booking event passes");
+      setShowProfileCompleteModal(true);
+      return;
     }
+    setBookingEventForModal(event);
   };
 
   const filteredBeacons = beacons
@@ -402,114 +397,128 @@ export default function ApprovedScreen({
         </div>
 
         {/* Quick Stats & Primary Action Buttons (Matching Image 2) */}
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap", position: "relative", zIndex: 1 }}>
-          {/* XP Badge */}
-          <div
-            style={{
-              background: "rgba(0, 0, 0, 0.45)",
-              border: "1px solid rgba(255, 255, 255, 0.14)",
-              borderRadius: "14px",
-              padding: "10px 16px",
-              textAlign: "center",
-            }}
-          >
-            <div style={{ fontSize: "18px", fontWeight: 900, color: "#FF8A3D", lineHeight: 1 }}>
-              1.2K
+        <div className="w-full sm:w-auto flex items-center gap-2.5 sm:gap-3 flex-wrap justify-between sm:justify-start relative z-10">
+          {/* XP & Bookings Counter Group */}
+          <div className="flex items-center gap-2.5">
+            {/* XP Badge */}
+            <div
+              style={{
+                background: "rgba(0, 0, 0, 0.45)",
+                border: "1px solid rgba(255, 255, 255, 0.14)",
+                borderRadius: "14px",
+                padding: "8px 14px",
+                textAlign: "center",
+              }}
+            >
+              <div style={{ fontSize: "16px", fontWeight: 900, color: "#FF8A3D", lineHeight: 1 }}>
+                1.2K
+              </div>
+              <div style={{ fontSize: "9px", fontWeight: 800, letterSpacing: "0.06em", color: "rgba(255,255,255,0.6)", marginTop: "3px" }}>
+                TOTAL XP
+              </div>
             </div>
-            <div style={{ fontSize: "9.5px", fontWeight: 800, letterSpacing: "0.06em", color: "rgba(255,255,255,0.6)", marginTop: "4px" }}>
-              TOTAL XP
+
+            {/* Bookings Counter */}
+            <div
+              style={{
+                background: "rgba(0, 0, 0, 0.45)",
+                border: "1px solid rgba(255, 255, 255, 0.14)",
+                borderRadius: "14px",
+                padding: "8px 14px",
+                textAlign: "center",
+              }}
+            >
+              <div style={{ fontSize: "16px", fontWeight: 900, color: "#FFA05C", lineHeight: 1 }}>
+                {tickets.length}
+              </div>
+              <div style={{ fontSize: "9px", fontWeight: 800, letterSpacing: "0.06em", color: "rgba(255,255,255,0.6)", marginTop: "3px" }}>
+                PASSES
+              </div>
             </div>
           </div>
 
-          {/* Bookings Counter */}
-          <div
-            style={{
-              background: "rgba(0, 0, 0, 0.45)",
-              border: "1px solid rgba(255, 255, 255, 0.14)",
-              borderRadius: "14px",
-              padding: "10px 16px",
-              textAlign: "center",
-            }}
-          >
-            <div style={{ fontSize: "18px", fontWeight: 900, color: "#FFA05C", lineHeight: 1 }}>
-              {tickets.length}
-            </div>
-            <div style={{ fontSize: "9.5px", fontWeight: 800, letterSpacing: "0.06em", color: "rgba(255,255,255,0.6)", marginTop: "4px" }}>
-              PASSES
-            </div>
-          </div>
-
-          {/* My Profile Button (Redirects to /dashboard/profile) */}
-          <Link
-            href="/dashboard/profile"
-            style={{
-              background: "rgba(255, 255, 255, 0.08)",
-              color: "#FFFFFF",
-              border: "1px solid rgba(255, 90, 31, 0.4)",
-              padding: "12px 18px",
-              borderRadius: "14px",
-              fontSize: "13px",
-              fontWeight: 800,
-              cursor: "pointer",
-              boxShadow: "0 4px 16px rgba(0, 0, 0, 0.4), inset 0 0 14px rgba(255, 90, 31, 0.15)",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "8px",
-            }}
-            className="hover:scale-105 active:scale-95 transition-transform hover:border-[#FF5A1F]"
-          >
-            <User className="w-4 h-4 text-[#FF8A3D]" />
-            <span>My Profile</span>
-          </Link>
-
-          {/* Broadcast Beacon or Portal Link Button */}
-          {isRestrictedRole ? (
+          {/* Action Buttons Group */}
+          <div className="flex items-center gap-2 flex-1 sm:flex-none justify-end sm:justify-start">
+            {/* My Profile Button (Redirects to /dashboard/profile) */}
             <Link
-              href={portalUrl}
+              href="/dashboard/profile"
               style={{
-                background: "linear-gradient(135deg, #FF6F26 0%, #FF5A1F 45%, #E6450A 100%)",
+                background: "rgba(255, 255, 255, 0.08)",
                 color: "#FFFFFF",
-                border: "none",
-                padding: "12px 20px",
+                border: "1px solid rgba(255, 90, 31, 0.4)",
+                padding: "10px 14px",
                 borderRadius: "14px",
-                fontSize: "13px",
+                fontSize: "12.5px",
                 fontWeight: 800,
                 cursor: "pointer",
-                boxShadow: "0 6px 20px rgba(255, 90, 31, 0.45)",
+                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.4), inset 0 0 14px rgba(255, 90, 31, 0.15)",
                 display: "inline-flex",
                 alignItems: "center",
-                gap: "8px",
-                textDecoration: "none",
+                gap: "6px",
               }}
-              className="hover:scale-105 active:scale-95 transition-transform"
+              className="hover:scale-105 active:scale-95 transition-transform hover:border-[#FF5A1F]"
             >
-              <Shield className="w-4 h-4" />
-              <span>{roleLabel} Hub ➔</span>
+              <User className="w-3.5 h-3.5 text-[#FF8A3D]" />
+              <span>Profile</span>
             </Link>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setIsBeaconModalOpen(true)}
-              style={{
-                background: "linear-gradient(135deg, #FF6F26 0%, #FF5A1F 45%, #E6450A 100%)",
-                color: "#FFFFFF",
-                border: "none",
-                padding: "12px 20px",
-                borderRadius: "14px",
-                fontSize: "13px",
-                fontWeight: 800,
-                cursor: "pointer",
-                boxShadow: "0 6px 20px rgba(255, 90, 31, 0.45)",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "8px",
-              }}
-              className="hover:scale-105 active:scale-95 transition-transform"
-            >
-              <Radio className="w-4 h-4" />
-              <span>Broadcast Beacon</span>
-            </button>
-          )}
+
+            {/* Broadcast Beacon or Portal Link Button */}
+            {isRestrictedRole ? (
+              <Link
+                href={portalUrl}
+                style={{
+                  background: "linear-gradient(135deg, #FF6F26 0%, #FF5A1F 45%, #E6450A 100%)",
+                  color: "#FFFFFF",
+                  border: "none",
+                  padding: "10px 16px",
+                  borderRadius: "14px",
+                  fontSize: "12.5px",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  boxShadow: "0 6px 20px rgba(255, 90, 31, 0.45)",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  textDecoration: "none",
+                }}
+                className="hover:scale-105 active:scale-95 transition-transform"
+              >
+                <Shield className="w-3.5 h-3.5" />
+                <span>{roleLabel} Hub ➔</span>
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  const completeness = checkProfileCompleteness(profile);
+                  if (!completeness.isComplete) {
+                    setCompletenessActionContext("hosting a hangout");
+                    setShowProfileCompleteModal(true);
+                    return;
+                  }
+                  setIsBeaconModalOpen(true);
+                }}
+                style={{
+                  background: "linear-gradient(135deg, #FF6F26 0%, #FF5A1F 45%, #E6450A 100%)",
+                  color: "#FFFFFF",
+                  border: "none",
+                  padding: "10px 16px",
+                  borderRadius: "14px",
+                  fontSize: "12.5px",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  boxShadow: "0 6px 20px rgba(255, 90, 31, 0.45)",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+                className="hover:scale-105 active:scale-95 transition-transform"
+              >
+                <Radio className="w-3.5 h-3.5" />
+                <span>Broadcast</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -549,6 +558,35 @@ export default function ApprovedScreen({
           >
             Manage via {roleLabel} Hub ➔
           </Link>
+        </div>
+      )}
+
+      {/* Guest Upgrade Banner (Extracted from QHQ Guest Dashboard) */}
+      {profile?.is_guest && (
+        <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-purple-900/40 via-[#FF6F26]/20 to-black/60 border border-[#FF6F26]/40 flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 shadow-2xl animate-in fade-in">
+          <div className="space-y-1 text-center sm:text-left">
+            <div className="flex items-center justify-center sm:justify-start gap-2">
+              <Sparkles className="w-4 h-4 text-[#FFA05C]" />
+              <span className="text-xs font-black uppercase tracking-wider text-[#FFA05C]">
+                Guest Pass Active
+              </span>
+            </div>
+            <h3 className="text-base sm:text-lg font-black text-white">
+              Upgrade to Full Solo-No-More Member
+            </h3>
+            <p className="text-xs text-zinc-300">
+              Host personal hangouts, connect in private squad chats, and access exclusive member-only raves.
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              setCompletenessActionContext("upgrading to full membership");
+              setShowProfileCompleteModal(true);
+            }}
+            className="px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-wider bg-gradient-to-r from-[#FF6F26] to-[#FF5A1F] text-white hover:brightness-110 shadow-[0_4px_20px_rgba(255,111,38,0.4)] shrink-0 transition-all cursor-pointer"
+          >
+            Request Membership Upgrade →
+          </button>
         </div>
       )}
 
@@ -778,7 +816,7 @@ export default function ApprovedScreen({
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 300px), 1fr))",
               gap: "20px",
             }}
           >
@@ -905,7 +943,7 @@ export default function ApprovedScreen({
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 300px), 1fr))",
             gap: "20px",
           }}
         >
@@ -1030,8 +1068,36 @@ export default function ApprovedScreen({
                     background: "rgba(0, 0, 0, 0.25)",
                   }}
                 >
-                  <div style={{ fontSize: "11px", fontWeight: 700, color: "rgba(255, 255, 255, 0.6)" }}>
-                    <span style={{ color: "#27C93F", fontWeight: 800 }}>● Live</span> · {event.max_capacity} Max Spots
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <div style={{ fontSize: "11px", fontWeight: 700, color: "rgba(255, 255, 255, 0.6)" }}>
+                      <span style={{ color: "#27C93F", fontWeight: 800 }}>● Live</span> · {event.max_capacity} Max Spots
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEventToShare(event);
+                      }}
+                      style={{
+                        background: "rgba(255, 111, 38, 0.12)",
+                        border: "1px solid rgba(255, 111, 38, 0.3)",
+                        borderRadius: "8px",
+                        padding: "3px 8px",
+                        color: "#FFA05C",
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "5px",
+                        fontSize: "11px",
+                        fontWeight: 700,
+                      }}
+                      className="hover:bg-[#FF6F26]/20 transition-colors"
+                      title="Share event link with friends or on socials"
+                    >
+                      <Share2 style={{ width: "12px", height: "12px" }} />
+                      <span>Share</span>
+                    </button>
                   </div>
 
                   {isRestrictedRole ? (
@@ -1952,6 +2018,48 @@ export default function ApprovedScreen({
         isOpen={!!selectedTicketForModal}
         onClose={() => setSelectedTicketForModal(null)}
         ticket={selectedTicketForModal}
+      />
+
+      {/* 4. Event Share Modal */}
+      {eventToShare && (
+        <UniversalShareModal
+          isOpen={!!eventToShare}
+          onClose={() => setEventToShare(null)}
+          title={eventToShare.title}
+          shareUrl={
+            typeof window !== "undefined"
+              ? `${window.location.origin}/e/${eventToShare.id.slice(0, 8)}`
+              : `https://solonomore.com/e/${eventToShare.id.slice(0, 8)}`
+          }
+          shareText={`Check out "${eventToShare.title}" on Solo-No-More! Book passes:`}
+          type="event"
+        />
+      )}
+
+      {/* 5. QHQ-style Event Booking Modal with Safepay Merchant */}
+      {bookingEventForModal && (
+        <EventBookingModal
+          isOpen={!!bookingEventForModal}
+          onClose={() => setBookingEventForModal(null)}
+          event={bookingEventForModal as any}
+          currentUserProfile={profile || null}
+          onSuccess={() => {
+            setBookingEventForModal(null);
+            router.refresh();
+          }}
+        />
+      )}
+
+      {/* 6. Profile Completeness Enforcement Modal */}
+      <CompleteProfileModal
+        isOpen={showProfileCompleteModal}
+        onClose={() => setShowProfileCompleteModal(false)}
+        profile={profile || null}
+        actionContext={completenessActionContext}
+        onProfileCompleted={() => {
+          setShowProfileCompleteModal(false);
+          router.refresh();
+        }}
       />
     </div>
   );

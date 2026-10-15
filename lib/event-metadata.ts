@@ -41,6 +41,8 @@ export interface EventRichMetadata {
   creator_name?: string;
   verification_notes?: string;
   event_category?: "open_event" | "community_event";
+  is_members_only?: boolean;
+  access_type?: string;
 }
 
 const METADATA_PREFIX = "<!--SNM_EVENT_META_V1-->";

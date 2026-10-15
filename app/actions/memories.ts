@@ -218,6 +218,54 @@ export async function getMemoriesForProfile(
 }
 
 /**
+ * Fetch all memories / photos for a specific beacon (for squad chat post-hangout gallery).
+ */
+export async function getMemoriesForBeacon(
+  beaconId: string
+): Promise<{ success: true; memories: (BeaconMemory & { uploader_name?: string; uploader_avatar?: string })[] } | { success: false; error: string }> {
+  try {
+    const { data, error } = await (supabaseAdmin
+      .from("beacon_memories") as any)
+      .select(`
+        id,
+        beacon_id,
+        user_id,
+        image_url,
+        caption,
+        is_public,
+        created_at,
+        profiles:user_id (
+          full_name,
+          avatar_icon
+        )
+      `)
+      .eq("beacon_id", beaconId)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.error("[getMemoriesForBeacon] error:", error);
+      return { success: false, error: "Failed to fetch beacon memories." };
+    }
+
+    const memories = (data || []).map((m: any) => ({
+      id: m.id,
+      beacon_id: m.beacon_id,
+      user_id: m.user_id,
+      image_url: m.image_url,
+      caption: m.caption,
+      is_public: m.is_public,
+      created_at: m.created_at,
+      uploader_name: m.profiles?.full_name || "Squad Member",
+      uploader_avatar: m.profiles?.avatar_icon || "zap",
+    }));
+
+    return { success: true, memories };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Error loading memories" };
+  }
+}
+
+/**
  * Toggle the privacy status of a memory.
  */
 export async function toggleMemoryPrivacy(

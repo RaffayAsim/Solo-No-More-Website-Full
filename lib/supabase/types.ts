@@ -29,6 +29,19 @@ export interface Profile {
   vibe_tags: string[];
   is_active_seeker: boolean;
   seeker_updated_at: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  cnic?: string | null;
+  gender?: string | null;
+  date_of_birth?: string | null;
+  emergency_contact_name?: string | null;
+  emergency_contact_phone?: string | null;
+  instagram_username?: string | null;
+  cnic_picture_url?: string | null;
+  photo_url?: string | null;
+  avatar_url?: string | null;
+  is_guest?: boolean;
+  is_profile_complete?: boolean;
   created_at: string;
   updated_at: string;
 }

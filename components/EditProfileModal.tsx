@@ -141,37 +141,15 @@ export default function EditProfileModal({
 
   return (
     <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 99999,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "rgba(0, 0, 0, 0.85)",
-        backdropFilter: "blur(18px)",
-        WebkitBackdropFilter: "blur(18px)",
-        padding: "30px 16px",
-        overflowY: "auto",
-      }}
+      className="fixed inset-0 z-[99999] flex items-center justify-center p-2.5 sm:p-4 bg-black/85 backdrop-blur-xl overflow-y-auto"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div
+        className="relative w-full max-w-2xl max-h-[94vh] overflow-y-auto rounded-2xl sm:rounded-3xl border border-[#FF5A1F]/40 p-4 sm:p-7 shadow-[0_32px_80px_rgba(0,0,0,0.95),0_0_45px_rgba(255,90,31,0.25)] text-white"
         style={{
-          width: "100%",
-          maxWidth: "680px",
-          maxHeight: "90vh",
-          overflowY: "auto",
           background: "linear-gradient(150deg, #130B1C 0%, #09050F 100%)",
-          border: "1.5px solid rgba(255, 90, 31, 0.4)",
-          borderRadius: "26px",
-          boxShadow:
-            "0 32px 80px rgba(0, 0, 0, 0.95), 0 0 45px rgba(255, 90, 31, 0.25)",
-          color: "#FFFFFF",
-          padding: "clamp(20px, 3vw, 32px)",
-          position: "relative",
           fontFamily:
             "var(--font-display), 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif",
         }}
@@ -269,14 +247,7 @@ export default function EditProfileModal({
         </div>
 
         {/* ── TOP READONLY SUMMARY TILES (Matching Image 3) ─────────────── */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: "12px",
-            marginBottom: "22px",
-          }}
-        >
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
           <div
             style={{
               background: "rgba(255, 255, 255, 0.04)",
@@ -436,7 +407,7 @@ export default function EditProfileModal({
         {/* ── THE BIG FORM: ALL REQUESTED USER PROFILE DETAILS ─────────── */}
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           {/* First Name & Last Name */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label
                 style={{
@@ -543,7 +514,7 @@ export default function EditProfileModal({
           </div>
 
           {/* Phone Number & City */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label
                 style={{
@@ -649,7 +620,7 @@ export default function EditProfileModal({
           </div>
 
           {/* Gender & CNIC Picture URL */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label
                 style={{

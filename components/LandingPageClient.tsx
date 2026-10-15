@@ -943,21 +943,17 @@ export default function LandingPageClient({
         style={{
           position: "relative",
           overflow: "hidden",
-          minHeight: "720px",
+          minHeight: "clamp(580px, 85vh, 760px)",
           display: "flex",
           alignItems: "center",
           background: "#050507",
-          paddingTop: "100px",
+          paddingTop: "clamp(80px, 12vw, 110px)",
         }}
       >
-        {/* Right Photography Layer: User's Hero Image (Extended width so left person is fully inside frame) */}
+        {/* Photography Layer: User's Hero Image (Extended width so left person is fully inside frame) */}
         <div
+          className="absolute inset-0 md:left-auto md:right-0 md:top-0 md:bottom-0 md:w-[70%]"
           style={{
-            position: "absolute",
-            top: 0,
-            right: 0,
-            bottom: 0,
-            width: "70%",
             backgroundImage: "url('/images/hero-image.jpg')",
             backgroundPosition: "center right",
             backgroundSize: "cover",
@@ -965,11 +961,10 @@ export default function LandingPageClient({
           }}
         />
 
-        {/* Pure Black and Orange Atmospheric Gradient Overlay (Shifted left so left person in photo is clearly visible) */}
+        {/* Desktop: High-Drama Horizontal Split Light Streak */}
         <div
+          className="hidden md:block absolute inset-0 pointer-events-none"
           style={{
-            position: "absolute",
-            inset: 0,
             background: `
               linear-gradient(to right,
                 #000000 0%,
@@ -983,7 +978,24 @@ export default function LandingPageClient({
               radial-gradient(ellipse 50% 75% at 24% 48%, rgba(255, 90, 31, 0.65) 0%, transparent 65%),
               radial-gradient(ellipse 40% 55% at 8% 20%, rgba(217, 70, 15, 0.65) 0%, transparent 65%)
             `,
-            pointerEvents: "none",
+            zIndex: 2,
+          }}
+        />
+
+        {/* Mobile: Full-Cover Ambient Vignette with Warm Orange Light at Top & Dark Scrim Behind Text */}
+        <div
+          className="block md:hidden absolute inset-0 pointer-events-none"
+          style={{
+            background: `
+              linear-gradient(180deg,
+                rgba(5, 5, 7, 0.88) 0%,
+                rgba(18, 9, 5, 0.82) 25%,
+                rgba(40, 14, 4, 0.72) 45%,
+                rgba(5, 5, 7, 0.92) 80%,
+                #050507 100%
+              ),
+              radial-gradient(ellipse 90% 50% at 50% 20%, rgba(255, 90, 31, 0.45) 0%, transparent 75%)
+            `,
             zIndex: 2,
           }}
         />
@@ -1008,7 +1020,7 @@ export default function LandingPageClient({
             position: "relative",
             zIndex: 10,
             width: "100%",
-            padding: "40px 48px 80px",
+            padding: "clamp(24px, 5vw, 40px) clamp(20px, 4vw, 48px) clamp(36px, 8vw, 80px)",
           }}
         >
           <div style={{ maxWidth: "600px" }}>
@@ -1028,9 +1040,9 @@ export default function LandingPageClient({
                 fontWeight: 700,
                 color: "#FFFFFF",
                 letterSpacing: "0.02em",
-                marginBottom: "24px",
-                boxShadow: "0 2px 10px rgba(0, 0, 0, 0.3)",
-                border: "1px solid rgba(255, 255, 255, 0.18)",
+                marginBottom: "clamp(16px, 3.5vw, 24px)",
+                boxShadow: "0 2px 10px rgba(0, 0, 0, 0.5)",
+                border: "1px solid rgba(255, 255, 255, 0.22)",
               }}
             >
               <span style={{ fontSize: "14px", letterSpacing: "2px", color: "#FFA578" }}>★★★★★</span>
@@ -1041,12 +1053,13 @@ export default function LandingPageClient({
             <h1
               style={{
                 fontFamily: "var(--font-display), 'Plus Jakarta Sans', system-ui, sans-serif",
-                fontSize: "clamp(58px, 8.5vw, 102px)",
+                fontSize: "clamp(46px, 9.5vw, 102px)",
                 fontWeight: 900,
                 letterSpacing: "-0.04em",
-                lineHeight: 0.94,
+                lineHeight: 0.95,
                 color: "#FFFFFF",
-                margin: "0 0 20px",
+                margin: "0 0 clamp(14px, 3vw, 20px)",
+                textShadow: "0 3px 18px rgba(0, 0, 0, 0.75)",
               }}
             >
               Parties<br />
@@ -1056,12 +1069,13 @@ export default function LandingPageClient({
             {/* Subtitle */}
             <p
               style={{
-                fontSize: "clamp(18px, 2.2vw, 22px)",
+                fontSize: "clamp(16px, 2.2vw, 22px)",
                 lineHeight: 1.45,
                 color: "rgba(255, 255, 255, 0.94)",
                 fontWeight: 600,
                 maxWidth: "460px",
-                margin: "0 0 34px",
+                margin: "0 0 clamp(22px, 4vw, 34px)",
+                textShadow: "0 2px 10px rgba(0, 0, 0, 0.8)",
               }}
             >
               The easiest way to get your guests on the same page
@@ -1075,10 +1089,10 @@ export default function LandingPageClient({
                 color: "#000000",
                 fontSize: "16px",
                 fontWeight: 800,
-                padding: "14px 28px",
+                padding: "14px 32px",
                 borderRadius: "8px",
                 textDecoration: "none",
-                boxShadow: "0 10px 30px rgba(0, 0, 0, 0.45)",
+                boxShadow: "0 10px 30px rgba(0, 0, 0, 0.6)",
                 display: "inline-block",
                 transition: "transform 0.15s ease, background 0.15s ease",
               }}
@@ -1979,14 +1993,15 @@ export default function LandingPageClient({
         id="members-only-events-section"
         style={{
           width: "100%",
-          borderRadius: "clamp(32px, 4vw, 56px)",
+          borderRadius: "clamp(32px, 4vw, 56px) clamp(32px, 4vw, 56px) 0 0",
           background: "linear-gradient(135deg, #FF6F26 0%, #FF5A1F 40%, #E6450A 75%, #BD3000 100%)",
           padding: "70px min(4vw, 48px) 75px",
           marginTop: "24px",
-          marginBottom: "24px",
+          marginBottom: "0px",
           position: "relative",
           overflow: "hidden",
           border: "1.5px solid rgba(255, 255, 255, 0.22)",
+          borderBottom: "none",
         }}
       >
         {/* Subtle Geometric Dotted Texture Overlay (Only on Members Only Orange Gradient) */}
@@ -2383,15 +2398,17 @@ export default function LandingPageClient({
         id="powerful-features-section"
         style={{
           width: "100%",
-          borderRadius: "clamp(32px, 4vw, 56px)",
+          borderRadius: "clamp(32px, 4vw, 56px) clamp(32px, 4vw, 56px) 0 0",
           background:
             "radial-gradient(ellipse at 50% 0%, #FF6F3A 0%, #FF5A1F 35%, #E64808 70%, #B83200 100%)",
           color: "#FFFFFF",
           padding: "70px min(4vw, 48px) 100px",
           marginTop: "24px",
-          marginBottom: "24px",
+          marginBottom: "0px",
           position: "relative",
           overflow: "hidden",
+          border: "1.5px solid rgba(255, 255, 255, 0.22)",
+          borderBottom: "none",
           boxShadow: "0 20px 60px rgba(0, 0, 0, 0.45)",
         }}
       >
@@ -2445,7 +2462,7 @@ export default function LandingPageClient({
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 300px), 1fr))",
               gap: "28px",
               marginBottom: "110px",
             }}
@@ -3082,7 +3099,7 @@ export default function LandingPageClient({
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 300px), 1fr))",
                 gap: "48px",
                 alignItems: "center",
                 position: "relative",
@@ -3349,7 +3366,7 @@ export default function LandingPageClient({
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 300px), 1fr))",
                 gap: "48px",
                 alignItems: "center",
                 position: "relative",
@@ -3704,7 +3721,7 @@ export default function LandingPageClient({
             maxWidth: "1200px",
             margin: "0 auto",
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 300px), 1fr))",
             gap: "54px",
             alignItems: "center",
           }}

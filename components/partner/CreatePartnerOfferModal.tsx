@@ -248,20 +248,20 @@ export default function CreatePartnerOfferModal({
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-5 overflow-y-auto"
       style={{
         background: "rgba(4, 2, 7, 0.85)",
         backdropFilter: "blur(18px)",
       }}
     >
       <div
-        className="relative w-full max-w-2xl rounded-3xl border border-[#FF6F26]/30 overflow-hidden shadow-[0_20px_70px_rgba(0,0,0,0.85),0_0_40px_rgba(255,111,38,0.2)] flex flex-col my-auto"
+        className="relative w-full max-w-2xl max-h-[96vh] rounded-2xl sm:rounded-3xl border border-[#FF6F26]/30 overflow-hidden shadow-[0_20px_70px_rgba(0,0,0,0.85),0_0_40px_rgba(255,111,38,0.2)] flex flex-col my-auto"
         style={{
           background: "linear-gradient(180deg, #160e1d 0%, #0e0914 100%)",
         }}
       >
         {/* Header Bar */}
-        <div className="p-5 sm:p-6 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-[#FF6F26]/10 to-transparent">
+        <div className="p-4 sm:p-6 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-[#FF6F26]/10 to-transparent">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#FF6F26] to-[#FF5A1F] flex items-center justify-center text-white shadow-lg shadow-[#FF6F26]/30">
               <Store className="w-5 h-5" />
@@ -290,7 +290,7 @@ export default function CreatePartnerOfferModal({
         </div>
 
         {/* Scrollable Form Body */}
-        <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-5 max-h-[78vh] overflow-y-auto custom-scrollbar">
+        <form onSubmit={handleSubmit} className="p-3.5 sm:p-6 space-y-4 sm:space-y-5 max-h-[calc(96vh-80px)] overflow-y-auto custom-scrollbar">
           {/* Locked Venue Information Strip */}
           <div className="rounded-2xl bg-white/[0.03] border border-white/10 p-3.5 flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-2.5">

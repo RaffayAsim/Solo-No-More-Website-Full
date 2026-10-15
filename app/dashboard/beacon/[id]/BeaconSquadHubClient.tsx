@@ -7,6 +7,7 @@ import type { Beacon, BeaconCategory } from "@/lib/supabase/types";
 import { approveApplicant, declineApplicant, flagNoShow } from "@/app/actions/applications";
 import { updateBeaconCapacity, cancelBeacon, updateFullBeacon } from "@/app/actions/beacons";
 import { getBeaconMessages, sendBeaconMessage } from "@/app/actions/chat";
+import UniversalShareModal from "@/components/share/UniversalShareModal";
 import {
   ArrowLeft,
   Radio,
@@ -96,6 +97,7 @@ export default function BeaconSquadHubClient({
   const [isUpdatingCapacity, setIsUpdatingCapacity] = useState(false);
 
   // Chat state
+  const [showShareModal, setShowShareModal] = useState(false);
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
@@ -479,6 +481,31 @@ export default function BeaconSquadHubClient({
             >
               <Edit3 className="w-3.5 h-3.5 text-[#FFA05C]" />
               <span>Edit Plans</span>
+            </button>
+          )}
+
+          {beacon.status === "active" && (
+            <button
+              type="button"
+              onClick={() => setShowShareModal(true)}
+              style={{
+                background: "rgba(255, 111, 38, 0.12)",
+                border: "1px solid rgba(255, 111, 38, 0.35)",
+                color: "#FFA05C",
+                borderRadius: "12px",
+                padding: "7px 14px",
+                fontSize: "12.5px",
+                fontWeight: 800,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                cursor: "pointer",
+              }}
+              className="hover:scale-[1.02] active:scale-98 transition-transform"
+              title="Share this meetup with friends or on socials"
+            >
+              <Share2 className="w-3.5 h-3.5 text-[#FF6F26]" />
+              <span>Share Link</span>
             </button>
           )}
 
@@ -1652,6 +1679,20 @@ export default function BeaconSquadHubClient({
           </div>
         </main>
       </div>
+
+      {/* Universal Share Modal */}
+      <UniversalShareModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        title={beacon.title}
+        shareUrl={
+          typeof window !== "undefined"
+            ? `${window.location.origin}/b/${beacon.id.slice(0, 8)}`
+            : `https://solonomore.com/b/${beacon.id.slice(0, 8)}`
+        }
+        shareText={`Join my squad meetup "${beacon.title}" on Solo-No-More!`}
+        type="beacon"
+      />
     </div>
   );
 }

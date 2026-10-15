@@ -11,7 +11,9 @@ import {
   flagNoShow,
   removeSquadMember,
 } from "@/app/actions/applications";
-import { updateFullBeacon, cancelBeacon } from "@/app/actions/beacons";
+import { updateFullBeacon, cancelBeacon, completeBeaconAction } from "@/app/actions/beacons";
+import { uploadMemory, getMemoriesForBeacon } from "@/app/actions/memories";
+import UniversalShareModal from "@/components/share/UniversalShareModal";
 import {
   BUDGET_TIERS,
   parseBeaconMeta,
@@ -48,7 +50,20 @@ import {
   Trash2,
   UserMinus,
   AlertTriangle,
+  Share2,
+  Camera,
+  Image as ImageIcon,
 } from "lucide-react";
+
+function InstagramIcon({ className = "w-3.5 h-3.5" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+      <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+    </svg>
+  );
+}
 
 interface ChatBeaconItem {
   id: string;
@@ -201,6 +216,102 @@ export default function ChatsDashboardClient({
   const [memberToRemove, setMemberToRemove] = useState<ApplicationItem | null>(null);
   const [isRemovingMember, setIsRemovingMember] = useState(false);
 
+  // Share & Post-Hangout Memories state
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [memories, setMemories] = useState<any[]>([]);
+  const [loadingMemories, setLoadingMemories] = useState(false);
+  const [selectedPhotoBase64, setSelectedPhotoBase64] = useState<string | null>(null);
+  const [photoCaption, setPhotoCaption] = useState("");
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [isConcluding, setIsConcluding] = useState(false);
+  const [copiedInstagramTag, setCopiedInstagramTag] = useState(false);
+
+  // Load memories for selected beacon
+  const loadBeaconMemories = async (id: string) => {
+    setLoadingMemories(true);
+    try {
+      const res = await getMemoriesForBeacon(id);
+      if (res.success && res.memories) {
+        setMemories(res.memories);
+      }
+    } catch (e) {
+      console.error("[Chats] Error loading memories:", e);
+    } finally {
+      setLoadingMemories(false);
+    }
+  };
+
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        const MAX_WIDTH = 1200;
+        const scale = img.width > MAX_WIDTH ? MAX_WIDTH / img.width : 1;
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const compressed = canvas.toDataURL("image/jpeg", 0.82);
+        setSelectedPhotoBase64(compressed);
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleUploadPhoto = async () => {
+    if (!selectedPhotoBase64 || !selectedBeaconId || uploadingPhoto) return;
+    setUploadingPhoto(true);
+    try {
+      const res = await uploadMemory(selectedBeaconId, selectedPhotoBase64, photoCaption.trim() || null, true);
+      if (res.success) {
+        setSelectedPhotoBase64(null);
+        setPhotoCaption("");
+        setFeedback({ type: "success", text: "Photo uploaded to squad hangout memories! 🎉" });
+        loadBeaconMemories(selectedBeaconId);
+      } else {
+        setFeedback({ type: "error", text: res.error || "Failed to upload photo" });
+      }
+    } catch {
+      setFeedback({ type: "error", text: "Upload failed. Please try a smaller photo." });
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const handleConcludeMeetup = async () => {
+    if (!selectedBeaconId || isConcluding) return;
+    if (!confirm("Are you sure you want to conclude this meetup? Normal chat will close and squad members can upload hangout photos & memories!")) return;
+    setIsConcluding(true);
+    try {
+      const res = await completeBeaconAction(selectedBeaconId);
+      if (res.success) {
+        setChatBeacons((prev) =>
+          prev.map((b) => (b.id === selectedBeaconId ? { ...b, status: "completed" } : b))
+        );
+        setFeedback({ type: "success", text: "Meetup concluded! Post-hangout memories & photo drop are now open!" });
+      } else {
+        setFeedback({ type: "error", text: res.error || "Failed to conclude meetup" });
+      }
+    } catch {
+      setFeedback({ type: "error", text: "Failed to conclude meetup." });
+    } finally {
+      setIsConcluding(false);
+    }
+  };
+
+  const handleCopyInstagramTag = async () => {
+    try {
+      await navigator.clipboard.writeText("@solonomore");
+      setCopiedInstagramTag(true);
+      setTimeout(() => setCopiedInstagramTag(false), 2500);
+    } catch {}
+  };
+
   // Sync edit form whenever selected beacon changes
   useEffect(() => {
     if (selectedBeacon) {
@@ -218,6 +329,9 @@ export default function ChatsDashboardClient({
       setFeedback(null);
       setShowCancelModal(false);
       setMemberToRemove(null);
+      setSelectedPhotoBase64(null);
+      setPhotoCaption("");
+      loadBeaconMemories(selectedBeacon.id);
     }
   }, [selectedBeaconId]);
 
@@ -528,25 +642,22 @@ export default function ChatsDashboardClient({
     (new Date(selectedBeacon.scheduled_at).getTime() - Date.now()) / (1000 * 60 * 60) <= 2;
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-4">
-      {/* ─── Top Header ─── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-[#FF6F26]/10 text-[#FF6F26] border border-[#FF6F26]/30">
-              <MessageSquare className="w-3.5 h-3.5" />
-              Squad Direct Channels
-            </span>
-            <span className="text-xs text-zinc-400">All-in-One Meetup Hub</span>
-          </div>
-          <h1 className="text-2xl font-black text-white tracking-tight">
+    <div className="w-full max-w-7xl mx-auto flex flex-col h-[calc(100dvh-125px)] min-h-[520px] space-y-2">
+      {/* ─── Compact Top Header ─── */}
+      <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-2">
+        <div className="flex items-center gap-2.5">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-[#FF6F26]/10 text-[#FF6F26] border border-[#FF6F26]/30">
+            <MessageSquare className="w-3.5 h-3.5" />
+            Squad Direct Channels
+          </span>
+          <h1 className="text-sm sm:text-base font-black text-white tracking-tight hidden sm:inline">
             Squad Chats, Vetting &amp; Plan Coordination
           </h1>
         </div>
 
         <Link
           href="/dashboard/manage"
-          className="text-xs text-zinc-400 hover:text-white flex items-center gap-1.5 self-start sm:self-auto py-1.5 px-3 rounded-xl bg-white/5 border border-white/10"
+          className="text-xs text-zinc-400 hover:text-white flex items-center gap-1.5 py-1 px-3 rounded-xl bg-white/5 border border-white/10 transition-colors"
         >
           <Radio className="w-3.5 h-3.5 text-[#FF6F26]" />
           <span>My Hosting Summary ➔</span>
@@ -556,7 +667,7 @@ export default function ChatsDashboardClient({
       {/* Global Feedback Banner */}
       {feedback && (
         <div
-          className={`p-3 rounded-xl border flex items-center justify-between gap-2 text-xs font-medium animate-fadeIn ${
+          className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 text-xs font-medium animate-fadeIn ${
             feedback.type === "success"
               ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
               : "bg-rose-500/10 border-rose-500/30 text-rose-300"
@@ -578,17 +689,17 @@ export default function ChatsDashboardClient({
 
       {/* ─── 0-ATTENDEE TIME ALERT BANNER (SAFE AUTO-CANCEL WITH 0 PENALTY) ─── */}
       {isZeroAttendeesNearTime && selectedBeacon && (
-        <div className="p-3.5 rounded-2xl border border-amber-500/30 bg-amber-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2.5 text-amber-200">
+        <div className="p-2.5 rounded-2xl border border-amber-500/30 bg-amber-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-2 text-amber-200">
             <Clock className="w-4 h-4 text-amber-400 shrink-0 animate-pulse" />
             <span>
-              <strong>Zero Audience Notice:</strong> Your scheduled meetup time is approaching with 0 attendees. You can auto-cancel now with <strong>zero penalty</strong> to keep your Host Trust Score 100% intact.
+              <strong>Zero Audience Notice:</strong> Your scheduled meetup time is approaching with 0 attendees. You can auto-cancel now with <strong>zero penalty</strong>.
             </span>
           </div>
           <button
             onClick={() => handleCancelBeacon(false)}
             disabled={isCancelling}
-            className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-black shrink-0 transition-colors"
+            className="px-3 py-1 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-black shrink-0 transition-colors"
           >
             {isCancelling ? "Cancelling..." : "Auto-Cancel Safely (0 Penalty)"}
           </button>
@@ -596,7 +707,7 @@ export default function ChatsDashboardClient({
       )}
 
       {/* ─── MAIN CHAT & COMMAND WORKSPACE ─── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 h-[calc(100vh-210px)] min-h-[620px] rounded-3xl border border-white/10 bg-white/[0.02] backdrop-blur-xl overflow-hidden shadow-2xl">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-3 flex-1 min-h-0 rounded-3xl border border-white/10 bg-white/[0.02] backdrop-blur-xl overflow-hidden shadow-2xl">
         {/* ─── LEFT COLUMN: BEACON CHANNELS LIST ─── */}
         <div
           className={`lg:col-span-4 border-r border-white/10 flex flex-col h-full bg-white/[0.01] ${
@@ -753,58 +864,102 @@ export default function ChatsDashboardClient({
                   </div>
                 </div>
 
-                {/* Host Control Tabs (Live Chat | Select Squad | Edit Beacon) */}
-                {selectedBeacon.isHost ? (
-                  <div className="flex items-center gap-1 bg-white/5 p-1 rounded-2xl border border-white/10 self-start sm:self-auto shrink-0 flex-wrap">
+                {/* Right Action Bar: Share Link + Host Tabs + Conclude Meetup */}
+                <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto pb-1 no-scrollbar shrink-0">
+                  {/* Universal Share Beacon Link Button (Only while active) */}
+                  {selectedBeacon.status === "active" && (
                     <button
-                      onClick={() => setHostTab("chat")}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                        hostTab === "chat"
-                          ? "bg-[#FF6F26] text-white shadow-[0_0_10px_rgba(255,111,38,0.3)]"
-                          : "text-zinc-400 hover:text-white"
-                      }`}
+                      type="button"
+                      onClick={() => setShowShareModal(true)}
+                      className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-white/5 hover:bg-white/10 text-[#FFA05C] border border-white/10 flex items-center gap-1.5 transition-all cursor-pointer shadow-sm shrink-0 whitespace-nowrap"
+                      title="Share beacon link with friends or on socials"
                     >
-                      <MessageSquare className="w-3.5 h-3.5" />
-                      <span>Chat</span>
+                      <Share2 className="w-3.5 h-3.5 text-[#FF6F26]" />
+                      <span>Share</span>
                     </button>
+                  )}
 
-                    <button
-                      onClick={() => setHostTab("squad")}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                        hostTab === "squad"
-                          ? "bg-[#FF6F26] text-white shadow-[0_0_10px_rgba(255,111,38,0.3)]"
-                          : "text-zinc-400 hover:text-white"
-                      }`}
-                    >
-                      <Users className="w-3.5 h-3.5" />
-                      <span>
-                        Select Squad
-                        {pendingApps.length > 0 && (
-                          <span className="ml-1 px-1.5 py-0.2 rounded-full text-[9px] font-black bg-rose-500 text-white">
-                            {pendingApps.length}
-                          </span>
-                        )}
-                      </span>
-                    </button>
+                  {/* Host Control Tabs */}
+                  {selectedBeacon.isHost ? (
+                    <div className="flex items-center gap-1 bg-white/5 p-1 rounded-2xl border border-white/10 shrink-0 whitespace-nowrap">
+                      <button
+                        onClick={() => setHostTab("chat")}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
+                          hostTab === "chat"
+                            ? "bg-[#FF6F26] text-white shadow-[0_0_10px_rgba(255,111,38,0.3)]"
+                            : "text-zinc-400 hover:text-white"
+                        }`}
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        <span>Chat</span>
+                      </button>
 
-                    <button
-                      onClick={() => setHostTab("edit")}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                        hostTab === "edit"
-                          ? "bg-[#FF6F26] text-white shadow-[0_0_10px_rgba(255,111,38,0.3)]"
-                          : "text-zinc-400 hover:text-white"
-                      }`}
-                    >
-                      <Edit3 className="w-3.5 h-3.5" />
-                      <span>Edit Plans</span>
-                    </button>
-                  </div>
-                ) : (
-                  <div className="text-[11px] text-zinc-400 flex items-center gap-1.5">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Approved Attendee View</span>
-                  </div>
-                )}
+                      <button
+                        onClick={() => setHostTab("squad")}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
+                          hostTab === "squad"
+                            ? "bg-[#FF6F26] text-white shadow-[0_0_10px_rgba(255,111,38,0.3)]"
+                            : "text-zinc-400 hover:text-white"
+                        }`}
+                      >
+                        <Users className="w-3.5 h-3.5" />
+                        <span>
+                          Squad
+                          {pendingApps.length > 0 && (
+                            <span className="ml-1 px-1.5 py-0.2 rounded-full text-[9px] font-black bg-rose-500 text-white">
+                              {pendingApps.length}
+                            </span>
+                          )}
+                        </span>
+                      </button>
+
+                      <button
+                        onClick={() => setHostTab("edit")}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
+                          hostTab === "edit"
+                            ? "bg-[#FF6F26] text-white shadow-[0_0_10px_rgba(255,111,38,0.3)]"
+                            : "text-zinc-400 hover:text-white"
+                        }`}
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span>Plans</span>
+                      </button>
+
+                      {/* Conclude Meetup Button */}
+                      {selectedBeacon.status === "active" ? (
+                        <button
+                          type="button"
+                          onClick={handleConcludeMeetup}
+                          disabled={isConcluding}
+                          className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 border border-purple-500/30 flex items-center gap-1 transition-all cursor-pointer disabled:opacity-50 shrink-0 whitespace-nowrap"
+                          title="Wrap up this hangout and unlock photo sharing"
+                        >
+                          <Check className="w-3.5 h-3.5 text-purple-400" />
+                          <span>{isConcluding ? "Wrapping up..." : "Conclude"}</span>
+                        </button>
+                      ) : (
+                        <span className="px-2.5 py-1 rounded-xl text-[10px] font-bold bg-zinc-800 text-zinc-300 border border-white/10 flex items-center gap-1 shrink-0 whitespace-nowrap">
+                          <Lock className="w-3 h-3 text-zinc-400" />
+                          <span>Concluded</span>
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-[11px] text-zinc-400 flex items-center gap-1.5">
+                      {selectedBeacon.status === "completed" ? (
+                        <span className="px-2.5 py-1 rounded-xl text-[10px] font-bold bg-zinc-800 text-zinc-300 border border-white/10 flex items-center gap-1">
+                          <Lock className="w-3 h-3 text-zinc-400" />
+                          <span>Meetup Concluded</span>
+                        </span>
+                      ) : (
+                        <>
+                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Approved Attendee View</span>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* ─── VIEW 1: LIVE CHAT STREAM ─── */}
@@ -873,29 +1028,132 @@ export default function ChatsDashboardClient({
                         );
                       })
                     )}
+                    {/* Post-Hangout Memories Gallery inside Chat Stream */}
+                    {memories.length > 0 && (
+                      <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/10 space-y-2 mb-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-xs font-bold text-white">
+                            <Camera className="w-3.5 h-3.5 text-[#FF6F26]" />
+                            <span>Squad Hangout Photos ({memories.length})</span>
+                          </div>
+                          <span className="text-[10px] text-zinc-400 font-mono">Shared Memories</span>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          {memories.map((m: any) => (
+                            <div key={m.id} className="relative rounded-xl overflow-hidden aspect-square border border-white/10 bg-black group">
+                              <img src={m.image_url} alt="Memory" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                              <div className="absolute inset-x-0 bottom-0 p-1.5 bg-gradient-to-t from-black/90 to-transparent text-[9px] text-zinc-300">
+                                <div className="font-bold text-white truncate">{m.uploader_name}</div>
+                                {m.caption && <div className="truncate">{m.caption}</div>}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Input Form */}
-                  <form
-                    onSubmit={handleSendMessage}
-                    className="p-3.5 border-t border-white/10 bg-white/[0.01] flex items-center gap-2"
-                  >
-                    <input
-                      type="text"
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      placeholder="Message your squad..."
-                      className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-xs placeholder:text-zinc-600 focus:outline-none focus:border-[#FF6F26] transition-colors"
-                    />
-                    <button
-                      type="submit"
-                      disabled={sending || !newMessage.trim()}
-                      className="px-4 py-2.5 rounded-xl bg-[#FF6F26] hover:bg-[#FF5A1F] text-white text-xs font-bold disabled:opacity-40 transition-colors flex items-center gap-1.5"
+                  {/* Input Form or Post-Hangout Memories Drop Zone */}
+                  {selectedBeacon.status === "completed" ? (
+                    <div className="p-4 border-t border-white/10 bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-orange-500/10 space-y-3">
+                      {/* Notice & Instagram Callout */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-zinc-800 text-zinc-300 border border-white/10 shrink-0">
+                            🔒 Chat Closed
+                          </span>
+                          <span className="text-xs text-zinc-200">
+                            Hangout concluded! Share your meetup selfies &amp; memories below.
+                          </span>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={handleCopyInstagramTag}
+                          className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-pink-500/20 hover:bg-pink-500/30 text-pink-300 border border-pink-500/30 flex items-center gap-1.5 transition-colors cursor-pointer self-start sm:self-auto shrink-0"
+                        >
+                          <InstagramIcon className="w-3.5 h-3.5 text-pink-400" />
+                          <span>{copiedInstagramTag ? "Copied @tag!" : "Tag Us @solonomore"}</span>
+                        </button>
+                      </div>
+
+                      {/* Photo Upload Row */}
+                      {selectedPhotoBase64 ? (
+                        <div className="flex flex-col sm:flex-row items-center gap-3 p-3 rounded-2xl bg-black/40 border border-white/10">
+                          <img
+                            src={selectedPhotoBase64}
+                            alt="Preview"
+                            className="w-16 h-16 rounded-xl object-cover shrink-0 border border-white/20"
+                          />
+                          <input
+                            type="text"
+                            value={photoCaption}
+                            onChange={(e) => setPhotoCaption(e.target.value)}
+                            placeholder="Add a photo caption (e.g. Best chai night with the squad!)..."
+                            className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-[#FF6F26]"
+                          />
+                          <div className="flex items-center gap-2 w-full sm:w-auto">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedPhotoBase64(null)}
+                              className="px-3 py-2 rounded-xl text-xs font-bold text-zinc-400 hover:text-white bg-white/5 cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              disabled={uploadingPhoto}
+                              onClick={handleUploadPhoto}
+                              className="px-4 py-2 rounded-xl text-xs font-bold bg-[#FF6F26] hover:bg-[#FF5A1F] text-white flex items-center gap-1.5 shadow-md disabled:opacity-50 cursor-pointer"
+                            >
+                              <Sparkles className="w-3.5 h-3.5" />
+                              <span>{uploadingPhoto ? "Posting..." : "Post Photo"}</span>
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between gap-3 p-2.5 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-white/20 transition-all">
+                          <label className="flex-1 flex items-center gap-2.5 cursor-pointer text-xs font-bold text-zinc-300 hover:text-white">
+                            <div className="w-8 h-8 rounded-xl bg-[#FF6F26]/15 border border-[#FF6F26]/30 flex items-center justify-center text-[#FF6F26] shrink-0">
+                              <Camera className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <div>Drop Hangout Photo or Squad Selfie</div>
+                              <div className="text-[10px] text-zinc-400 font-normal">Click to upload photos directly to this squad gallery</div>
+                            </div>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handlePhotoSelect}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    /* Regular Input Form */
+                    <form
+                      onSubmit={handleSendMessage}
+                      className="p-3.5 border-t border-white/10 bg-white/[0.01] flex items-center gap-2"
                     >
-                      <Send className="w-3.5 h-3.5" />
-                      <span>Send</span>
-                    </button>
-                  </form>
+                      <input
+                        type="text"
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        placeholder="Message your squad..."
+                        className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-xs placeholder:text-zinc-600 focus:outline-none focus:border-[#FF6F26] transition-colors"
+                      />
+                      <button
+                        type="submit"
+                        disabled={sending || !newMessage.trim()}
+                        className="px-4 py-2.5 rounded-xl bg-[#FF6F26] hover:bg-[#FF5A1F] text-white text-xs font-bold disabled:opacity-40 transition-colors flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                        <span>Send</span>
+                      </button>
+                    </form>
+                  )}
                 </div>
               )}
 
@@ -1474,6 +1732,22 @@ export default function ChatsDashboardClient({
             </div>
           </div>
         </div>
+      )}
+
+      {/* ─── UNIVERSAL SHARE BEACON MODAL ─── */}
+      {selectedBeacon && (
+        <UniversalShareModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          title={selectedBeacon.title}
+          shareUrl={
+            typeof window !== "undefined"
+              ? `${window.location.origin}/b/${selectedBeacon.id.slice(0, 8)}`
+              : `https://solonomore.com/b/${selectedBeacon.id.slice(0, 8)}`
+          }
+          shareText={`Join my squad meetup "${selectedBeacon.title}" on Solo-No-More!`}
+          type="beacon"
+        />
       )}
     </div>
   );

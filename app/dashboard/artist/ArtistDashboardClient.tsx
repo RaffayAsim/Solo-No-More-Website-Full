@@ -9,6 +9,10 @@ import {
   saveArtistProfileAction,
   toggleAttendeeAdmissionAction,
 } from "@/app/actions/artists";
+import {
+  approveTicketByOwnerAction,
+  rejectTicketByOwnerAction,
+} from "@/app/actions/events";
 import type { OfficialEvent, Profile } from "@/lib/supabase/types";
 import {
   Mic2,
@@ -40,8 +44,35 @@ import {
   Volume2,
   Camera,
   Upload,
+  QrCode,
+  Hourglass,
 } from "lucide-react";
 import EventCreateEditModal from "@/components/events/EventCreateEditModal";
+import EventDoorScannerModal from "@/components/events/EventDoorScannerModal";
+import DelegatedManagerSection, { ScopeDef } from "@/components/team/DelegatedManagerSection";
+
+const ARTIST_MANAGER_SCOPES: ScopeDef[] = [
+  {
+    key: "events.door_scanner",
+    name: "Camera Door Scanner & Live Gate Entry",
+    desc: "Operate live camera check-in scanner and admit verified guests at the door",
+  },
+  {
+    key: "events.manage_applications",
+    name: "Review & Approve Ticket Bookings",
+    desc: "Review and approve/decline incoming member pass bookings",
+  },
+  {
+    key: "events.create_edit",
+    name: "Create & Edit Gigs and Lineups",
+    desc: "Update set times, performer lineups, and ticket tiers",
+  },
+  {
+    key: "settlement.view",
+    name: "View Ticket Revenue & Settlement",
+    desc: "Inspect gross ticket sales and platform settlement wire calculations",
+  },
+];
 
 interface TicketWithProfile {
   id: string;
@@ -87,9 +118,9 @@ export default function ArtistDashboardClient({
 }: ArtistDashboardClientProps) {
   const router = useRouter();
 
-  // Tab State: "overview" | "gigs" | "create" | "profile" | "settlement"
-  const [activeTab, setActiveTab] = useState<"overview" | "gigs" | "create" | "profile" | "settlement">(() => {
-    if (["overview", "gigs", "create", "profile", "settlement"].includes(initialTab)) {
+  // Tab State: "overview" | "gigs" | "create" | "team" | "profile" | "settlement"
+  const [activeTab, setActiveTab] = useState<"overview" | "gigs" | "create" | "team" | "profile" | "settlement">(() => {
+    if (["overview", "gigs", "create", "team", "profile", "settlement"].includes(initialTab)) {
       return initialTab as any;
     }
     return "overview";
@@ -99,13 +130,16 @@ export default function ArtistDashboardClient({
   const [tickets, setTickets] = useState<TicketWithProfile[]>(initialTickets);
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
 
-  // Fast-Pass Scanner Filter & Search
+  // Per-event Door Scanner modal
+  const [scannerEvent, setScannerEvent] = useState<OfficialEvent | null>(null);
+  const [checkingInId, setCheckingInId] = useState<string | null>(null);
+
+  // Legacy scanner support (kept for backward compatibility in gigs tab)
   const [selectedEventId, setSelectedEventId] = useState<string | null>(
     initialEvents.length > 0 ? initialEvents[0].id : null
   );
   const [scannerSearch, setScannerSearch] = useState("");
   const [attendeeFilter, setAttendeeFilter] = useState<"all" | "waiting" | "admitted">("all");
-  const [checkingInId, setCheckingInId] = useState<string | null>(null);
 
   // Feedback Messages
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -147,7 +181,7 @@ export default function ArtistDashboardClient({
       if (typeof window !== "undefined") {
         const params = new URLSearchParams(window.location.search);
         const tab = params.get("tab");
-        if (tab && ["overview", "gigs", "create", "profile", "settlement"].includes(tab)) {
+        if (tab && ["overview", "gigs", "create", "team", "profile", "settlement"].includes(tab)) {
           setActiveTab(tab as any);
         } else {
           setActiveTab("overview");
@@ -164,7 +198,7 @@ export default function ArtistDashboardClient({
     };
   }, []);
 
-  const handleTabChange = (tab: "overview" | "gigs" | "create" | "profile" | "settlement") => {
+  const handleTabChange = (tab: "overview" | "gigs" | "create" | "team" | "profile" | "settlement") => {
     setActiveTab(tab);
     setErrorMsg(null);
     setSuccessMsg(null);
@@ -205,6 +239,38 @@ export default function ArtistDashboardClient({
       }
     } finally {
       setCheckingInId(null);
+    }
+  };
+
+  const handleApproveTicket = async (ticketId: string) => {
+    try {
+      const res = await approveTicketByOwnerAction(ticketId);
+      if (res.success) {
+        setTickets((prev) =>
+          prev.map((t) => (t.id === ticketId ? { ...t, ticket_status: "active" } : t))
+        );
+        setSuccessMsg("✓ Ticket booking approved! Attendee is now cleared for door admission.");
+        setTimeout(() => setSuccessMsg(null), 4000);
+      } else {
+        alert(res.error || "Failed to approve ticket");
+      }
+    } catch {
+      alert("Network error approving ticket");
+    }
+  };
+
+  const handleRejectTicket = async (ticketId: string) => {
+    try {
+      const res = await rejectTicketByOwnerAction(ticketId);
+      if (res.success) {
+        setTickets((prev) =>
+          prev.map((t) => (t.id === ticketId ? { ...t, ticket_status: "cancelled" } : t))
+        );
+      } else {
+        alert(res.error || "Failed to reject ticket");
+      }
+    } catch {
+      alert("Network error rejecting ticket");
     }
   };
 
@@ -418,43 +484,77 @@ export default function ArtistDashboardClient({
       </div>
 
       {/* ── Telemetry Monitor Cards (Data-Isolated to Artist) ─────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-2xl bg-white/[0.02] border border-white/10 p-5 text-center backdrop-blur-md">
-          <div className="text-3xl font-black text-white tracking-tight">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="rounded-2xl bg-white/[0.02] border border-white/10 p-4 sm:p-5 text-center backdrop-blur-md">
+          <div className="text-2xl sm:text-3xl font-black text-white tracking-tight">
             {events.length}
           </div>
-          <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mt-1">
+          <div className="text-[11px] sm:text-xs font-semibold text-zinc-400 uppercase tracking-wider mt-1">
             My Listed Gigs
           </div>
         </div>
 
-        <div className="rounded-2xl bg-white/[0.02] border border-white/10 p-5 text-center backdrop-blur-md">
-          <div className="text-3xl font-black text-amber-300 tracking-tight">
+        <div className="rounded-2xl bg-white/[0.02] border border-white/10 p-4 sm:p-5 text-center backdrop-blur-md">
+          <div className="text-2xl sm:text-3xl font-black text-amber-300 tracking-tight">
             {totalTicketsSold}
           </div>
-          <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mt-1">
+          <div className="text-[11px] sm:text-xs font-semibold text-zinc-400 uppercase tracking-wider mt-1">
             Total Tickets Sold
           </div>
         </div>
 
-        <div className="rounded-2xl bg-white/[0.02] border border-white/10 p-5 text-center backdrop-blur-md">
-          <div className="text-2xl md:text-3xl font-black text-emerald-400 tracking-tight">
+        <div className="rounded-2xl bg-white/[0.02] border border-white/10 p-4 sm:p-5 text-center backdrop-blur-md">
+          <div className="text-xl sm:text-2xl md:text-3xl font-black text-emerald-400 tracking-tight">
             PKR {grossRevenuePkr.toLocaleString()}
           </div>
-          <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mt-1">
+          <div className="text-[11px] sm:text-xs font-semibold text-zinc-400 uppercase tracking-wider mt-1">
             Gross Ticket Sales
           </div>
         </div>
 
-        <div className="rounded-2xl bg-white/[0.02] border border-[#FF6F26]/40 p-5 text-center backdrop-blur-md bg-gradient-to-br from-[#FF6F26]/10 to-transparent">
-          <div className="text-2xl md:text-3xl font-black text-[#FF8A3D] tracking-tight">
+        <div className="rounded-2xl bg-white/[0.02] border border-[#FF6F26]/40 p-4 sm:p-5 text-center backdrop-blur-md bg-gradient-to-br from-[#FF6F26]/10 to-transparent">
+          <div className="text-xl sm:text-2xl md:text-3xl font-black text-[#FF8A3D] tracking-tight">
             PKR {netArtistPayoutPkr.toLocaleString()}
           </div>
-          <div className="text-xs font-semibold text-zinc-300 uppercase tracking-wider mt-1 flex items-center justify-center gap-1">
+          <div className="text-[11px] sm:text-xs font-semibold text-zinc-300 uppercase tracking-wider mt-1 flex items-center justify-center gap-1">
             <span>Net Payout (92%)</span>
             <span className="text-[10px] text-zinc-500 font-normal">(-8% fee)</span>
           </div>
         </div>
+      </div>
+
+      {/* ── SEGMENTED SUB-NAV TABS (Mobile horizontally scrollable) ──────── */}
+      <div className="flex items-center gap-2 border-b border-white/10 pb-2 overflow-x-auto no-scrollbar scrollbar-none shrink-0 whitespace-nowrap">
+        {[
+          { id: "overview", label: "Dashboard & Lineups", icon: Calendar },
+          { id: "gigs", label: `Live Gigs & Scanners (${events.length})`, icon: QrCode },
+          { id: "create", label: "Gig Studio", icon: Plus },
+          { id: "profile", label: "Press Kit & EPK", icon: Headphones },
+          { id: "settlement", label: "Settlement Wire (92%)", icon: Wallet },
+          { id: "team", label: "Gate Reception Team", icon: Users },
+        ].map((tab) => {
+          const TabIcon = tab.icon;
+          const isSelected = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => handleTabChange(tab.id as any)}
+              className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 ${
+                isSelected
+                  ? "bg-gradient-to-r from-[#FF6F26] to-[#FF5A1F] text-white shadow-[0_4px_16px_rgba(255,111,38,0.35)]"
+                  : "bg-white/[0.02] text-zinc-400 hover:text-white hover:bg-white/[0.05] border border-white/5"
+              }`}
+            >
+              <TabIcon className={`w-3.5 h-3.5 ${isSelected ? "text-white" : "text-zinc-400"}`} />
+              <span>{tab.label}</span>
+              {tab.id === "gigs" && tickets.filter((t) => t.ticket_status === "pending").length > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full bg-amber-500/30 text-amber-300 text-[10px] font-black border border-amber-500/40">
+                  {tickets.filter((t) => t.ticket_status === "pending").length}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* Alert Banners */}
@@ -493,6 +593,31 @@ export default function ArtistDashboardClient({
               + Launch Another Gig
             </button>
           </div>
+
+          {tickets.filter((t) => t.ticket_status === "pending").length > 0 && (
+            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center shrink-0">
+                  <Hourglass className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-amber-200">
+                    {tickets.filter((t) => t.ticket_status === "pending").length} Ticket Booking{tickets.filter((t) => t.ticket_status === "pending").length > 1 ? "s" : ""} Awaiting Your Approval
+                  </div>
+                  <div className="text-[11px] text-amber-300/70">
+                    As the event creator, approve attendee bookings directly before door admission.
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleTabChange("gigs")}
+                className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-amber-500 text-black hover:bg-amber-400 transition-colors shadow-sm"
+              >
+                Review &amp; Approve ➔
+              </button>
+            </div>
+          )}
 
           {events.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -580,13 +705,10 @@ export default function ArtistDashboardClient({
 
                       <button
                         type="button"
-                        onClick={() => {
-                          setSelectedEventId(ev.id);
-                          handleTabChange("gigs");
-                        }}
-                        className="px-3 py-1.5 rounded-xl text-xs font-bold bg-white/[0.06] hover:bg-white/[0.1] text-white border border-white/10 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+                        onClick={() => setScannerEvent(ev)}
+                        className="px-3 py-1.5 rounded-xl text-xs font-bold bg-[#FF6F26]/15 hover:bg-[#FF6F26]/25 text-[#FFA05C] border border-[#FF6F26]/30 transition-all inline-flex items-center gap-1.5 cursor-pointer"
                       >
-                        <Ticket className="w-3.5 h-3.5 text-[#FF6F26]" />
+                        <QrCode className="w-3.5 h-3.5 text-[#FF6F26]" />
                         <span>Door Scanner ➔</span>
                       </button>
                     </div>
@@ -613,182 +735,170 @@ export default function ArtistDashboardClient({
         </div>
       )}
 
-      {/* ── TAB 2: FAST-PASS DOOR SCANNER & GUESTLIST ─────────────────────── */}
+      {/* ── TAB 2: GIGS & PER-EVENT DOOR SCANNER ───────────────────────── */}
       {activeTab === "gigs" && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left Show Selector */}
-          <div className="lg:col-span-5 rounded-3xl border border-white/10 bg-white/[0.02] p-5 backdrop-blur-md space-y-4">
-            <span className="text-xs font-bold uppercase tracking-wider text-zinc-400 block">
-              1. Select Show to Admit Guests
-            </span>
+        <div className="space-y-6">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <QrCode className="w-5 h-5 text-[#FF6F26]" />
+                Event Guestlist & Door Scanners
+              </h3>
+              <p className="text-xs text-zinc-400 mt-0.5">
+                Select an event to open its dedicated door scanner — approve pending bookings, admit attendees, and track real-time admission.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsEventModalOpen(true)}
+              className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-[#FF6F26]/20 border border-[#FF6F26]/40 text-[#FFA05C] hover:bg-[#FF6F26]/30 transition-colors"
+            >
+              + List New Gig
+            </button>
+          </div>
 
-            {events.length > 0 ? (
-              <div className="space-y-3">
-                {events.map((ev) => {
-                  const evTickets = tickets.filter(
-                    (t) => t.event_id === ev.id && (t.ticket_status === "active" || t.ticket_status === "admitted")
-                  );
-                  const isSelected = selectedEventId === ev.id;
-                  return (
-                    <div
-                      key={ev.id}
-                      onClick={() => setSelectedEventId(ev.id)}
-                      className={`p-4 rounded-2xl border cursor-pointer transition-all ${
-                        isSelected
-                          ? "bg-gradient-to-r from-[#FF6F26]/20 to-[#FF5A1F]/10 border-[#FF6F26]/60 shadow-[0_0_20px_rgba(255,111,38,0.2)]"
-                          : "bg-white/[0.02] hover:bg-white/[0.05] border-white/10"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <h4 className="font-bold text-white text-sm">
-                          {ev.title}
-                        </h4>
-                        <span className="font-bold text-[#FF8A3D] text-sm shrink-0">
-                          {ev.price ? `PKR ${Number(ev.price).toLocaleString()}` : "FREE"}
+          {events.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {events.map((ev) => {
+                const evTickets = tickets.filter((t) => t.event_id === ev.id);
+                const admittedForEv = evTickets.filter((t) => t.ticket_status === "admitted").length;
+                const pendingForEv = evTickets.filter((t) => t.ticket_status === "pending").length;
+                const activeForEv = evTickets.filter((t) => t.ticket_status === "active").length;
+                const { metadata: meta } = parseEventDescription(ev.description);
+                const isPendingAdmin = meta.status === "pending_review";
+
+                return (
+                  <div
+                    key={ev.id}
+                    className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 backdrop-blur-md space-y-4 hover:border-white/20 transition-all"
+                  >
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      {isPendingAdmin ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                          Pending Admin Review
                         </span>
-                      </div>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                          Live on Radar
+                        </span>
+                      )}
+                      <span className="text-xs font-bold text-[#FFA05C]">
+                        {ev.price ? `PKR ${Number(ev.price).toLocaleString()}` : "FREE"}
+                      </span>
+                    </div>
 
-                      <div className="text-xs text-zinc-400 mt-2 flex items-center gap-3 flex-wrap">
-                        <span>📍 {ev.venue_name || "Karachi Venue"}</span>
-                        <span>• 👥 {evTickets.length}/{ev.max_capacity} Passes</span>
-                      </div>
-
-                      <div className="mt-3 flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/5 text-zinc-400">
+                    <div>
+                      <h4 className="font-bold text-white text-sm">{ev.title}</h4>
+                      <div className="text-xs text-zinc-400 mt-1 flex items-center gap-3 flex-wrap">
+                        <span className="flex items-center gap-1">
+                          <MapPin className="w-3 h-3" />
+                          {ev.venue_name || "Karachi Venue"}
+                        </span>
+                        <span>
                           {ev.scheduled_at ? new Date(ev.scheduled_at).toLocaleDateString() : "Upcoming"}
                         </span>
-                        {isSelected && (
-                          <span className="text-[10px] font-bold text-[#FF8A3D]">
-                            ✓ Selected for Door Scanner
-                          </span>
-                        )}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center text-xs text-zinc-500 py-8">
-                No events published yet. Click &quot;List New Gig&quot; to publish a show.
-              </div>
-            )}
-          </div>
 
-          {/* Right Fast-Pass Scanner */}
-          <div className="lg:col-span-7 rounded-3xl border border-white/10 bg-white/[0.02] p-5 backdrop-blur-md space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-white/10 flex-wrap gap-2">
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#FF6F26] block">
-                  Fast-Pass Door Scanner
-                </span>
-                <h3 className="font-bold text-white text-base mt-0.5">
-                  {selectedEvent ? selectedEvent.title : "Select an Event"}
-                </h3>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="px-3 py-1 rounded-full text-xs font-bold bg-[#FF6F26]/15 text-[#FFA05C] border border-[#FF6F26]/30">
-                  {admittedCount} / {attendeesForSelected.length} Admitted ({gateCapacityPercentage}%)
-                </span>
-              </div>
-            </div>
+                    {/* Mini stats */}
+                    <div className="grid grid-cols-3 gap-2">
+                      {pendingForEv > 0 && (
+                        <div className="text-center p-2 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                          <div className="text-lg font-black text-amber-400">{pendingForEv}</div>
+                          <div className="text-[10px] text-amber-500/70 font-bold uppercase">Pending</div>
+                        </div>
+                      )}
+                      <div className="text-center p-2 rounded-xl bg-white/[0.03] border border-white/5">
+                        <div className="text-lg font-black text-sky-400">{activeForEv}</div>
+                        <div className="text-[10px] text-zinc-500 font-bold uppercase">At Gate</div>
+                      </div>
+                      <div className="text-center p-2 rounded-xl bg-white/[0.03] border border-white/5">
+                        <div className="text-lg font-black text-emerald-400">{admittedForEv}</div>
+                        <div className="text-[10px] text-zinc-500 font-bold uppercase">Admitted</div>
+                      </div>
+                      {pendingForEv === 0 && (
+                        <div className="text-center p-2 rounded-xl bg-white/[0.03] border border-white/5">
+                          <div className="text-lg font-black text-white">{evTickets.length}</div>
+                          <div className="text-[10px] text-zinc-500 font-bold uppercase">Total</div>
+                        </div>
+                      )}
+                    </div>
 
-            {/* Fast Live Search Bar */}
-            <div className="relative">
-              <Search className="w-4 h-4 text-white/50 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={scannerSearch}
-                onChange={(e) => setScannerSearch(e.target.value)}
-                placeholder="Search attendee by full name, city, or pass code..."
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#FF6F26]/60 transition-colors"
-              />
-            </div>
-
-            {/* Filter Pills */}
-            <div className="flex items-center gap-2">
-              {[
-                { id: "all", label: `All Passes (${attendeesForSelected.length})` },
-                { id: "waiting", label: `Waiting at Gate (${attendeesForSelected.length - admittedCount})` },
-                { id: "admitted", label: `Admitted (${admittedCount})` },
-              ].map(({ id, label }) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setAttendeeFilter(id as any)}
-                  className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
-                    attendeeFilter === id
-                      ? "bg-white/15 text-white border border-white/20"
-                      : "text-zinc-400 hover:text-white bg-transparent"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-
-            {filteredAttendees.length > 0 ? (
-              <div className="space-y-2.5 max-h-[460px] overflow-y-auto pr-1">
-                {filteredAttendees.map((att) => {
-                  const isAdmitted = att.ticket_status === "admitted";
-                  return (
-                    <div
-                      key={att.id}
-                      className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 transition-colors ${
-                        isAdmitted
-                          ? "bg-emerald-500/5 border-emerald-500/25"
-                          : "bg-white/[0.02] border-white/10 hover:border-white/20"
-                      }`}
+                    {/* Open Door Scanner button */}
+                    <button
+                      type="button"
+                      onClick={() => setScannerEvent(ev)}
+                      className="w-full py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-[#FF6F26]/20 to-[#FF5A1F]/10 hover:from-[#FF6F26]/30 hover:to-[#FF5A1F]/20 border border-[#FF6F26]/30 text-[#FFA05C] transition-all flex items-center justify-center gap-2"
                     >
-                      <div>
-                        <div className="font-semibold text-white text-xs flex items-center gap-2">
-                          <span>{att.profiles?.full_name || "Solo Member"}</span>
-                          {isAdmitted && (
-                            <span className="text-[10px] text-emerald-400 font-bold">
-                              ✓ Gate Passed
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-[10px] text-zinc-500 font-mono mt-0.5">
-                          PASS: {att.id.slice(0, 8).toUpperCase()} • {att.profiles?.city || "Karachi"}
-                        </div>
-                      </div>
-
-                      <div>
-                        {isAdmitted ? (
-                          <button
-                            type="button"
-                            onClick={() => handleToggleAdmission(att.id, "admitted")}
-                            disabled={checkingInId === att.id}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-rose-500/20 hover:text-rose-300 hover:border-rose-500/40 transition-colors cursor-pointer"
-                            title="Click to undo admission"
-                          >
-                            <Check className="w-3.5 h-3.5" />
-                            <span>Admitted (Undo)</span>
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => handleToggleAdmission(att.id, "active")}
-                            disabled={checkingInId === att.id}
-                            className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-gradient-to-r from-[#FF6F26] to-[#FF5A1F] text-white hover:brightness-110 shadow-[0_0_12px_rgba(255,111,38,0.3)] transition-all cursor-pointer"
-                          >
-                            {checkingInId === att.id ? "Admitting..." : "Check In (Admit)"}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="p-8 text-center text-zinc-500 text-xs rounded-2xl border border-dashed border-white/10">
-                {attendeesForSelected.length === 0
-                  ? "No tickets purchased for this show yet. Member passes purchased via platform Raast/Bank will appear here."
-                  : "No attendees matching the search filter."}
-              </div>
-            )}
-          </div>
+                      <QrCode className="w-3.5 h-3.5" />
+                      <span>Open Door Scanner</span>
+                      {pendingForEv > 0 && (
+                        <span className="ml-1 px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-black border border-amber-500/30">
+                          {pendingForEv} pending
+                        </span>
+                      )}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-16 px-6 rounded-3xl bg-white/[0.02] border border-white/10 backdrop-blur-md">
+              <QrCode className="w-12 h-12 text-zinc-700 mx-auto mb-3" />
+              <h3 className="text-lg font-bold text-white">No Events to Scan</h3>
+              <p className="text-xs text-zinc-400 max-w-sm mx-auto mt-1 mb-5 leading-relaxed">
+                Create your first gig to unlock the Door Scanner. Once members book tickets, you can manage admissions here.
+              </p>
+              <button
+                type="button"
+                onClick={() => setIsEventModalOpen(true)}
+                className="px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-[#FF6F26] to-[#FF5A1F] text-white shadow-lg shadow-[#FF6F26]/30 cursor-pointer"
+              >
+                + Create Your First Gig
+              </button>
+            </div>
+          )}
         </div>
+      )}
+
+      {/* ── Per-event Door Scanner Modal ──────────────────────────────── */}
+      {scannerEvent && (
+        <EventDoorScannerModal
+          isOpen={!!scannerEvent}
+          onClose={() => setScannerEvent(null)}
+          eventTitle={scannerEvent.title}
+          eventDate={scannerEvent.scheduled_at ? new Date(scannerEvent.scheduled_at).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) : undefined}
+          eventVenue={scannerEvent.venue_name || undefined}
+          tickets={tickets.filter((t) => t.event_id === scannerEvent.id)}
+          accent="orange"
+          onToggleAdmit={async (ticketId, currentStatus) => {
+            const newStatus = currentStatus === "admitted" ? "active" : "admitted";
+            const res = await toggleAttendeeAdmissionAction(ticketId, newStatus as any);
+            if (res.success) {
+              setTickets((prev) =>
+                prev.map((t) => (t.id === ticketId ? { ...t, ticket_status: newStatus } : t))
+              );
+            }
+          }}
+          onApprove={async (ticketId) => {
+            const res = await approveTicketByOwnerAction(ticketId);
+            if (res.success) {
+              setTickets((prev) =>
+                prev.map((t) => (t.id === ticketId ? { ...t, ticket_status: "active" } : t))
+              );
+            }
+          }}
+          onReject={async (ticketId) => {
+            const res = await rejectTicketByOwnerAction(ticketId);
+            if (res.success) {
+              setTickets((prev) =>
+                prev.map((t) => (t.id === ticketId ? { ...t, ticket_status: "cancelled" } : t))
+              );
+            }
+          }}
+        />
       )}
 
       {/* ── TAB 3: LIST NEW GIG ───────────────────────────────────────────── */}
@@ -1107,6 +1217,19 @@ export default function ArtistDashboardClient({
         </form>
       )}
 
+      {/* ── TAB 6: GATE MANAGERS & TEAM ACCESS ────────────────────────────── */}
+      {activeTab === "team" && (
+        <DelegatedManagerSection
+          type="artist_manager"
+          delegatorId={profile?.id || "artist_default"}
+          delegatorName={stageName || profile?.full_name || "Artist Host"}
+          title="Gatekeepers & Door Reception Team"
+          subtitle="Assign trusted crew or receptionists to operate the live camera Door Scanner and approve attendee bookings at the gate."
+          availableScopes={ARTIST_MANAGER_SCOPES}
+          accent="orange"
+        />
+      )}
+
       {/* ── Event Create Modal for Artist ───────────────────────────────── */}
       <EventCreateEditModal
         isOpen={isEventModalOpen}
@@ -1117,6 +1240,27 @@ export default function ArtistDashboardClient({
         workspaceTitle="Artist & Performer Studio"
         isPartnerOrArtist={true}
       />
+
+      {/* ── Dedicated Event Door Scanner Modal ───────────────────────────── */}
+      {scannerEvent && (
+        <EventDoorScannerModal
+          isOpen={!!scannerEvent}
+          onClose={() => setScannerEvent(null)}
+          eventId={scannerEvent.id}
+          eventTitle={scannerEvent.title}
+          eventDate={
+            scannerEvent.scheduled_at
+              ? new Date(scannerEvent.scheduled_at).toLocaleDateString()
+              : undefined
+          }
+          eventVenue={scannerEvent.venue_name || "Official Venue"}
+          tickets={tickets.filter((t) => t.event_id === scannerEvent.id)}
+          onToggleAdmit={handleToggleAdmission}
+          onApprove={handleApproveTicket}
+          onReject={handleRejectTicket}
+          accent="orange"
+        />
+      )}
     </div>
   );
 }

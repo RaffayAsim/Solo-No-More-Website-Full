@@ -276,7 +276,7 @@ export default function ReviewWallClient({ initialData }: ReviewWallClientProps)
         </div>
 
         {/* 6 Slots Grid (2 columns on medium+ screens) */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: "16px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 300px), 1fr))", gap: "16px" }}>
           {slots.map((slot, index) => (
             <div
               key={slot.id || index}

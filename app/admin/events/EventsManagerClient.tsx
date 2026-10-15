@@ -16,9 +16,11 @@ import {
   ShieldCheck,
   Building2,
   Layers,
+  QrCode,
 } from "lucide-react";
 import { IconEdit, IconTrash, IconCheck, IconPlus, IconImage } from "@/components/icons/AppIcons";
 import EventCreateEditModal from "@/components/events/EventCreateEditModal";
+import EventDoorScannerModal from "@/components/events/EventDoorScannerModal";
 import {
   parseEventDescription,
   isEventConcluded,
@@ -26,10 +28,12 @@ import {
 import {
   verifyAndPublishEventAction,
   deleteRichEventAction,
+  checkInAttendeeAction,
 } from "@/app/actions/events";
 
 interface EventsManagerClientProps {
   initialEvents: OfficialEvent[];
+  initialTickets?: any[];
 }
 
 function formatScheduledAt(iso: string): string {
@@ -44,18 +48,35 @@ function formatScheduledAt(iso: string): string {
   });
 }
 
-export default function EventsManagerClient({ initialEvents }: EventsManagerClientProps) {
+export default function EventsManagerClient({
+  initialEvents,
+  initialTickets = [],
+}: EventsManagerClientProps) {
   const router = useRouter();
   const [events, setEvents] = useState<OfficialEvent[]>(initialEvents);
+  const [tickets, setTickets] = useState<any[]>(initialTickets);
   const [activeTab, setActiveTab] = useState<"all" | "pending" | "past">("all");
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<OfficialEvent | null>(null);
+  const [scannerEvent, setScannerEvent] = useState<OfficialEvent | null>(null);
 
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  const handleToggleAdmission = async (ticketId: string, currentStatus: string) => {
+    const newStatus = currentStatus === "admitted" ? "active" : "admitted";
+    try {
+      const res = await checkInAttendeeAction(ticketId);
+      if (res.success) {
+        setTickets((prev) =>
+          prev.map((t) => (t.id === ticketId ? { ...t, ticket_status: newStatus } : t))
+        );
+      }
+    } catch {}
+  };
 
   // Sync state if props reload
   useEffect(() => {
@@ -356,7 +377,8 @@ export default function EventsManagerClient({ initialEvents }: EventsManagerClie
           boxShadow: "0 10px 30px rgba(0, 0, 0, 0.4)",
         }}
       >
-        <div style={{ overflowX: "auto" }}>
+        {/* Desktop Table View */}
+        <div className="hidden md:block" style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "12.5px" }}>
             <thead>
               <tr
@@ -615,6 +637,31 @@ export default function EventsManagerClient({ initialEvents }: EventsManagerClie
                             </button>
                           )}
 
+                          {/* Door Scanner button */}
+                          <button
+                            type="button"
+                            onClick={() => setScannerEvent(evt)}
+                            title="Open Camera Door Scanner"
+                            style={{
+                              padding: "6px 12px",
+                              borderRadius: "8px",
+                              background: "rgba(255, 111, 38, 0.15)",
+                              border: "1px solid rgba(255, 111, 38, 0.4)",
+                              color: "#FFA05C",
+                              fontSize: "11.5px",
+                              fontWeight: 800,
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "6px",
+                              transition: "all 0.15s ease",
+                            }}
+                            className="hover:bg-[#FF6F26]/25 hover:border-[#FF6F26]/60 cursor-pointer"
+                          >
+                            <QrCode size={14} className="text-[#FF6F26]" />
+                            <span>Door Scanner</span>
+                          </button>
+
                           {/* Edit button */}
                           <button
                             type="button"
@@ -679,6 +726,128 @@ export default function EventsManagerClient({ initialEvents }: EventsManagerClie
             </tbody>
           </table>
         </div>
+
+        {/* Mobile Responsive Cards View (< 768px) */}
+        <div className="md:hidden p-3.5 space-y-3">
+          {filteredEvents.length > 0 ? (
+            filteredEvents.map((evt) => {
+              const { metadata } = parseEventDescription(evt.description);
+              const isArtistSplit = evt.event_type === "artist_split";
+              const isPast = isEventConcluded(evt.scheduled_at);
+              const isPending = metadata.status === "pending_review";
+              const isLoading = actionLoadingId === evt.id;
+
+              return (
+                <div
+                  key={evt.id}
+                  className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3"
+                >
+                  <div className="flex items-start gap-3">
+                    {metadata.feature_image ? (
+                      <img
+                        src={metadata.feature_image}
+                        alt={evt.title}
+                        className="w-14 h-14 rounded-xl object-cover shrink-0 border border-[#FF6F26]/30"
+                      />
+                    ) : (
+                      <div className="w-14 h-14 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 text-white/40">
+                        <Calendar size={22} />
+                      </div>
+                    )}
+
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm font-bold text-white truncate">
+                        {evt.title}
+                      </h3>
+                      <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-[#FF6F26]/15 text-[#FFA05C] border border-[#FF6F26]/30">
+                          {metadata.creator_type || "Admin"}
+                        </span>
+                        {isPending && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                            Pending
+                          </span>
+                        )}
+                        {isPast && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-white/10 text-zinc-400">
+                            Concluded
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs text-zinc-300 pt-1 border-t border-white/5">
+                    <div className="flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-[#FF8A3D] shrink-0" />
+                      <span className="truncate">{evt.venue_name || "Karachi Venue"}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 justify-end">
+                      <span className="font-bold text-[#FFA05C]">
+                        {evt.price > 0 ? `PKR ${evt.price.toLocaleString()}` : "Free"}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-zinc-400 text-[11px]">
+                      <Clock className="w-3 h-3 text-zinc-500 shrink-0" />
+                      <span className="truncate">{formatScheduledAt(evt.scheduled_at)}</span>
+                    </div>
+                    <div className="text-right text-[11px] text-zinc-400">
+                      Capacity: <strong className="text-white">{evt.max_capacity}</strong>
+                    </div>
+                  </div>
+
+                  {/* Mobile Actions Toolbar */}
+                  <div className="pt-2 border-t border-white/10 flex items-center gap-2 flex-wrap">
+                    {isPending && (
+                      <button
+                        type="button"
+                        onClick={() => handleVerifyAndPublish(evt.id, evt.title)}
+                        disabled={isLoading}
+                        className="flex-1 py-2 px-3 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-500 to-green-600 text-white flex items-center justify-center gap-1.5 shadow"
+                      >
+                        <IconCheck size={14} color="#FFFFFF" />
+                        <span>Verify &amp; Go Live</span>
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => setScannerEvent(evt)}
+                      className="flex-1 py-2 px-3 rounded-xl text-xs font-bold bg-[#FF6F26]/20 border border-[#FF6F26]/40 text-[#FFA05C] flex items-center justify-center gap-1.5"
+                    >
+                      <QrCode size={14} className="text-[#FF6F26]" />
+                      <span>Scanner</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEdit(evt)}
+                      className="p-2 rounded-xl bg-white/10 text-white hover:bg-white/20 border border-white/15"
+                      title="Edit"
+                    >
+                      <IconEdit size={16} color="#FFFFFF" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(evt.id, evt.title)}
+                      disabled={isLoading}
+                      className="p-2 rounded-xl bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 border border-rose-500/40"
+                      title="Delete"
+                    >
+                      <IconTrash size={16} color="#FF3B30" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="py-8 text-center text-zinc-500 text-xs">
+              <Calendar className="w-8 h-8 mx-auto mb-2 text-white/30" />
+              <p>No events found in this category.</p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ── 5. COMPREHENSIVE EVENT CREATION & EDIT MODAL ───────────────── */}
@@ -691,6 +860,25 @@ export default function EventsManagerClient({ initialEvents }: EventsManagerClie
         }}
         workspaceTitle="Admin workspace"
       />
+
+      {/* ── 6. DEDICATED OFFICIAL EVENT DOOR SCANNER MODAL ───────────────── */}
+      {scannerEvent && (
+        <EventDoorScannerModal
+          isOpen={!!scannerEvent}
+          onClose={() => setScannerEvent(null)}
+          eventId={scannerEvent.id}
+          eventTitle={scannerEvent.title}
+          eventDate={
+            scannerEvent.scheduled_at
+              ? new Date(scannerEvent.scheduled_at).toLocaleDateString()
+              : undefined
+          }
+          eventVenue={scannerEvent.venue_name || "Official Venue"}
+          tickets={tickets.filter((t) => t.event_id === scannerEvent.id)}
+          onToggleAdmit={handleToggleAdmission}
+          accent="orange"
+        />
+      )}
     </div>
   );
 }

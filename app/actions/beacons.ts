@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { CreateBeaconInput, BeaconCategory } from "@/lib/supabase/types";
 import { writeNotification } from "@/app/actions/notifications";
 import { getSessionUserSecurely } from "@/lib/supabase/session";
+import { checkProfileCompleteness } from "@/lib/profile-completeness";
 
 export type CreateBeaconResult =
   | { success: true; beaconId: string }
@@ -25,12 +26,24 @@ export async function createBeacon(
 
   const { data: profile } = await (supabaseAdmin
     .from("profiles")
-    .select("account_status, city, is_partner, subscription_tier")
+    .select("*")
     .eq("id", userId)
     .single() as any);
 
   if (!profile || profile.account_status !== "approved") {
     return { success: false, error: "Your account must be approved to post Beacons." };
+  }
+
+  // Profile Completeness Gate for regular member hangouts
+  if (!data.is_partner_offer) {
+    const completeness = checkProfileCompleteness(profile);
+    if (!completeness.isComplete) {
+      const missingLabels = completeness.missingFields.map((f) => f.label).join(", ");
+      return {
+        success: false,
+        error: `PROFILE_INCOMPLETE: Please complete your verified safety profile before hosting hangouts (Missing: ${missingLabels}).`,
+      };
+    }
   }
 
   const isPartner = !!profile.is_partner;
@@ -463,5 +476,53 @@ export async function autoExpireStaleBeacons(): Promise<void> {
   } catch {
     // Best-effort cleanup
   }
+}
+
+/**
+ * Server Action: Host marks a Beacon as Completed / Concluded.
+ * Locks standard chat and unlocks Post-Hangout Memories sharing.
+ */
+export async function completeBeaconAction(beaconId: string): Promise<BeaconActionResult> {
+  const authCheck = await getSessionUserSecurely();
+  if ("error" in authCheck) return { success: false, error: authCheck.error };
+  const userId = authCheck.userId;
+
+  const { data: beacon, error: fetchError } = await (supabaseAdmin
+    .from("beacons") as any)
+    .select("host_id, status, title")
+    .eq("id", beaconId)
+    .single();
+
+  if (fetchError || !beacon) return { success: false, error: "Beacon not found." };
+  if (beacon.host_id !== userId) return { success: false, error: "Only the host can conclude this meetup." };
+  if (beacon.status === "completed") return { success: true };
+
+  const { error: updateError } = await (supabaseAdmin
+    .from("beacons") as any)
+    .update({ status: "completed" })
+    .eq("id", beaconId);
+
+  if (updateError) return { success: false, error: "Failed to mark beacon as completed." };
+
+  // Notify approved attendees
+  const { data: approvedApps } = await (supabaseAdmin
+    .from("beacon_applications") as any)
+    .select("applicant_id")
+    .eq("beacon_id", beaconId)
+    .eq("status", "approved");
+
+  if (approvedApps) {
+    for (const app of approvedApps) {
+      await writeNotification(
+        app.applicant_id,
+        "post_event_vibe_check",
+        "📸 MEETUP CONCLUDED · SHARE PHOTOS",
+        `"${beacon.title}" has concluded! Drop your squad photos in the chat and tag @solonomore on Instagram!`,
+        beaconId
+      );
+    }
+  }
+
+  return { success: true };
 }
 

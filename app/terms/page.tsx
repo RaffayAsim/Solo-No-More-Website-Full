@@ -166,7 +166,7 @@ export default function TermsPage() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
               gap: "36px",
               alignItems: "start",
               marginBottom: "80px",

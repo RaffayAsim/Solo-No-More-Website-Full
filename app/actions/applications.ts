@@ -3,6 +3,7 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { writeNotification } from "@/app/actions/notifications";
 import { getSessionUserSecurely } from "@/lib/supabase/session";
+import { checkProfileCompleteness } from "@/lib/profile-completeness";
 
 export type ApplicationActionResult =
   | { success: true }
@@ -63,7 +64,7 @@ export async function applyToBeacon(
   // 1b. Check role restrictions: Partners, Admins, Artists cannot join squad hangouts
   const { data: applicantProfile } = await (supabaseAdmin
     .from("profiles") as any)
-    .select("subscription_tier, is_partner")
+    .select("*")
     .eq("id", userId)
     .single();
 
@@ -71,6 +72,16 @@ export async function applyToBeacon(
     return {
       success: false,
       error: "Partner, artist, and admin accounts cannot apply to join squad hangouts. Participation is reserved for personal member accounts.",
+    };
+  }
+
+  // Profile Completeness Gate: Must complete verified safety profile before applying
+  const completeness = checkProfileCompleteness(applicantProfile);
+  if (!completeness.isComplete) {
+    const missingLabels = completeness.missingFields.map((f) => f.label).join(", ");
+    return {
+      success: false,
+      error: `PROFILE_INCOMPLETE: Please complete your verified safety profile before applying to hangouts (Missing: ${missingLabels}).`,
     };
   }
 

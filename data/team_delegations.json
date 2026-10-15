@@ -1,0 +1,42 @@
+[
+  {
+    "id": "del_1792034338460_261",
+    "type": "artist_manager",
+    "delegator_id": "ac02d694-9e83-4851-b7b1-d9326eb886f9",
+    "delegator_name": "DJ Synapse Music",
+    "manager_user_id": "1b7294cf-a74f-48ee-a210-a6b7c3e64cfa",
+    "manager_name": "Abdul Raffay",
+    "manager_email": "raffay.asim6@gmail.com",
+    "manager_phone": "",
+    "permissions": [
+      "events.door_scanner",
+      "events.manage_applications",
+      "events.create_edit",
+      "settlement.view"
+    ],
+    "status": "active",
+    "created_at": "2026-10-15T03:18:58.460Z",
+    "updated_at": "2026-10-15T03:18:58.460Z"
+  },
+  {
+    "id": "del_subadmin_01",
+    "type": "sub_admin",
+    "delegator_id": "admin_root",
+    "delegator_name": "Super Admin",
+    "manager_user_id": "usr_hamza_sub",
+    "manager_name": "Hamza Tariq",
+    "manager_email": "hamza.ops@solonomore.com",
+    "manager_phone": "0300-8271923",
+    "permissions": [
+      "events.view",
+      "events.door_scanner",
+      "bookings.view",
+      "bookings.approve",
+      "members.view",
+      "payments.view"
+    ],
+    "status": "active",
+    "created_at": "2026-10-15T03:17:04.951Z",
+    "updated_at": "2026-10-15T03:17:04.955Z"
+  }
+]

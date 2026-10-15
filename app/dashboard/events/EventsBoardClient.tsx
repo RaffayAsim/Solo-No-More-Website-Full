@@ -155,9 +155,9 @@ export default function EventsBoardClient({
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto space-y-6">
+    <div className="p-3 sm:p-6 lg:p-8 max-w-6xl mx-auto space-y-4 sm:space-y-6">
       {/* ── Modern Header Panel ──────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-2xl bg-white/[0.03] border border-white/[0.08] backdrop-blur-xl p-6 sm:p-8">
+      <div className="relative overflow-hidden rounded-2xl bg-white/[0.03] border border-white/[0.08] backdrop-blur-xl p-4 sm:p-8">
         <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-[#FF6F26]/15 via-transparent to-transparent blur-3xl pointer-events-none" />
         <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
@@ -369,8 +369,8 @@ export default function EventsBoardClient({
 
       {/* ── EVENT TICKET PAYMENT MODAL ──── */}
       {activeEventForPayment && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="relative w-full max-w-lg overflow-hidden rounded-2xl bg-[#0B080E] border border-white/[0.12] shadow-2xl shadow-black/80 animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <div className="relative w-full max-w-lg max-h-[94vh] overflow-y-auto rounded-2xl bg-[#0B080E] border border-white/[0.12] shadow-2xl shadow-black/80 animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Title Bar */}
             <div className="flex items-center justify-between p-5 border-b border-white/[0.08] bg-white/[0.02]">
               <div className="flex items-center gap-2 text-white font-bold text-base">
@@ -417,7 +417,7 @@ export default function EventsBoardClient({
                     <label className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-2.5">
                       Select Payment Method
                     </label>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       {[
                         { id: "raast", label: "Raast (Instant)" },
                         { id: "sadapay", label: "SadaPay" },

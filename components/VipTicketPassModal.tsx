@@ -45,34 +45,15 @@ export default function VipTicketPassModal({
 
   return (
     <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 99999,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "rgba(0, 0, 0, 0.85)",
-        backdropFilter: "blur(16px)",
-        padding: "40px 16px",
-        overflowY: "auto",
-      }}
+      className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md overflow-y-auto"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div
+        className="w-full max-w-[440px] rounded-3xl border border-[#FF5A1F]/40 shadow-[0_28px_70px_rgba(0,0,0,0.9),0_0_40px_rgba(255,90,31,0.25)] text-white p-5 sm:p-7 relative overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-150"
         style={{
-          width: "100%",
-          maxWidth: "460px",
           background: "linear-gradient(155deg, #130B1C 0%, #08040C 100%)",
-          border: "1.5px solid rgba(255, 90, 31, 0.4)",
-          borderRadius: "26px",
-          boxShadow: "0 28px 70px rgba(0, 0, 0, 0.9), 0 0 40px rgba(255, 90, 31, 0.25)",
-          color: "#FFFFFF",
-          padding: "26px",
-          position: "relative",
-          overflow: "hidden",
           fontFamily: "var(--font-display), 'Plus Jakarta Sans', system-ui, sans-serif",
         }}
       >
@@ -164,7 +145,7 @@ export default function VipTicketPassModal({
         />
 
         {/* Ticket Details Grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "20px" }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 mb-5">
           <div
             style={{
               background: "rgba(255, 255, 255, 0.04)",
@@ -216,18 +197,25 @@ export default function VipTicketPassModal({
         >
           <div
             style={{
-              width: "120px",
-              height: "120px",
+              width: "140px",
+              height: "140px",
               background: "#FFFFFF",
-              borderRadius: "12px",
-              padding: "10px",
+              borderRadius: "14px",
+              padding: "8px",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               boxShadow: "0 6px 20px rgba(0, 0, 0, 0.5)",
             }}
           >
-            <QrCode className="w-full h-full text-black" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=260x260&format=svg&data=${encodeURIComponent(
+                JSON.stringify({ ticketId: ticket.id, eventId: (ticket as any).event_id || (ticket as any).eventId || "" })
+              )}`}
+              alt="Live Scannable Ticket Pass QR"
+              className="w-full h-full object-contain"
+            />
           </div>
           <div style={{ fontSize: "11px", fontFamily: "monospace", color: "rgba(255, 255, 255, 0.7)", letterSpacing: "0.1em" }}>
             TICKET #{ticket.id.slice(0, 8).toUpperCase()}

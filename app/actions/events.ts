@@ -312,7 +312,7 @@ export async function checkInAttendeeAction(
 
   const { error } = await (supabaseAdmin
     .from("event_tickets") as any)
-    .update({ ticket_status: "admitted" })
+    .update({ ticket_status: "scanned" })
     .eq("id", ticketId);
 
   if (error) {
@@ -576,7 +576,466 @@ export async function deleteRichEventAction(
   }
 
   return { success: true };
+}export interface EventBookingRecord {
+  ticketId: string;
+  eventId: string;
+  userId: string;
+  ticketStatus: "pending" | "active" | "admitted" | "cancelled" | "scanned";
+  createdAt: string;
+  passerName: string;
+  passCity: string | null;
+  passCode: string; // first 8 chars of ticketId uppercased
+  tier: string;
 }
 
+/**
+ * Server Action: Fetch all tickets for events owned/created by the current user (artist or partner).
+ * Each event must have creator_id matching the session user in its metadata.
+ */
+export async function getEventBookingsForOwnerAction(): Promise<{
+  success: boolean;
+  bookings: EventBookingRecord[];
+  error?: string;
+}> {
+  const auth = await getSessionUserSecurely();
+  if ("error" in auth) {
+    return { success: false, bookings: [], error: auth.error };
+  }
+  const userId = auth.userId;
+
+  try {
+    // 1. Fetch all events, filter those where creator_id === userId via metadata
+    const { data: allEvents } = await (supabaseAdmin.from("official_events") as any)
+      .select("id, title, description, price")
+      .order("scheduled_at", { ascending: false });
+
+    const ownedEventIds: string[] = [];
+    const eventTierMap: Map<string, string> = new Map();
+
+    for (const ev of allEvents || []) {
+      try {
+        const { metadata } = parseEventDescription(ev.description);
+        if (metadata.creator_id === userId) {
+          ownedEventIds.push(ev.id);
+          const tier = metadata.tier_packages?.[0]?.name || "General Admission";
+          eventTierMap.set(ev.id, tier);
+        }
+      } catch {}
+    }
+
+    if (ownedEventIds.length === 0) {
+      return { success: true, bookings: [] };
+    }
+
+    // 2. Fetch tickets for owned events with member profiles
+    const { data: tickets, error } = await (supabaseAdmin.from("event_tickets") as any)
+      .select(`
+        id,
+        event_id,
+        user_id,
+        ticket_status,
+        created_at,
+        profiles:user_id (
+          full_name,
+          city
+        )
+      `)
+      .in("event_id", ownedEventIds)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      return { success: false, bookings: [], error: error.message };
+    }
+
+    const bookings: EventBookingRecord[] = (tickets || []).map((t: any) => ({
+      ticketId: t.id,
+      eventId: t.event_id,
+      userId: t.user_id,
+      ticketStatus: t.ticket_status as EventBookingRecord["ticketStatus"],
+      createdAt: t.created_at,
+      passerName: t.profiles?.full_name || "Solo Member",
+      passCity: t.profiles?.city || null,
+      passCode: String(t.id).slice(0, 8).toUpperCase(),
+      tier: eventTierMap.get(t.event_id) || "General Admission",
+    }));
+
+    return { success: true, bookings };
+  } catch (err: any) {
+    return { success: false, bookings: [], error: err.message || "Failed to fetch bookings." };
+  }
+}
+
+/**
+ * Server Action: Approve a pending booking for an event owned by the current user.
+ * Only the event creator (artist/partner) can approve their own event bookings.
+ */
+export async function approveTicketByOwnerAction(
+  ticketId: string
+): Promise<{ success: boolean; error?: string }> {
+  const auth = await getSessionUserSecurely();
+  if ("error" in auth) {
+    return { success: false, error: auth.error };
+  }
+  const userId = auth.userId;
+
+  try {
+    // 1. Get the ticket to find the event
+    const { data: ticket, error: ticketErr } = await (supabaseAdmin.from("event_tickets") as any)
+      .select("id, event_id, ticket_status")
+      .eq("id", ticketId)
+      .single();
+
+    if (ticketErr || !ticket) {
+      return { success: false, error: "Ticket not found." };
+    }
+
+    // 2. Verify this event belongs to the current user
+    const { data: ev, error: evErr } = await (supabaseAdmin.from("official_events") as any)
+      .select("id, description")
+      .eq("id", ticket.event_id)
+      .single();
+
+    if (evErr || !ev) {
+      return { success: false, error: "Event not found." };
+    }
+
+    const { metadata } = parseEventDescription(ev.description);
+    if (metadata.creator_id !== userId) {
+      return { success: false, error: "Unauthorized: You are not the creator of this event." };
+    }
+
+    // 3. Approve ticket (pending → active)
+    const { error: updateErr } = await (supabaseAdmin.from("event_tickets") as any)
+      .update({ ticket_status: "active" })
+      .eq("id", ticketId);
+
+    if (updateErr) {
+      return { success: false, error: updateErr.message };
+    }
+
+    // 4. Notify member
+    try {
+      const { writeNotification } = await import("@/app/actions/notifications");
+      await writeNotification(
+        ticket.user_id,
+        "spot_available" as any,
+        "🎟 TICKET APPROVED",
+        `Your booking for this event has been approved by the host. See you at the door!`
+      );
+    } catch {}
+
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to approve ticket." };
+  }
+}
+
+/**
+ * Server Action: Reject/cancel a booking for an event owned by the current user.
+ */
+export async function rejectTicketByOwnerAction(
+  ticketId: string
+): Promise<{ success: boolean; error?: string }> {
+  const auth = await getSessionUserSecurely();
+  if ("error" in auth) {
+    return { success: false, error: auth.error };
+  }
+  const userId = auth.userId;
+
+  try {
+    const { data: ticket, error: ticketErr } = await (supabaseAdmin.from("event_tickets") as any)
+      .select("id, event_id, user_id")
+      .eq("id", ticketId)
+      .single();
+
+    if (ticketErr || !ticket) {
+      return { success: false, error: "Ticket not found." };
+    }
+
+    const { data: ev, error: evErr } = await (supabaseAdmin.from("official_events") as any)
+      .select("id, description")
+      .eq("id", ticket.event_id)
+      .single();
+
+    if (evErr || !ev) {
+      return { success: false, error: "Event not found." };
+    }
+
+    const { metadata } = parseEventDescription(ev.description);
+    if (metadata.creator_id !== userId) {
+      return { success: false, error: "Unauthorized: You are not the creator of this event." };
+    }
+
+    const { error: updateErr } = await (supabaseAdmin.from("event_tickets") as any)
+      .update({ ticket_status: "cancelled" })
+      .eq("id", ticketId);
+
+    if (updateErr) {
+      return { success: false, error: updateErr.message };
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to reject ticket." };
+  }
+}
+
+export interface VerifyTicketResult {
+  success: boolean;
+  verdict:
+    | "valid_admitted"
+    | "already_admitted"
+    | "wrong_event"
+    | "pending_approval"
+    | "cancelled"
+    | "not_found";
+  message: string;
+  ticket?: {
+    id: string;
+    event_id: string;
+    ticket_status: string;
+    created_at: string;
+    attendeeName: string;
+    attendeeCity?: string;
+    targetEventTitle?: string;
+  };
+}
+
+/**
+ * Server Action: Bullet-proof ticket verification and gate admission for Door Scanner.
+ * Strictly verifies ticket against currentEventId, prevents duplicate entries, and validates approval status.
+ */
+export async function verifyAndCheckInTicketAction({
+  scannedCode,
+  currentEventId,
+}: {
+  scannedCode: string;
+  currentEventId: string;
+}): Promise<VerifyTicketResult> {
+  const auth = await getSessionUserSecurely();
+  if ("error" in auth) {
+    return { success: false, verdict: "not_found", message: "Unauthorized scanner session." };
+  }
+
+  // 1. Clean and parse scanned code
+  let ticketId = scannedCode.trim();
+  let candidateEventId: string | null = null;
+
+  // Handle JSON encoded QR codes: { ticketId, eventId }
+  try {
+    if (ticketId.startsWith("{") && ticketId.endsWith("}")) {
+      const parsed = JSON.parse(ticketId);
+      if (parsed.ticketId) ticketId = String(parsed.ticketId);
+      else if (parsed.id) ticketId = String(parsed.id);
+      if (parsed.eventId) candidateEventId = String(parsed.eventId);
+      else if (parsed.event_id) candidateEventId = String(parsed.event_id);
+    }
+  } catch {}
+
+  // Handle URL format: https://.../?id=...&event_id=...
+  if (ticketId.includes("id=")) {
+    try {
+      const url = new URL(ticketId.startsWith("http") ? ticketId : `https://x.com/${ticketId}`);
+      ticketId = url.searchParams.get("id") || ticketId;
+      if (!candidateEventId) candidateEventId = url.searchParams.get("event_id") || url.searchParams.get("eventId");
+    } catch {}
+  }
+
+  // Strip prefixes like "TICKET #", "PASS #", etc.
+  ticketId = ticketId.replace(/^(ticket|pass)\s*#?:?\s*/i, "").trim();
+
+  // 1. Scanner Authorization Check
+  const scannerEmail = auth.email?.toLowerCase() || "";
+  const authorizedAdminEmails = [
+    (process.env.ADMIN_EMAIL || "").toLowerCase(),
+    "raffay.asim6@gmail.com",
+    "admin@solonomore.com",
+    "subadmin@solonomore.com",
+    "vibe.tester@solonomore.com",
+  ].filter(Boolean);
+
+  const { data: scannerProfile } = await (supabaseAdmin.from("profiles") as any)
+    .select("subscription_tier, is_partner")
+    .eq("id", auth.userId)
+    .maybeSingle();
+
+  const isScannerAdmin = authorizedAdminEmails.includes(scannerEmail) || scannerProfile?.subscription_tier === "admin";
+
+  // Check event ownership if not global admin
+  if (!isScannerAdmin) {
+    const { data: targetEv } = await (supabaseAdmin.from("official_events") as any)
+      .select("description")
+      .eq("id", currentEventId)
+      .maybeSingle();
+
+    if (targetEv) {
+      const { metadata } = parseEventDescription(targetEv.description || "");
+      const isOwner = metadata?.creator_id === auth.userId;
+      // Also check delegated team managers
+      let isDelegated = false;
+      try {
+        const { getTeamDelegationsAction } = await import("@/app/actions/team-permissions");
+        const delegations = await getTeamDelegationsAction();
+        if (
+          delegations?.some(
+            (m: any) =>
+              m.manager_user_id === auth.userId &&
+              m.status === "active" &&
+              m.permissions?.includes("events.door_scanner") &&
+              (m.type === "sub_admin" || m.delegator_id === metadata?.creator_id)
+          )
+        ) {
+          isDelegated = true;
+        }
+      } catch {}
+
+      if (!isOwner && !isDelegated && scannerProfile?.subscription_tier !== "manager") {
+        return {
+          success: false,
+          verdict: "not_found",
+          message: "Unauthorized: You do not have door-scanner credentials for this event venue.",
+        };
+      }
+    }
+  }
+
+  // 2. Fetch ticket from Supabase (by exact ID, exact qr_id, or prefix match)
+  let ticketRecord: any = null;
+  const { data: exactMatch } = await (supabaseAdmin.from("event_tickets") as any)
+    .select(`
+      id,
+      event_id,
+      ticket_status,
+      created_at,
+      user_name,
+      qr_id,
+      profiles:user_id (
+        full_name,
+        city
+      ),
+      official_events:event_id (
+        id,
+        title,
+        description
+      )
+    `)
+    .or(`id.eq.${ticketId},qr_id.eq.${ticketId}`)
+    .maybeSingle();
+
+  if (exactMatch) {
+    ticketRecord = exactMatch;
+  } else if (ticketId.length >= 6) {
+    const { data: prefixMatches } = await (supabaseAdmin.from("event_tickets") as any)
+      .select(`
+        id,
+        event_id,
+        ticket_status,
+        created_at,
+        user_name,
+        qr_id,
+        profiles:user_id (
+          full_name,
+          city
+        ),
+        official_events:event_id (
+          id,
+          title,
+          description
+        )
+      `)
+      .or(`id.ilike.${ticketId}%,qr_id.ilike.${ticketId}%`)
+      .limit(1);
+
+    if (prefixMatches && prefixMatches.length > 0) {
+      ticketRecord = prefixMatches[0];
+    }
+  }
+
+  if (!ticketRecord) {
+    return {
+      success: false,
+      verdict: "not_found",
+      message: `Invalid Pass QR (${ticketId.slice(0, 10)}). No matching booking exists on the system.`,
+    };
+  }
+
+  const attendeeName = ticketRecord.user_name || ticketRecord.profiles?.full_name || "Verified Attendee";
+  const attendeeCity = ticketRecord.profiles?.city || "Karachi";
+  const targetEventTitle = ticketRecord.official_events?.title || "Another Event";
+
+  const ticketPayload = {
+    id: ticketRecord.id,
+    event_id: ticketRecord.event_id,
+    ticket_status: ticketRecord.ticket_status,
+    created_at: ticketRecord.created_at,
+    attendeeName,
+    attendeeCity,
+    targetEventTitle,
+  };
+
+  // 3. BULLET-PROOF EVENT MISMATCH CHECK
+  if (ticketRecord.event_id !== currentEventId) {
+    return {
+      success: false,
+      verdict: "wrong_event",
+      message: `WRONG EVENT! This ticket is for "${targetEventTitle}", not this event. Entry Denied.`,
+      ticket: ticketPayload,
+    };
+  }
+
+  // 4. DUPLICATE CHECK
+  if (ticketRecord.ticket_status === "admitted" || ticketRecord.ticket_status === "scanned") {
+    return {
+      success: false,
+      verdict: "already_admitted",
+      message: `DUPLICATE SCAN! Pass for ${attendeeName} was ALREADY checked in. Entry Denied.`,
+      ticket: ticketPayload,
+    };
+  }
+
+  // 5. PENDING APPROVAL CHECK
+  if (ticketRecord.ticket_status === "pending") {
+    return {
+      success: false,
+      verdict: "pending_approval",
+      message: `PENDING APPROVAL! Booking for ${attendeeName} is not yet approved by the host.`,
+      ticket: ticketPayload,
+    };
+  }
+
+  // 6. CANCELLED CHECK
+  if (ticketRecord.ticket_status === "cancelled") {
+    return {
+      success: false,
+      verdict: "cancelled",
+      message: `VOID TICKET! Booking for ${attendeeName} was cancelled or refunded. Entry Denied.`,
+      ticket: ticketPayload,
+    };
+  }
+
+  // 7. VALID & CLEARED -> ADMIT ATTENDEE!
+  const { error: updateErr } = await (supabaseAdmin.from("event_tickets") as any)
+    .update({ ticket_status: "scanned" })
+    .eq("id", ticketRecord.id);
+
+  if (updateErr) {
+    return {
+      success: false,
+      verdict: "not_found",
+      message: `Database error updating admission: ${updateErr.message}`,
+      ticket: ticketPayload,
+    };
+  }
+
+  return {
+    success: true,
+    verdict: "valid_admitted",
+    message: `ACCESS GRANTED! Welcome, ${attendeeName}.`,
+    ticket: {
+      ...ticketPayload,
+      ticket_status: "scanned",
+    },
+  };
+}
 
 

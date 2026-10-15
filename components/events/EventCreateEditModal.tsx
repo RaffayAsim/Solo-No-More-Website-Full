@@ -547,37 +547,15 @@ export default function EventCreateEditModal({
 
   return createPortal(
     <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0, 0, 0, 0.90)",
-        backdropFilter: "blur(14px)",
-        WebkitBackdropFilter: "blur(14px)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "16px",
-        zIndex: 999999,
-        overflowY: "auto",
-      }}
+      className="fixed inset-0 z-[999999] flex items-center justify-center p-2 sm:p-4 overflow-y-auto bg-black/90 backdrop-blur-md"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div
+        className="w-full max-w-4xl max-h-[96vh] rounded-2xl sm:rounded-3xl border border-[#FF6F26]/35 flex flex-col shadow-[0_24px_80px_rgba(0,0,0,0.95)] overflow-hidden relative"
         style={{
-          width: "100%",
-          maxWidth: "860px",
-          maxHeight: "92vh",
           background: "linear-gradient(180deg, #160E1D 0%, #0A0610 100%)",
-          border: "1px solid rgba(255, 111, 38, 0.35)",
-          borderRadius: "24px",
-          display: "flex",
-          flexDirection: "column",
-          boxShadow: "0 24px 80px rgba(0, 0, 0, 0.95)",
-          overflow: "hidden",
-          position: "relative",
-          zIndex: 1000000,
         }}
       >
         {/* ── 1. MODAL HEADER ────────────────────────────────────────────── */}
@@ -640,14 +618,7 @@ export default function EventCreateEditModal({
         {/* ── 2. SCROLLABLE FORM BODY ────────────────────────────────────── */}
         <form
           onSubmit={handleSubmit}
-          style={{
-            padding: "24px",
-            overflowY: "auto",
-            display: "flex",
-            flexDirection: "column",
-            gap: "22px",
-          }}
-          className="custom-tabs-scrollbar"
+          className="p-3.5 sm:p-6 overflow-y-auto flex flex-col gap-4 sm:gap-5 custom-tabs-scrollbar"
         >
           {errorMsg && (
             <div
@@ -690,7 +661,7 @@ export default function EventCreateEditModal({
           )}
 
           {/* Section: Title & Status */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 220px", gap: "14px" }}>
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_220px] gap-3 sm:gap-3.5">
             <div>
               <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.75)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "6px" }}>
                 Title *
@@ -806,7 +777,7 @@ export default function EventCreateEditModal({
           </div>
 
           {/* Section: Event Date, Start Time, End Time */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "14px" }}>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-3.5">
             <div>
               <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.75)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "6px" }}>
                 Event Date *
@@ -873,7 +844,7 @@ export default function EventCreateEditModal({
           </div>
 
           {/* Section: Venue Name & Full Address with Google Maps Autocomplete */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
             {/* Venue Name with Dropdown */}
             <div ref={locationWrapperRef} style={{ position: "relative" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
@@ -1119,16 +1090,7 @@ export default function EventCreateEditModal({
               {tierPackages.map((tier, idx) => (
                 <div
                   key={tier.id || idx}
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1.5fr 1fr 1fr 36px",
-                    gap: "10px",
-                    alignItems: "center",
-                    background: "rgba(255, 255, 255, 0.03)",
-                    padding: "10px 12px",
-                    borderRadius: "12px",
-                    border: "1px solid rgba(255, 255, 255, 0.08)",
-                  }}
+                  className="grid grid-cols-1 sm:grid-cols-[1.5fr_1fr_1fr_36px] gap-2.5 items-center p-3 rounded-xl border border-white/10 bg-white/[0.03]"
                 >
                   <input
                     type="text"
@@ -1423,7 +1385,7 @@ export default function EventCreateEditModal({
           </div>
 
           {/* Section: Attending Label & Capacity Limit */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
             <div>
               <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.75)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "6px" }}>
                 Attending People Label
@@ -1626,7 +1588,7 @@ export default function EventCreateEditModal({
                 style={{ display: "none" }}
               />
 
-              <div style={{ display: "grid", gridTemplateColumns: "auto 1fr 1.2fr", gap: "14px", alignItems: "center" }}>
+              <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr_1.2fr] gap-3 sm:gap-3.5 items-center">
                 {/* Organizer Logo/Photo Upload & Preview */}
                 <div>
                   <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "rgba(255, 255, 255, 0.6)", marginBottom: "6px" }}>
@@ -1919,16 +1881,7 @@ export default function EventCreateEditModal({
               {lineups.map((perf, idx) => (
                 <div
                   key={idx}
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "auto 1.2fr 1.2fr 1fr 36px",
-                    gap: "10px",
-                    alignItems: "center",
-                    background: "rgba(0, 0, 0, 0.25)",
-                    padding: "8px 12px",
-                    borderRadius: "12px",
-                    border: "1px solid rgba(255, 255, 255, 0.08)",
-                  }}
+                  className="grid grid-cols-1 sm:grid-cols-[auto_1.2fr_1.2fr_1fr_36px] gap-2.5 items-center p-2.5 rounded-xl border border-white/10 bg-black/30"
                 >
                   {/* Performer Photo Upload Thumbnail */}
                   <div style={{ position: "relative" }}>
@@ -2029,16 +1982,7 @@ export default function EventCreateEditModal({
           </div>
 
           {/* ── 3. FORM FOOTER ACTIONS ────────────────────────────────────── */}
-          <div
-            style={{
-              borderTop: "1px solid rgba(255, 255, 255, 0.08)",
-              paddingTop: "16px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "flex-end",
-              gap: "12px",
-            }}
-          >
+          <div className="border-t border-white/10 pt-4 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 sm:gap-3">
             <button
               type="button"
               onClick={onClose}

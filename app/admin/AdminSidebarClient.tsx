@@ -38,6 +38,7 @@ export default function AdminSidebarClient({
     { label: "Partners", href: "/admin/partners" },
     { label: "Artist", href: "/admin/artists" },
     { label: "Review Wall", href: "/admin/review-wall" },
+    { label: "Access & Settings", href: "/admin/settings" },
   ];
 
   const isActive = (tab: (typeof navTabs)[0]) => {

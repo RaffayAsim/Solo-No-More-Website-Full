@@ -50,6 +50,21 @@ export async function verifyAdminStatus(): Promise<{ userId: string; email: stri
     return { userId: authCheck.userId, email: authCheck.email };
   }
 
+  // Check if authorized active Sub-Admin
+  try {
+    const { getTeamDelegationsAction } = await import("@/app/actions/team-permissions");
+    const subAdmins = await getTeamDelegationsAction({ type: "sub_admin" });
+    const isSubAdmin = subAdmins.some(
+      (s) =>
+        s.status === "active" &&
+        (s.manager_user_id === authCheck.userId ||
+          (authCheck.email && s.manager_email.toLowerCase() === authCheck.email.toLowerCase()))
+    );
+    if (isSubAdmin) {
+      return { userId: authCheck.userId, email: authCheck.email };
+    }
+  } catch {}
+
   // Unauthorized users get redirected to standard dashboard
   redirect("/dashboard");
 }

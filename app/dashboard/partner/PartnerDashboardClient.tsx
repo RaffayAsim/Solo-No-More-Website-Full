@@ -5,11 +5,40 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { updateProfile } from "@/app/actions/billing";
 import { cancelPartnerOfferAction } from "@/app/actions/beacons";
-import { checkInAttendeeAction } from "@/app/actions/events";
+import {
+  checkInAttendeeAction,
+  approveTicketByOwnerAction,
+  rejectTicketByOwnerAction,
+} from "@/app/actions/events";
 import CreatePartnerOfferModal from "@/components/partner/CreatePartnerOfferModal";
 import CreatePartnerEventModal from "@/components/partner/CreatePartnerEventModal";
+import EventDoorScannerModal from "@/components/events/EventDoorScannerModal";
+import DelegatedManagerSection, { ScopeDef } from "@/components/team/DelegatedManagerSection";
 import type { Beacon, Profile, OfficialEvent } from "@/lib/supabase/types";
 import { parseEventDescription } from "@/lib/event-metadata";
+
+const PARTNER_MANAGER_SCOPES: ScopeDef[] = [
+  {
+    key: "events.door_scanner",
+    name: "Brand Event Camera Door Scanner",
+    desc: "Operate live camera gate check-in for brand tastings & venue events",
+  },
+  {
+    key: "events.manage_applications",
+    name: "Approve Event Ticket Bookings",
+    desc: "Review and approve attendee pass bookings for ticketed events",
+  },
+  {
+    key: "beacons.manage_applications",
+    name: "Manage Squad Deals & Table Seating",
+    desc: "Review squad applications for radar promo offers and seat table reservations",
+  },
+  {
+    key: "offers.create_manage",
+    name: "Broadcast Promotional Deals & Discounts",
+    desc: "Create and publish discounts, 1+1 vouchers, and happy hour offers",
+  },
+];
 import {
   Store,
   Sparkles,
@@ -41,6 +70,8 @@ import {
   UserCheck,
   Camera,
   Upload,
+  QrCode,
+  Hourglass,
 } from "lucide-react";
 
 interface TicketWithProfile {
@@ -102,9 +133,9 @@ export default function PartnerDashboardClient({
 }: PartnerDashboardClientProps) {
   const router = useRouter();
 
-  // Tab State: "overview" | "offers" | "events" | "store"
-  const [activeTab, setActiveTab] = useState<"overview" | "offers" | "events" | "store">(() => {
-    if (initialTab === "offers" || initialTab === "events" || initialTab === "store") {
+  // Tab State: "overview" | "offers" | "events" | "store" | "team"
+  const [activeTab, setActiveTab] = useState<"overview" | "offers" | "events" | "store" | "team">(() => {
+    if (initialTab === "offers" || initialTab === "events" || initialTab === "store" || initialTab === "team") {
       return initialTab;
     }
     return "overview";
@@ -115,7 +146,7 @@ export default function PartnerDashboardClient({
       if (typeof window !== "undefined") {
         const params = new URLSearchParams(window.location.search);
         const tab = params.get("tab");
-        if (tab === "offers" || tab === "events" || tab === "store") {
+        if (tab === "offers" || tab === "events" || tab === "store" || tab === "team") {
           setActiveTab(tab);
         } else {
           setActiveTab("overview");
@@ -132,7 +163,7 @@ export default function PartnerDashboardClient({
     };
   }, [initialTab]);
 
-  const handleTabChange = (tab: "overview" | "offers" | "events" | "store") => {
+  const handleTabChange = (tab: "overview" | "offers" | "events" | "store" | "team") => {
     setActiveTab(tab);
     if (typeof window !== "undefined") {
       const url = tab === "overview" ? "/dashboard/partner" : `/dashboard/partner?tab=${tab}`;
@@ -165,17 +196,18 @@ export default function PartnerDashboardClient({
     );
   };
 
-  // Door Check-in Handler
-  const handleAdmitTicket = async (ticketId: string) => {
+  // Door Check-in & Approval Handlers
+  const handleToggleAdmission = async (ticketId: string, currentStatus: string) => {
+    const newStatus = currentStatus === "admitted" ? "active" : "admitted";
     setCheckingInTicketId(ticketId);
     try {
       const res = await checkInAttendeeAction(ticketId);
       if (res.success) {
         setTickets((prev) =>
-          prev.map((t) => (t.id === ticketId ? { ...t, ticket_status: "admitted" } : t))
+          prev.map((t) => (t.id === ticketId ? { ...t, ticket_status: newStatus } : t))
         );
       } else {
-        alert(res.error || "Failed to admit attendee.");
+        alert(res.error || "Failed to update admission status.");
       }
     } catch {
       alert("Network error during door check-in.");
@@ -184,9 +216,42 @@ export default function PartnerDashboardClient({
     }
   };
 
+  const handleApproveTicket = async (ticketId: string) => {
+    try {
+      const res = await approveTicketByOwnerAction(ticketId);
+      if (res.success) {
+        setTickets((prev) =>
+          prev.map((t) => (t.id === ticketId ? { ...t, ticket_status: "active" } : t))
+        );
+      } else {
+        alert(res.error || "Failed to approve booking.");
+      }
+    } catch {
+      alert("Network error approving booking.");
+    }
+  };
+
+  const handleRejectTicket = async (ticketId: string) => {
+    try {
+      const res = await rejectTicketByOwnerAction(ticketId);
+      if (res.success) {
+        setTickets((prev) =>
+          prev.map((t) => (t.id === ticketId ? { ...t, ticket_status: "cancelled" } : t))
+        );
+      } else {
+        alert(res.error || "Failed to reject booking.");
+      }
+    } catch {
+      alert("Network error rejecting booking.");
+    }
+  };
+
   // Modal triggers
   const [isOfferModalOpen, setIsOfferModalOpen] = useState(false);
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+  // Per-event Door Scanner
+  const [scannerEvent, setScannerEvent] = useState<OfficialEvent | null>(null);
+  // Legacy guestlist — kept for backward compatibility
   const [selectedGuestlistEvent, setSelectedGuestlistEvent] = useState<OfficialEvent | null>(null);
 
   // Action states
@@ -333,7 +398,7 @@ export default function PartnerDashboardClient({
   return (
     <div className="p-3 sm:p-6 md:p-8 max-w-7xl mx-auto space-y-7">
       {/* ── TOP HERO BANNER: BRAND SPOTLIGHT & ACTION CENTER ────────────── */}
-      <div className="relative rounded-3xl bg-gradient-to-r from-white/[0.04] via-white/[0.02] to-transparent border border-[#FF6F26]/30 p-6 md:p-8 overflow-hidden backdrop-blur-2xl shadow-[0_10px_40px_rgba(0,0,0,0.6)]">
+      <div className="relative rounded-3xl bg-gradient-to-r from-white/[0.04] via-white/[0.02] to-transparent border border-[#FF6F26]/30 p-4 sm:p-6 md:p-8 overflow-hidden backdrop-blur-2xl shadow-[0_10px_40px_rgba(0,0,0,0.6)]">
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="flex items-center gap-2 flex-wrap">
@@ -424,12 +489,13 @@ export default function PartnerDashboardClient({
       </div>
 
       {/* ── SEGMENTED SUB-NAV TABS ───────────────────────────────────────── */}
-      <div className="flex items-center gap-2 border-b border-white/10 pb-2 overflow-x-auto custom-scrollbar">
+      <div className="flex items-center gap-2 border-b border-white/10 pb-2 overflow-x-auto no-scrollbar scrollbar-none shrink-0 whitespace-nowrap">
         {[
           { id: "overview", label: "Command Center & Figures", icon: BarChart3 },
           { id: "offers", label: `Promos & Deals (${activeOffers.length})`, icon: Tag },
           { id: "events", label: `Brand Events (${events.length})`, icon: Calendar },
           { id: "store", label: "Store & Venue Setup", icon: Building2 },
+          { id: "team", label: "Team & Managers", icon: Users },
         ].map((tab) => {
           const TabIcon = tab.icon;
           const isSelected = activeTab === tab.id;
@@ -437,7 +503,7 @@ export default function PartnerDashboardClient({
             <button
               key={tab.id}
               onClick={() => handleTabChange(tab.id as any)}
-              className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
+              className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 ${
                 isSelected
                   ? "bg-[#FF6F26] text-white shadow-[0_4px_16px_rgba(255,111,38,0.35)]"
                   : "bg-white/[0.02] text-zinc-400 hover:text-white hover:bg-white/[0.05] border border-white/5"
@@ -456,7 +522,7 @@ export default function PartnerDashboardClient({
       {activeTab === "overview" && (
         <div className="space-y-8 animate-fadeIn">
           {/* ── KEY BUSINESS FIGURES ────────────────────────────────────────── */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {/* Figure 1: Active Promos */}
             <div className="rounded-3xl bg-white/[0.02] border border-white/10 p-5 backdrop-blur-xl flex flex-col justify-between hover:border-white/20 transition-all">
               <div className="flex items-center justify-between text-zinc-400">
@@ -731,11 +797,11 @@ export default function PartnerDashboardClient({
                           </div>
                         </div>
                         <button
-                          onClick={() => setSelectedGuestlistEvent(ev)}
-                          className="px-3 py-1.5 rounded-xl text-xs font-bold bg-white/5 hover:bg-white/10 text-white border border-white/10 transition-all flex items-center gap-1"
+                          onClick={() => setScannerEvent(ev)}
+                          className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/25 transition-all flex items-center gap-1.5 shadow-sm"
                         >
-                          <Ticket className="w-3.5 h-3.5 text-purple-400" />
-                          <span>Guestlist</span>
+                          <QrCode className="w-3.5 h-3.5 text-purple-400" />
+                          <span>Door Scanner</span>
                         </button>
                       </div>
                     );
@@ -924,6 +990,24 @@ export default function PartnerDashboardClient({
             </button>
           </div>
 
+          {tickets.filter((t) => t.ticket_status === "pending").length > 0 && (
+            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center shrink-0">
+                  <Hourglass className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-amber-200">
+                    {tickets.filter((t) => t.ticket_status === "pending").length} Ticket Booking{tickets.filter((t) => t.ticket_status === "pending").length > 1 ? "s" : ""} Awaiting Your Approval
+                  </div>
+                  <div className="text-[11px] text-amber-300/70">
+                    As the event creator/partner host, click &ldquo;Door Scanner&rdquo; on your event below to approve or decline attendee bookings.
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {events.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {events.map((ev) => {
@@ -980,11 +1064,16 @@ export default function PartnerDashboardClient({
                         Revenue: <span className="text-emerald-400 font-bold">PKR {revenueForEvent.toLocaleString()}</span>
                       </div>
                       <button
-                        onClick={() => setSelectedGuestlistEvent(ev)}
-                        className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white/5 hover:bg-white/10 text-white border border-white/10 transition-all flex items-center gap-1.5"
+                        onClick={() => setScannerEvent(ev)}
+                        className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/20 transition-all flex items-center gap-1.5"
                       >
-                        <Ticket className="w-3.5 h-3.5 text-purple-400" />
-                        <span>Guestlist ({soldForThisEvent.length})</span>
+                        <QrCode className="w-3.5 h-3.5 text-purple-400" />
+                        <span>Door Scanner</span>
+                        {tickets.filter((t) => t.event_id === ev.id && t.ticket_status === "pending").length > 0 && (
+                          <span className="px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-black border border-amber-500/30 animate-pulse">
+                            {tickets.filter((t) => t.event_id === ev.id && t.ticket_status === "pending").length}
+                          </span>
+                        )}
                       </button>
                     </div>
                   </div>
@@ -1258,6 +1347,19 @@ export default function PartnerDashboardClient({
         </div>
       )}
 
+      {/* ── TAB 5: VENUE MANAGERS & TEAM ACCESS ────────────────────────────── */}
+      {activeTab === "team" && (
+        <DelegatedManagerSection
+          type="partner_manager"
+          delegatorId={profile.id}
+          delegatorName={businessName || profile.full_name || "Partner Venue"}
+          title="Venue Managers & Door Reception Team"
+          subtitle="Empower your floor managers, receptionists, or security staff to operate the camera Door Scanner and seat radar squads without sharing account credentials."
+          availableScopes={PARTNER_MANAGER_SCOPES}
+          accent="purple"
+        />
+      )}
+
       {/* ── DEDICATED PARTNER OFFER MODAL ─────────────────────────────────── */}
       <CreatePartnerOfferModal
         isOpen={isOfferModalOpen}
@@ -1280,82 +1382,25 @@ export default function PartnerDashboardClient({
         profile={profile}
       />
 
-      {/* ── GUESTLIST / TICKET VIEWER MODAL ───────────────────────────────── */}
-      {selectedGuestlistEvent && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
-        >
-          <div className="relative w-full max-w-lg rounded-3xl border border-white/10 bg-[#120d18] p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-purple-400">
-                  Guestlist & Check-in
-                </span>
-                <h3 className="text-base font-extrabold text-white">
-                  {selectedGuestlistEvent.title}
-                </h3>
-              </div>
-              <button
-                onClick={() => setSelectedGuestlistEvent(null)}
-                className="w-7 h-7 rounded-full bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="max-h-80 overflow-y-auto space-y-2.5 custom-scrollbar">
-              {tickets.filter((t) => t.event_id === selectedGuestlistEvent.id).length > 0 ? (
-                tickets
-                  .filter((t) => t.event_id === selectedGuestlistEvent.id)
-                  .map((t) => {
-                    const isAdmitted = t.ticket_status === "admitted" || t.ticket_status === "scanned";
-                    return (
-                      <div
-                        key={t.id}
-                        className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center justify-between text-xs gap-3 hover:border-white/15 transition-all"
-                      >
-                        <div className="space-y-0.5">
-                          <div className="font-bold text-white flex items-center gap-1.5">
-                            <span>{t.profiles?.full_name || "Verified Member"}</span>
-                          </div>
-                          <div className="text-[10px] text-zinc-400 flex items-center gap-1.5">
-                            <span>{t.profiles?.city || "Karachi"}</span>
-                            <span>·</span>
-                            <span className="font-mono text-zinc-500">Pass #{t.id.slice(0, 8)}</span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2 shrink-0">
-                          {isAdmitted ? (
-                            <span className="px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5 shadow-sm">
-                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                              <span>✓ Admitted at Door</span>
-                            </span>
-                          ) : (
-                            <button
-                              type="button"
-                              disabled={checkingInTicketId === t.id}
-                              onClick={() => handleAdmitTicket(t.id)}
-                              className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:brightness-110 border border-emerald-400/40 transition-all flex items-center gap-1.5 shadow-[0_0_15px_rgba(16,185,129,0.25)] active:scale-95 disabled:opacity-50"
-                            >
-                              <Check className="w-3.5 h-3.5" />
-                              <span>{checkingInTicketId === t.id ? "Checking In..." : "Admit Guest"}</span>
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })
-              ) : (
-                <div className="p-8 text-center text-xs text-zinc-500">
-                  No ticket passes claimed for this event yet.
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+      {/* ── PER-EVENT DOOR SCANNER MODAL ────────────────────────────────────── */}
+      {scannerEvent && (
+        <EventDoorScannerModal
+          isOpen={!!scannerEvent}
+          onClose={() => setScannerEvent(null)}
+          eventId={scannerEvent.id}
+          eventTitle={scannerEvent.title}
+          eventDate={
+            scannerEvent.scheduled_at
+              ? new Date(scannerEvent.scheduled_at).toLocaleDateString()
+              : undefined
+          }
+          eventVenue={scannerEvent.venue_name || businessName}
+          tickets={tickets.filter((t) => t.event_id === scannerEvent.id)}
+          onToggleAdmit={handleToggleAdmission}
+          onApprove={handleApproveTicket}
+          onReject={handleRejectTicket}
+          accent="purple"
+        />
       )}
 
       {/* ── SQUAD ROSTER VIEWER MODAL (PROMO OFFERS) ────────────────────── */}
@@ -1399,7 +1444,7 @@ export default function PartnerDashboardClient({
                   .map((app) => (
                     <div
                       key={app.id}
-                      className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center justify-between text-xs gap-3 hover:border-white/15 transition-all"
+                      className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-3 hover:border-white/15 transition-all"
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 overflow-hidden flex items-center justify-center shrink-0">

@@ -23,7 +23,10 @@ import {
   Moon,
   Coins,
   HelpCircle,
+  Share2,
+  AlertCircle,
 } from "lucide-react";
+import UniversalShareModal from "@/components/share/UniversalShareModal";
 import { parseBeaconMeta } from "@/lib/beaconBudget";
 
 const CATEGORY_META: Record<
@@ -137,14 +140,31 @@ export default function BeaconCard({
 
   const parsedMeta = parseBeaconMeta(beacon.description);
   const [showApplyModal, setShowApplyModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [applicantAnswer, setApplicantAnswer] = useState("");
   const [budgetAgreed, setBudgetAgreed] = useState(true);
+  const [appliedSuccess, setAppliedSuccess] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  const shortCode = beacon.id.length >= 8 ? beacon.id.slice(0, 8) : beacon.id;
+  const shortUrl = typeof window !== "undefined"
+    ? `${window.location.origin}/b/${shortCode}`
+    : `https://solonomore.com/b/${shortCode}`;
+
+  const handleCopyShortLink = async () => {
+    try {
+      await navigator.clipboard.writeText(shortUrl);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
+    } catch {}
+  };
 
   const handleJoin = async () => {
     if (isRestrictedRole) {
       alert(`${roleLabel || "Restricted"} accounts cannot join member hangouts. Hangout participation is reserved for personal member accounts.`);
       return;
     }
+    setAppliedSuccess(false);
     setShowApplyModal(true);
   };
 
@@ -159,7 +179,7 @@ export default function BeaconCard({
       });
       if (result.success) {
         setAppliedStatus("requested");
-        setShowApplyModal(false);
+        setAppliedSuccess(true);
         onApply?.(beacon.id);
       } else {
         setErrorMessage(result.error);
@@ -316,20 +336,48 @@ export default function BeaconCard({
             )}
           </div>
 
-          <span
-            style={{
-              fontSize: "10.5px",
-              fontWeight: 700,
-              color: beacon.visibility_mode === "friend" ? "#FF8A3D" : "rgba(255,255,255,0.6)",
-              background: "rgba(255,255,255,0.05)",
-              border: "1px solid rgba(255,255,255,0.1)",
-              padding: "2px 8px",
-              borderRadius: "6px",
-              letterSpacing: "0.02em",
-            }}
-          >
-            {beacon.visibility_mode === "friend" ? "Friends" : "Open Radar"}
-          </span>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <span
+              style={{
+                fontSize: "10.5px",
+                fontWeight: 700,
+                color: beacon.visibility_mode === "friend" ? "#FF8A3D" : "rgba(255,255,255,0.6)",
+                background: "rgba(255,255,255,0.05)",
+                border: "1px solid rgba(255,255,255,0.1)",
+                padding: "2px 8px",
+                borderRadius: "6px",
+                letterSpacing: "0.02em",
+              }}
+            >
+              {beacon.visibility_mode === "friend" ? "Friends" : "Open Radar"}
+            </span>
+
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowShareModal(true);
+              }}
+              style={{
+                background: "rgba(255, 111, 38, 0.12)",
+                border: "1px solid rgba(255, 111, 38, 0.3)",
+                borderRadius: "6px",
+                padding: "2px 7px",
+                color: "#FFA05C",
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                fontSize: "10px",
+                fontWeight: 800,
+              }}
+              className="hover:bg-[#FF6F26]/20 transition-colors"
+              title="Share this hangout with friends or on socials"
+            >
+              <Share2 style={{ width: "11px", height: "11px" }} />
+              <span>Share</span>
+            </button>
+          </div>
         </div>
 
         {/* Title */}
@@ -610,14 +658,88 @@ export default function BeaconCard({
                     </div>
                   </div>
                   <button
-                    onClick={() => setShowApplyModal(false)}
+                    onClick={() => {
+                      setShowApplyModal(false);
+                      setAppliedSuccess(false);
+                    }}
                     className="p-1 rounded-lg text-zinc-400 hover:text-white"
                   >
                     ✕
                   </button>
                 </div>
 
-                <form onSubmit={handleJoinSubmit} className="space-y-4">
+                {appliedSuccess ? (
+                  <div className="space-y-4 py-3 text-center">
+                    <div className="w-12 h-12 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mx-auto text-xl font-bold">
+                      ✓
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className="text-base font-bold text-white">Join Request Sent!</h4>
+                      <p className="text-xs text-zinc-300">
+                        The host will review your request. Want your friends to join the same squad with you?
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-white/[0.04] border border-white/10 text-left">
+                      <input
+                        type="text"
+                        readOnly
+                        value={shortUrl}
+                        className="flex-1 bg-transparent px-2.5 text-xs text-zinc-300 font-mono outline-none truncate"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleCopyShortLink}
+                        className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-[#FF6F26] hover:bg-[#FF5A1F] text-white flex items-center gap-1.5 shrink-0 transition-colors"
+                      >
+                        {copiedLink ? "✓ Copied!" : "Copy Link"}
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowApplyModal(false);
+                          setAppliedSuccess(false);
+                          setShowShareModal(true);
+                        }}
+                        className="flex-1 py-2 rounded-xl text-xs font-bold bg-white/5 hover:bg-white/10 text-[#FFA05C] border border-white/10 flex items-center justify-center gap-1.5 transition-colors"
+                      >
+                        <Share2 className="w-3.5 h-3.5 text-[#FF6F26]" />
+                        <span>Share With Friends</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowApplyModal(false);
+                          setAppliedSuccess(false);
+                        }}
+                        className="px-5 py-2 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/20 text-white transition-colors"
+                      >
+                        Done
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <form onSubmit={handleJoinSubmit} className="space-y-4">
+                  {errorMessage && (
+                    <div className="p-3 rounded-2xl bg-red-500/10 border border-red-500/30 text-xs text-red-300 space-y-1.5">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                        <span>{errorMessage}</span>
+                      </div>
+                      {errorMessage.includes("PROFILE_INCOMPLETE") && (
+                        <Link
+                          href="/dashboard/profile"
+                          className="inline-flex items-center gap-1 font-bold text-[#FFA05C] hover:underline text-[11px] pt-1"
+                        >
+                          <span>Complete Your Safety Profile Now →</span>
+                        </Link>
+                      )}
+                    </div>
+                  )}
+
                   {/* Budget Pact Alignment */}
                   <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 space-y-2">
                     <div className="flex items-center gap-2 text-xs font-bold text-amber-300">
@@ -677,12 +799,23 @@ export default function BeaconCard({
                       {isPending ? "Sending..." : "Submit Join Request ➔"}
                     </button>
                   </div>
-                </form>
+                  </form>
+                )}
               </div>
             </div>
           )}
         </div>
       )}
+
+      {/* Universal Share Modal */}
+      <UniversalShareModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        title={beacon.title}
+        shareUrl={shortUrl}
+        shareText={`Join my squad hangout "${beacon.title}" on Solo-No-More!`}
+        type="beacon"
+      />
     </article>
   );
 }
