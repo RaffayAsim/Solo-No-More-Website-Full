@@ -51,6 +51,27 @@ const skinBootScript = `
   try {
     document.documentElement.setAttribute('data-theme', 'partiful');
     localStorage.setItem('snm-skin', 'partiful');
+
+    // Instant Web & Desktop Cache Purge
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        var hadWorker = false;
+        for (var r of registrations) {
+          r.unregister();
+          hadWorker = true;
+        }
+        if (hadWorker && !sessionStorage.getItem('snm_cache_reset_v3')) {
+          sessionStorage.setItem('snm_cache_reset_v3', '1');
+          window.location.reload();
+        }
+      });
+    }
+
+    if ('caches' in window) {
+      caches.keys().then(function(keys) {
+        keys.forEach(function(k) { caches.delete(k); });
+      });
+    }
   } catch (e) {}
 `;
 
