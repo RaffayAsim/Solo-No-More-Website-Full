@@ -51,10 +51,16 @@ export const MANDATORY_PROFILE_FIELDS: MissingField[] = [
     hint: "18+ age verification for night experiences",
   },
   {
-    key: "cnic",
-    label: "CNIC / National ID",
+    key: "cnic_picture_url",
+    label: "CNIC Document Photo",
     category: "safety",
-    hint: "13-digit identity number (e.g. 42101-1234567-1)",
+    hint: "Clear front photo of your CNIC/National ID card",
+  },
+  {
+    key: "instagram_screenshot_url",
+    label: "Instagram Profile Screenshot",
+    category: "safety",
+    hint: "Screenshot of your Instagram account for community safety vetting",
   },
   {
     key: "emergency_contact_name",
@@ -79,12 +85,6 @@ export const MANDATORY_PROFILE_FIELDS: MissingField[] = [
     label: "Vibes & Interests",
     category: "vibe",
     hint: "Select at least 1 music, social, or nightlife vibe",
-  },
-  {
-    key: "avatar_url",
-    label: "Profile Headshot",
-    category: "vibe",
-    hint: "A clear real photo for door verification & squad recognition",
   },
 ];
 
@@ -120,9 +120,12 @@ export function checkProfileCompleteness(profile: Record<string, any> | null | u
     } else if (field.key === "date_of_birth") {
       const val = profile.date_of_birth;
       hasValue = typeof val === "string" && val.trim().length >= 4;
-    } else if (field.key === "cnic") {
-      const val = profile.cnic;
-      hasValue = typeof val === "string" && val.trim().length >= 8;
+    } else if (field.key === "cnic_picture_url") {
+      const val = profile.cnic_picture_url;
+      hasValue = typeof val === "string" && val.trim().length > 0 && (val.startsWith("http") || val.startsWith("data:") || val.startsWith("/"));
+    } else if (field.key === "instagram_screenshot_url") {
+      const val = profile.instagram_screenshot_url || profile.social_link || profile.instagram_screenshot;
+      hasValue = typeof val === "string" && val.trim().length > 0 && (val.startsWith("http") || val.startsWith("data:") || val.startsWith("/"));
     } else if (field.key === "emergency_contact_name") {
       const val = profile.emergency_contact_name || profile.emergency_name;
       hasValue = typeof val === "string" && val.trim().length >= 2;
@@ -130,14 +133,11 @@ export function checkProfileCompleteness(profile: Record<string, any> | null | u
       const val = profile.emergency_contact_phone || profile.emergency_phone;
       hasValue = typeof val === "string" && val.trim().length >= 7;
     } else if (field.key === "instagram_username") {
-      const val = profile.instagram_username || profile.instagram || profile.social_link;
+      const val = profile.instagram_username || profile.instagram;
       hasValue = typeof val === "string" && val.trim().length >= 2;
     } else if (field.key === "vibe_tags") {
       const val = profile.vibe_tags || profile.interests;
       hasValue = Array.isArray(val) && val.length > 0;
-    } else if (field.key === "avatar_url") {
-      const val = profile.avatar_url || profile.photo_url || profile.avatar_icon;
-      hasValue = typeof val === "string" && val.trim().length > 0;
     }
 
     if (hasValue) {

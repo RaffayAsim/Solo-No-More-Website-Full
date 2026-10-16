@@ -58,9 +58,18 @@ export interface UnifiedUserRecord {
   city: string;
   address: string;
   cnic: string;
+  gender?: string;
+  dateOfBirth?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  instagramUsername?: string;
   bio: string;
   profilePictureUrl: string;
+  avatarIcon?: string;
   cnicPictureUrl: string;
+  instagramScreenshotUrl?: string;
+  vibeTags?: string[];
+  isProfileComplete?: boolean;
   instagramScreenshots: string[];
   instagram: string;
   packageSelected: string;
@@ -115,15 +124,23 @@ export default function UserVettingClient({ initialUsers }: UserVettingClientPro
   const [editCnic, setEditCnic] = useState("");
   const [editCity, setEditCity] = useState("Karachi");
   const [editAddress, setEditAddress] = useState("");
+  const [editGender, setEditGender] = useState("Male");
+  const [editDateOfBirth, setEditDateOfBirth] = useState("");
+  const [editEmergencyName, setEditEmergencyName] = useState("");
+  const [editEmergencyPhone, setEditEmergencyPhone] = useState("");
+  const [editInstagram, setEditInstagram] = useState("");
   const [editBio, setEditBio] = useState("");
   const [editProfilePic, setEditProfilePic] = useState("");
   const [editCnicPic, setEditCnicPic] = useState("");
+  const [editVibeTags, setEditVibeTags] = useState<string[]>([]);
   const [editInstagramShots, setEditInstagramShots] = useState<string[]>([]);
+  const [editInstagramShot, setEditInstagramShot] = useState("");
   const [isSavingDetails, setIsSavingDetails] = useState(false);
 
   // Hidden File Inputs for Modal
   const profilePicInputRef = useRef<HTMLInputElement>(null);
   const cnicPicInputRef = useRef<HTMLInputElement>(null);
+  const igShotInputRef = useRef<HTMLInputElement>(null);
   const instaShotInputRef0 = useRef<HTMLInputElement>(null);
   const instaShotInputRef1 = useRef<HTMLInputElement>(null);
 
@@ -145,6 +162,12 @@ export default function UserVettingClient({ initialUsers }: UserVettingClientPro
     setUsers(initialUsers);
   }, [initialUsers]);
 
+  const toggleEditVibe = (tag: string) => {
+    setEditVibeTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  };
+
   // Open "User Details & Edit" modal
   const handleOpenDetails = (user: UnifiedUserRecord) => {
     setSelectedUser(user);
@@ -165,9 +188,17 @@ export default function UserVettingClient({ initialUsers }: UserVettingClientPro
     setEditCnic(user.cnic || "");
     setEditCity(user.city || "Karachi");
     setEditAddress(user.address || "");
+    setEditGender(user.gender || "Male");
+    setEditDateOfBirth(user.dateOfBirth || "");
+    setEditEmergencyName(user.emergencyContactName || "");
+    setEditEmergencyPhone(user.emergencyContactPhone || "");
+    setEditInstagram((user.instagramUsername || user.instagram || "").replace(/^@/, ""));
     setEditBio(user.bio || "");
     setEditProfilePic(user.profilePictureUrl || "");
     setEditCnicPic(user.cnicPictureUrl || "");
+    setEditVibeTags(Array.isArray(user.vibeTags) && user.vibeTags.length > 0 ? user.vibeTags : ["Techno & House"]);
+    const initialIgShot = user.instagramScreenshotUrl || (user.instagramScreenshots && user.instagramScreenshots[0]) || "";
+    setEditInstagramShot(initialIgShot);
     setEditInstagramShots(user.instagramScreenshots || []);
     setIsDetailModalOpen(true);
   };
@@ -220,14 +251,22 @@ export default function UserVettingClient({ initialUsers }: UserVettingClientPro
         cnic: editCnic,
         city: editCity,
         address: editAddress,
+        gender: editGender,
+        dateOfBirth: editDateOfBirth,
+        emergencyContactName: editEmergencyName,
+        emergencyContactPhone: editEmergencyPhone,
+        instagramUsername: editInstagram,
         bio: editBio,
         profilePictureUrl: editProfilePic,
         cnicPictureUrl: editCnicPic,
-        instagramScreenshots: editInstagramShots,
+        instagramScreenshotUrl: editInstagramShot,
+        instagram_screenshot_url: editInstagramShot,
+        vibeTags: editVibeTags,
+        instagramScreenshots: editInstagramShot ? [editInstagramShot] : editInstagramShots,
       });
 
       if (res.success) {
-        const updatedName = `${editFirstName} ${editLastName}`.trim() || editDisplayName;
+        const updatedName = editDisplayName || `${editFirstName} ${editLastName}`.trim();
         setUsers((prev) =>
           prev.map((u) =>
             u.id === selectedUser.id
@@ -236,15 +275,23 @@ export default function UserVettingClient({ initialUsers }: UserVettingClientPro
                   fullName: updatedName,
                   firstName: editFirstName,
                   lastName: editLastName,
-                  displayName: editDisplayName || updatedName,
+                  displayName: updatedName,
                   username: editUsername,
                   email: editEmail,
                   phone: editPhone,
                   city: editCity,
                   cnic: editCnic,
+                  gender: editGender,
+                  dateOfBirth: editDateOfBirth,
+                  emergencyContactName: editEmergencyName,
+                  emergencyContactPhone: editEmergencyPhone,
+                  instagramUsername: editInstagram,
                   bio: editBio,
                   status: editStatus,
                   profilePictureUrl: editProfilePic,
+                  cnicPictureUrl: editCnicPic,
+                  instagramScreenshotUrl: editInstagramShot,
+                  vibeTags: editVibeTags,
                 }
               : u
           )
@@ -650,7 +697,7 @@ export default function UserVettingClient({ initialUsers }: UserVettingClientPro
                               width: "36px",
                               height: "36px",
                               borderRadius: "10px",
-                              background: user.profilePictureUrl
+                              background: user.profilePictureUrl && (user.profilePictureUrl.startsWith("http") || user.profilePictureUrl.startsWith("data:") || user.profilePictureUrl.startsWith("/"))
                                 ? "transparent"
                                 : "linear-gradient(135deg, #FF6F26, #E02E00)",
                               display: "flex",
@@ -664,8 +711,10 @@ export default function UserVettingClient({ initialUsers }: UserVettingClientPro
                               border: "1px solid rgba(255, 255, 255, 0.15)",
                             }}
                           >
-                            {user.profilePictureUrl ? (
+                            {user.profilePictureUrl && (user.profilePictureUrl.startsWith("http") || user.profilePictureUrl.startsWith("data:") || user.profilePictureUrl.startsWith("/")) ? (
                               <img src={user.profilePictureUrl} alt={user.fullName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            ) : user.avatarIcon ? (
+                              <span style={{ fontSize: "16px" }}>{user.avatarIcon}</span>
                             ) : (
                               initial
                             )}
@@ -957,21 +1006,66 @@ export default function UserVettingClient({ initialUsers }: UserVettingClientPro
                 gap: "20px",
               }}
             >
-              {/* Photo Preview Cards (Side by Side: Profile Picture & CNIC Picture) */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+              {/* Profile Verification Status Banner */}
+              <div
+                style={{
+                  padding: "12px 18px",
+                  borderRadius: "14px",
+                  background: selectedUser?.isProfileComplete
+                    ? "rgba(16, 185, 129, 0.12)"
+                    : "rgba(255, 149, 0, 0.12)",
+                  border: selectedUser?.isProfileComplete
+                    ? "1px solid rgba(16, 185, 129, 0.3)"
+                    : "1px solid rgba(255, 149, 0, 0.3)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                  gap: "8px",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <ShieldCheck
+                    size={18}
+                    color={selectedUser?.isProfileComplete ? "#34D399" : "#FFA05C"}
+                  />
+                  <span
+                    style={{
+                      fontSize: "12.5px",
+                      fontWeight: 800,
+                      color: selectedUser?.isProfileComplete ? "#34D399" : "#FFA05C",
+                    }}
+                  >
+                    {selectedUser?.isProfileComplete
+                      ? "✓ Profile Identity & Safety Verified (100% Ready)"
+                      : "⚠ Mandatory Safety Verification Incomplete"}
+                  </span>
+                </div>
+                <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.55)" }}>
+                  Registered {selectedUser?.registeredDate}
+                </span>
+              </div>
+
+              {/* Photo Preview Cards: Headshot (Optional), Front CNIC (Required), Instagram Screenshot (Required) */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: "14px" }}>
                 {/* Profile Picture Card */}
                 <div
                   style={{
                     background: "rgba(255, 255, 255, 0.02)",
                     border: "1px solid rgba(255, 255, 255, 0.08)",
                     borderRadius: "16px",
-                    padding: "16px",
+                    padding: "14px",
                     textAlign: "center",
                   }}
                 >
-                  <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.75)", marginBottom: "10px" }}>
-                    Profile Picture
-                  </label>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+                    <span style={{ fontSize: "11px", fontWeight: 800, color: "rgba(255, 255, 255, 0.75)" }}>
+                      Headshot Photo
+                    </span>
+                    <span style={{ fontSize: "9.5px", fontWeight: 700, color: "rgba(255, 255, 255, 0.5)", background: "rgba(255, 255, 255, 0.06)", padding: "1px 6px", borderRadius: "10px" }}>
+                      Optional
+                    </span>
+                  </div>
                   <input
                     type="file"
                     ref={profilePicInputRef}
@@ -982,8 +1076,8 @@ export default function UserVettingClient({ initialUsers }: UserVettingClientPro
                   <div
                     onClick={() => profilePicInputRef.current?.click()}
                     style={{
-                      width: "120px",
-                      height: "120px",
+                      width: "110px",
+                      height: "110px",
                       borderRadius: "14px",
                       border: "1px dashed rgba(255, 255, 255, 0.2)",
                       background: "rgba(0, 0, 0, 0.3)",
@@ -996,28 +1090,48 @@ export default function UserVettingClient({ initialUsers }: UserVettingClientPro
                     }}
                     className="hover:border-[#FF6F26]"
                   >
-                    {editProfilePic ? (
+                    {editProfilePic && (editProfilePic.startsWith("http") || editProfilePic.startsWith("data:") || editProfilePic.startsWith("/")) ? (
                       <img src={editProfilePic} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     ) : (
-                      <span style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.4)", fontWeight: 700 }}>No image</span>
+                      <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.4)", fontWeight: 700 }}>No image</span>
                     )}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => profilePicInputRef.current?.click()}
-                    style={{
-                      background: "rgba(255, 255, 255, 0.08)",
-                      border: "1px solid rgba(255, 255, 255, 0.15)",
-                      color: "#FFFFFF",
-                      padding: "5px 12px",
-                      borderRadius: "8px",
-                      fontSize: "11px",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                    }}
-                  >
-                    {editProfilePic ? "Change Photo" : "Upload Photo"}
-                  </button>
+                  <div style={{ display: "flex", justifyContent: "center", gap: "6px" }}>
+                    <button
+                      type="button"
+                      onClick={() => profilePicInputRef.current?.click()}
+                      style={{
+                        background: "rgba(255, 255, 255, 0.08)",
+                        border: "1px solid rgba(255, 255, 255, 0.15)",
+                        color: "#FFFFFF",
+                        padding: "4px 10px",
+                        borderRadius: "8px",
+                        fontSize: "10.5px",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {editProfilePic ? "Change" : "Upload"}
+                    </button>
+                    {editProfilePic && (
+                      <button
+                        type="button"
+                        onClick={() => setEditProfilePic("")}
+                        style={{
+                          background: "rgba(239, 68, 68, 0.15)",
+                          border: "1px solid rgba(239, 68, 68, 0.3)",
+                          color: "#EF4444",
+                          padding: "4px 8px",
+                          borderRadius: "8px",
+                          fontSize: "10.5px",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                        }}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* CNIC Picture Card */}
@@ -1026,13 +1140,18 @@ export default function UserVettingClient({ initialUsers }: UserVettingClientPro
                     background: "rgba(255, 255, 255, 0.02)",
                     border: "1px solid rgba(255, 255, 255, 0.08)",
                     borderRadius: "16px",
-                    padding: "16px",
+                    padding: "14px",
                     textAlign: "center",
                   }}
                 >
-                  <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.75)", marginBottom: "10px" }}>
-                    CNIC Picture
-                  </label>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+                    <span style={{ fontSize: "11px", fontWeight: 800, color: "rgba(255, 255, 255, 0.75)" }}>
+                      Front CNIC Photo
+                    </span>
+                    <span style={{ fontSize: "9.5px", fontWeight: 800, color: "#FFA05C", background: "rgba(255, 111, 38, 0.15)", padding: "1px 6px", borderRadius: "10px", border: "1px solid rgba(255, 111, 38, 0.3)" }}>
+                      Required
+                    </span>
+                  </div>
                   <input
                     type="file"
                     ref={cnicPicInputRef}
@@ -1043,8 +1162,8 @@ export default function UserVettingClient({ initialUsers }: UserVettingClientPro
                   <div
                     onClick={() => cnicPicInputRef.current?.click()}
                     style={{
-                      width: "120px",
-                      height: "120px",
+                      width: "110px",
+                      height: "110px",
                       borderRadius: "14px",
                       border: "1px dashed rgba(255, 255, 255, 0.2)",
                       background: "rgba(0, 0, 0, 0.3)",
@@ -1057,396 +1176,535 @@ export default function UserVettingClient({ initialUsers }: UserVettingClientPro
                     }}
                     className="hover:border-[#FF6F26]"
                   >
-                    {editCnicPic ? (
-                      <img src={editCnicPic} alt="CNIC" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    {editCnicPic && (editCnicPic.startsWith("http") || editCnicPic.startsWith("data:") || editCnicPic.startsWith("/")) ? (
+                      <img src={editCnicPic} alt="CNIC Front" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     ) : (
-                      <span style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.4)", fontWeight: 700 }}>No image</span>
+                      <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.4)", fontWeight: 700 }}>No document</span>
                     )}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => cnicPicInputRef.current?.click()}
-                    style={{
-                      background: "rgba(255, 255, 255, 0.08)",
-                      border: "1px solid rgba(255, 255, 255, 0.15)",
-                      color: "#FFFFFF",
-                      padding: "5px 12px",
-                      borderRadius: "8px",
-                      fontSize: "11px",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                    }}
-                  >
-                    {editCnicPic ? "Change Photo" : "Upload CNIC"}
-                  </button>
+                  <div style={{ display: "flex", justifyContent: "center", gap: "6px" }}>
+                    <button
+                      type="button"
+                      onClick={() => cnicPicInputRef.current?.click()}
+                      style={{
+                        background: "rgba(255, 255, 255, 0.08)",
+                        border: "1px solid rgba(255, 255, 255, 0.15)",
+                        color: "#FFFFFF",
+                        padding: "4px 10px",
+                        borderRadius: "8px",
+                        fontSize: "10.5px",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {editCnicPic ? "Change" : "Upload CNIC"}
+                    </button>
+                    {editCnicPic && (
+                      <button
+                        type="button"
+                        onClick={() => setEditCnicPic("")}
+                        style={{
+                          background: "rgba(239, 68, 68, 0.15)",
+                          border: "1px solid rgba(239, 68, 68, 0.3)",
+                          color: "#EF4444",
+                          padding: "4px 8px",
+                          borderRadius: "8px",
+                          fontSize: "10.5px",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                        }}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              {/* Row 1: First Name & Last Name */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
-                <div>
-                  <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.7)", marginBottom: "6px" }}>
-                    First Name
-                  </label>
-                  <input
-                    type="text"
-                    value={editFirstName}
-                    onChange={(e) => setEditFirstName(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "10px 14px",
-                      background: "rgba(0, 0, 0, 0.35)",
-                      border: "1px solid rgba(255, 255, 255, 0.15)",
-                      borderRadius: "12px",
-                      color: "#FFFFFF",
-                      fontSize: "13px",
-                      outline: "none",
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.7)", marginBottom: "6px" }}>
-                    Last Name
-                  </label>
-                  <input
-                    type="text"
-                    value={editLastName}
-                    onChange={(e) => setEditLastName(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "10px 14px",
-                      background: "rgba(0, 0, 0, 0.35)",
-                      border: "1px solid rgba(255, 255, 255, 0.15)",
-                      borderRadius: "12px",
-                      color: "#FFFFFF",
-                      fontSize: "13px",
-                      outline: "none",
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Row 2: Display Name & Username */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
-                <div>
-                  <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.7)", marginBottom: "6px" }}>
-                    Display Name
-                  </label>
-                  <input
-                    type="text"
-                    value={editDisplayName}
-                    onChange={(e) => setEditDisplayName(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "10px 14px",
-                      background: "rgba(0, 0, 0, 0.35)",
-                      border: "1px solid rgba(255, 255, 255, 0.15)",
-                      borderRadius: "12px",
-                      color: "#FFFFFF",
-                      fontSize: "13px",
-                      outline: "none",
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.7)", marginBottom: "6px" }}>
-                    Username
-                  </label>
-                  <input
-                    type="text"
-                    value={editUsername}
-                    onChange={(e) => setEditUsername(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "10px 14px",
-                      background: "rgba(0, 0, 0, 0.35)",
-                      border: "1px solid rgba(255, 255, 255, 0.15)",
-                      borderRadius: "12px",
-                      color: "#FFFFFF",
-                      fontSize: "13px",
-                      outline: "none",
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Row 3: Email & Role */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
-                <div>
-                  <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.7)", marginBottom: "6px" }}>
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    value={editEmail}
-                    onChange={(e) => setEditEmail(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "10px 14px",
-                      background: "rgba(0, 0, 0, 0.35)",
-                      border: "1px solid rgba(255, 255, 255, 0.15)",
-                      borderRadius: "12px",
-                      color: "#FFFFFF",
-                      fontSize: "13px",
-                      outline: "none",
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.7)", marginBottom: "6px" }}>
-                    Role
-                  </label>
-                  <select
-                    value={editRole}
-                    onChange={(e) => setEditRole(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "10px 14px",
-                      background: "#1E1428",
-                      border: "1px solid rgba(255, 255, 255, 0.15)",
-                      borderRadius: "12px",
-                      color: "#FFFFFF",
-                      fontSize: "13px",
-                      outline: "none",
-                    }}
-                  >
-                    <option value="Subscriber / Member">Subscriber / Member</option>
-                    <option value="Partner">Partner</option>
-                    <option value="Admin">Admin</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Row 4: Status & Phone */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
-                <div>
-                  <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.7)", marginBottom: "6px" }}>
-                    Status
-                  </label>
-                  <select
-                    value={editStatus}
-                    onChange={(e) => setEditStatus(e.target.value as any)}
-                    style={{
-                      width: "100%",
-                      padding: "10px 14px",
-                      background: "#1E1428",
-                      border: "1px solid rgba(255, 255, 255, 0.15)",
-                      borderRadius: "12px",
-                      color: "#FFFFFF",
-                      fontSize: "13px",
-                      outline: "none",
-                    }}
-                  >
-                    <option value="approved">Approved</option>
-                    <option value="pending">Pending</option>
-                    <option value="payment_pending">Payment Pending</option>
-                    <option value="suspended">Suspended</option>
-                    <option value="rejected">Rejected</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.7)", marginBottom: "6px" }}>
-                    Phone
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 0300 1234567"
-                    value={editPhone}
-                    onChange={(e) => setEditPhone(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "10px 14px",
-                      background: "rgba(0, 0, 0, 0.35)",
-                      border: "1px solid rgba(255, 255, 255, 0.15)",
-                      borderRadius: "12px",
-                      color: "#FFFFFF",
-                      fontSize: "13px",
-                      outline: "none",
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Row 5: CNIC & City */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
-                <div>
-                  <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.7)", marginBottom: "6px" }}>
-                    CNIC Number
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="42101-1234567-1"
-                    value={editCnic}
-                    onChange={(e) => setEditCnic(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "10px 14px",
-                      background: "rgba(0, 0, 0, 0.35)",
-                      border: "1px solid rgba(255, 255, 255, 0.15)",
-                      borderRadius: "12px",
-                      color: "#FFFFFF",
-                      fontSize: "13px",
-                      outline: "none",
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.7)", marginBottom: "6px" }}>
-                    City Radar Hub
-                  </label>
-                  <select
-                    value={editCity}
-                    onChange={(e) => setEditCity(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "10px 14px",
-                      background: "#1E1428",
-                      border: "1px solid rgba(255, 255, 255, 0.15)",
-                      borderRadius: "12px",
-                      color: "#FFFFFF",
-                      fontSize: "13px",
-                      outline: "none",
-                    }}
-                  >
-                    <option value="Karachi">Karachi</option>
-                    <option value="Lahore">Lahore</option>
-                    <option value="Islamabad">Islamabad</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Row 6: Address & Bio */}
-              <div>
-                <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.7)", marginBottom: "6px" }}>
-                  Address
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. DHA Phase 6, Karachi"
-                  value={editAddress}
-                  onChange={(e) => setEditAddress(e.target.value)}
+                {/* Instagram Profile Screenshot Card */}
+                <div
                   style={{
-                    width: "100%",
-                    padding: "10px 14px",
-                    background: "rgba(0, 0, 0, 0.35)",
-                    border: "1px solid rgba(255, 255, 255, 0.15)",
-                    borderRadius: "12px",
-                    color: "#FFFFFF",
-                    fontSize: "13px",
-                    outline: "none",
+                    background: "rgba(255, 255, 255, 0.02)",
+                    border: "1px solid rgba(255, 255, 255, 0.08)",
+                    borderRadius: "16px",
+                    padding: "14px",
+                    textAlign: "center",
                   }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.7)", marginBottom: "6px" }}>
-                  Bio &amp; Vibe Statement
-                </label>
-                <textarea
-                  rows={2}
-                  value={editBio}
-                  onChange={(e) => setEditBio(e.target.value)}
-                  placeholder="Tell community members about personal vibe, interests..."
-                  style={{
-                    width: "100%",
-                    padding: "10px 14px",
-                    background: "rgba(0, 0, 0, 0.35)",
-                    border: "1px solid rgba(255, 255, 255, 0.15)",
-                    borderRadius: "12px",
-                    color: "#FFFFFF",
-                    fontSize: "13px",
-                    outline: "none",
-                    resize: "none",
-                  }}
-                />
-              </div>
-
-              {/* Instagram Screenshots (Matching Image 3) */}
-              <div>
-                <label style={{ display: "block", fontSize: "12px", fontWeight: 800, color: "#FFFFFF", marginBottom: "4px" }}>
-                  Instagram Screenshots (max 2 images)
-                </label>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginTop: "8px" }}>
-                  {/* Slot 0 */}
+                >
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+                    <span style={{ fontSize: "11px", fontWeight: 800, color: "rgba(255, 255, 255, 0.75)" }}>
+                      Instagram Screenshot
+                    </span>
+                    <span style={{ fontSize: "9.5px", fontWeight: 800, color: "#FFA05C", background: "rgba(255, 111, 38, 0.15)", padding: "1px 6px", borderRadius: "10px", border: "1px solid rgba(255, 111, 38, 0.3)" }}>
+                      Required
+                    </span>
+                  </div>
                   <input
                     type="file"
-                    ref={instaShotInputRef0}
+                    ref={igShotInputRef}
                     accept="image/*"
-                    onChange={(e) =>
-                      handleFileUpload(e, (dataUrl) =>
-                        setEditInstagramShots((prev) => [dataUrl, prev[1] || ""])
-                      )
-                    }
+                    onChange={(e) => handleFileUpload(e, setEditInstagramShot)}
                     style={{ display: "none" }}
                   />
                   <div
-                    onClick={() => instaShotInputRef0.current?.click()}
+                    onClick={() => igShotInputRef.current?.click()}
                     style={{
-                      height: "120px",
+                      width: "110px",
+                      height: "110px",
                       borderRadius: "14px",
-                      border: "1px dashed rgba(255, 255, 255, 0.25)",
-                      background: "rgba(0, 0, 0, 0.35)",
+                      border: "1px dashed rgba(255, 255, 255, 0.2)",
+                      background: "rgba(0, 0, 0, 0.3)",
+                      margin: "0 auto 10px",
+                      overflow: "hidden",
+                      cursor: "pointer",
                       display: "flex",
-                      flexDirection: "column",
                       alignItems: "center",
                       justifyContent: "center",
-                      cursor: "pointer",
-                      padding: "10px",
-                      overflow: "hidden",
                     }}
                     className="hover:border-[#FF6F26]"
                   >
-                    {editInstagramShots[0] ? (
-                      <img src={editInstagramShots[0]} alt="Screenshot 1" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "8px" }} />
+                    {editInstagramShot && (editInstagramShot.startsWith("http") || editInstagramShot.startsWith("data:") || editInstagramShot.startsWith("/")) ? (
+                      <img src={editInstagramShot} alt="IG Screenshot" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     ) : (
-                      <div style={{ textAlign: "center", color: "rgba(255, 255, 255, 0.45)", fontSize: "11px" }}>
-                        <div style={{ fontWeight: 700, marginBottom: "2px" }}>Click to upload</div>
-                        <div>or paste URL below</div>
-                      </div>
+                      <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.4)", fontWeight: 700 }}>No screenshot</span>
                     )}
                   </div>
-
-                  {/* Slot 1 */}
-                  <input
-                    type="file"
-                    ref={instaShotInputRef1}
-                    accept="image/*"
-                    onChange={(e) =>
-                      handleFileUpload(e, (dataUrl) =>
-                        setEditInstagramShots((prev) => [prev[0] || "", dataUrl])
-                      )
-                    }
-                    style={{ display: "none" }}
-                  />
-                  <div
-                    onClick={() => instaShotInputRef1.current?.click()}
-                    style={{
-                      height: "120px",
-                      borderRadius: "14px",
-                      border: "1px dashed rgba(255, 255, 255, 0.25)",
-                      background: "rgba(0, 0, 0, 0.35)",
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      cursor: "pointer",
-                      padding: "10px",
-                      overflow: "hidden",
-                    }}
-                    className="hover:border-[#FF6F26]"
-                  >
-                    {editInstagramShots[1] ? (
-                      <img src={editInstagramShots[1]} alt="Screenshot 2" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "8px" }} />
-                    ) : (
-                      <div style={{ textAlign: "center", color: "rgba(255, 255, 255, 0.45)", fontSize: "11px" }}>
-                        <div style={{ fontWeight: 700, marginBottom: "2px" }}>Click to upload</div>
-                        <div>or paste URL below</div>
-                      </div>
+                  <div style={{ display: "flex", justifyContent: "center", gap: "6px" }}>
+                    <button
+                      type="button"
+                      onClick={() => igShotInputRef.current?.click()}
+                      style={{
+                        background: "rgba(255, 255, 255, 0.08)",
+                        border: "1px solid rgba(255, 255, 255, 0.15)",
+                        color: "#FFFFFF",
+                        padding: "4px 10px",
+                        borderRadius: "8px",
+                        fontSize: "10.5px",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {editInstagramShot ? "Change" : "Upload Shot"}
+                    </button>
+                    {editInstagramShot && (
+                      <button
+                        type="button"
+                        onClick={() => setEditInstagramShot("")}
+                        style={{
+                          background: "rgba(239, 68, 68, 0.15)",
+                          border: "1px solid rgba(239, 68, 68, 0.3)",
+                          color: "#EF4444",
+                          padding: "4px 8px",
+                          borderRadius: "8px",
+                          fontSize: "10.5px",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                        }}
+                      >
+                        Remove
+                      </button>
                     )}
                   </div>
                 </div>
-                <div style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.45)", marginTop: "6px" }}>
-                  Max 2 images • Upload by clicking empty slots or paste URLs
+              </div>
+
+              {/* ── SECTION 1: Personal Info ── */}
+              <div style={{ background: "rgba(255, 255, 255, 0.02)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "16px", padding: "18px", display: "flex", flexDirection: "column", gap: "14px" }}>
+                <span style={{ fontSize: "12px", fontWeight: 800, color: "#FFA05C", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  1. Personal Information
+                </span>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.7)", marginBottom: "6px" }}>
+                      Full Legal Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={editDisplayName}
+                      onChange={(e) => setEditDisplayName(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "10px 14px",
+                        background: "rgba(0, 0, 0, 0.35)",
+                        border: "1px solid rgba(255, 255, 255, 0.15)",
+                        borderRadius: "12px",
+                        color: "#FFFFFF",
+                        fontSize: "13px",
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.7)", marginBottom: "6px" }}>
+                      WhatsApp / Phone *
+                    </label>
+                    <input
+                      type="text"
+                      value={editPhone}
+                      onChange={(e) => setEditPhone(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "10px 14px",
+                        background: "rgba(0, 0, 0, 0.35)",
+                        border: "1px solid rgba(255, 255, 255, 0.15)",
+                        borderRadius: "12px",
+                        color: "#FFFFFF",
+                        fontSize: "13px",
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "14px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.7)", marginBottom: "6px" }}>
+                      City Radar Hub *
+                    </label>
+                    <select
+                      value={editCity}
+                      onChange={(e) => setEditCity(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "10px 14px",
+                        background: "#1E1428",
+                        border: "1px solid rgba(255, 255, 255, 0.15)",
+                        borderRadius: "12px",
+                        color: "#FFFFFF",
+                        fontSize: "13px",
+                        outline: "none",
+                      }}
+                    >
+                      <option value="Karachi">Karachi</option>
+                      <option value="Lahore">Lahore</option>
+                      <option value="Islamabad">Islamabad</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.7)", marginBottom: "6px" }}>
+                      Gender *
+                    </label>
+                    <select
+                      value={editGender}
+                      onChange={(e) => setEditGender(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "10px 14px",
+                        background: "#1E1428",
+                        border: "1px solid rgba(255, 255, 255, 0.15)",
+                        borderRadius: "12px",
+                        color: "#FFFFFF",
+                        fontSize: "13px",
+                        outline: "none",
+                      }}
+                    >
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Non-Binary">Non-Binary</option>
+                      <option value="Prefer not to say">Prefer not to say</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.7)", marginBottom: "6px" }}>
+                      Date of Birth *
+                    </label>
+                    <input
+                      type="date"
+                      value={editDateOfBirth}
+                      onChange={(e) => setEditDateOfBirth(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "10px 14px",
+                        background: "#1E1428",
+                        border: "1px solid rgba(255, 255, 255, 0.15)",
+                        borderRadius: "12px",
+                        color: "#FFFFFF",
+                        fontSize: "13px",
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.7)", marginBottom: "6px" }}>
+                      Username
+                    </label>
+                    <input
+                      type="text"
+                      value={editUsername}
+                      onChange={(e) => setEditUsername(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "10px 14px",
+                        background: "rgba(0, 0, 0, 0.35)",
+                        border: "1px solid rgba(255, 255, 255, 0.15)",
+                        borderRadius: "12px",
+                        color: "#FFFFFF",
+                        fontSize: "13px",
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.7)", marginBottom: "6px" }}>
+                      Registered Email
+                    </label>
+                    <input
+                      type="email"
+                      value={editEmail}
+                      onChange={(e) => setEditEmail(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "10px 14px",
+                        background: "rgba(0, 0, 0, 0.35)",
+                        border: "1px solid rgba(255, 255, 255, 0.15)",
+                        borderRadius: "12px",
+                        color: "#FFFFFF",
+                        fontSize: "13px",
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* ── SECTION 2: Safety & CNIC Verification ── */}
+              <div style={{ background: "rgba(255, 255, 255, 0.02)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "16px", padding: "18px", display: "flex", flexDirection: "column", gap: "14px" }}>
+                <span style={{ fontSize: "12px", fontWeight: 800, color: "#FFA05C", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  2. Safety &amp; CNIC Verification
+                </span>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.7)", marginBottom: "6px" }}>
+                      CNIC Number (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="42101-1234567-1"
+                      value={editCnic}
+                      onChange={(e) => setEditCnic(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "10px 14px",
+                        background: "rgba(0, 0, 0, 0.35)",
+                        border: "1px solid rgba(255, 255, 255, 0.15)",
+                        borderRadius: "12px",
+                        color: "#FFFFFF",
+                        fontSize: "13px",
+                        outline: "none",
+                        fontFamily: "monospace",
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.7)", marginBottom: "6px" }}>
+                      Instagram Handle (@) *
+                    </label>
+                    <div style={{ position: "relative" }}>
+                      <span style={{ position: "absolute", left: "12px", top: "10px", color: "rgba(255, 255, 255, 0.4)", fontSize: "13px" }}>@</span>
+                      <input
+                        type="text"
+                        placeholder="username"
+                        value={editInstagram}
+                        onChange={(e) => setEditInstagram(e.target.value.replace(/^@/, ""))}
+                        style={{
+                          width: "100%",
+                          padding: "10px 14px 10px 30px",
+                          background: "rgba(0, 0, 0, 0.35)",
+                          border: "1px solid rgba(255, 255, 255, 0.15)",
+                          borderRadius: "12px",
+                          color: "#FFFFFF",
+                          fontSize: "13px",
+                          outline: "none",
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.7)", marginBottom: "6px" }}>
+                      Emergency Contact Name *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Zahid Asim (Father)"
+                      value={editEmergencyName}
+                      onChange={(e) => setEditEmergencyName(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "10px 14px",
+                        background: "rgba(0, 0, 0, 0.35)",
+                        border: "1px solid rgba(255, 255, 255, 0.15)",
+                        borderRadius: "12px",
+                        color: "#FFFFFF",
+                        fontSize: "13px",
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.7)", marginBottom: "6px" }}>
+                      Emergency Contact Phone *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="0300 9876543"
+                      value={editEmergencyPhone}
+                      onChange={(e) => setEditEmergencyPhone(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "10px 14px",
+                        background: "rgba(0, 0, 0, 0.35)",
+                        border: "1px solid rgba(255, 255, 255, 0.15)",
+                        borderRadius: "12px",
+                        color: "#FFFFFF",
+                        fontSize: "13px",
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* ── SECTION 3: Photo, Vibes & Bio ── */}
+              <div style={{ background: "rgba(255, 255, 255, 0.02)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "16px", padding: "18px", display: "flex", flexDirection: "column", gap: "14px" }}>
+                <span style={{ fontSize: "12px", fontWeight: 800, color: "#FFA05C", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  3. Vibes &amp; Bio Statement
+                </span>
+
+                <div>
+                  <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.7)", marginBottom: "8px" }}>
+                    Selected Vibes
+                  </label>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                    {[
+                      "Techno & House",
+                      "Late Night Chai",
+                      "Padel & Sports",
+                      "Live Music",
+                      "Rooftop Lounges",
+                      "Deep Beats",
+                      "Weekend Roadtrips",
+                      "Café Crawls",
+                      "Gaming & Tech",
+                      "Art & Culture",
+                    ].map((vibe) => {
+                      const isSelected = editVibeTags.includes(vibe);
+                      return (
+                        <button
+                          key={vibe}
+                          type="button"
+                          onClick={() => toggleEditVibe(vibe)}
+                          style={{
+                            padding: "6px 12px",
+                            borderRadius: "20px",
+                            fontSize: "11px",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            transition: "all 0.15s ease",
+                            background: isSelected ? "#FF6F26" : "rgba(255, 255, 255, 0.05)",
+                            color: isSelected ? "#FFFFFF" : "rgba(255, 255, 255, 0.6)",
+                            border: isSelected ? "1px solid #FF6F26" : "1px solid rgba(255, 255, 255, 0.1)",
+                            boxShadow: isSelected ? "0 0 12px rgba(255, 111, 38, 0.35)" : "none",
+                          }}
+                        >
+                          {isSelected ? "✓ " : "+ "}
+                          {vibe}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.7)", marginBottom: "6px" }}>
+                    Personal Bio / Vibe Statement
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={editBio}
+                    onChange={(e) => setEditBio(e.target.value)}
+                    placeholder="Tell community members about personal vibe, interests..."
+                    style={{
+                      width: "100%",
+                      padding: "10px 14px",
+                      background: "rgba(0, 0, 0, 0.35)",
+                      border: "1px solid rgba(255, 255, 255, 0.15)",
+                      borderRadius: "12px",
+                      color: "#FFFFFF",
+                      fontSize: "13px",
+                      outline: "none",
+                      resize: "none",
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* ── SECTION 4: Admin Controls ── */}
+              <div style={{ background: "rgba(255, 255, 255, 0.02)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "16px", padding: "18px", display: "flex", flexDirection: "column", gap: "14px" }}>
+                <span style={{ fontSize: "12px", fontWeight: 800, color: "#FFA05C", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  4. Membership &amp; Access Controls
+                </span>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.7)", marginBottom: "6px" }}>
+                      Account Status
+                    </label>
+                    <select
+                      value={editStatus}
+                      onChange={(e) => setEditStatus(e.target.value as any)}
+                      style={{
+                        width: "100%",
+                        padding: "10px 14px",
+                        background: "#1E1428",
+                        border: "1px solid rgba(255, 255, 255, 0.15)",
+                        borderRadius: "12px",
+                        color: "#FFFFFF",
+                        fontSize: "13px",
+                        outline: "none",
+                      }}
+                    >
+                      <option value="approved">Approved</option>
+                      <option value="pending">Pending</option>
+                      <option value="payment_pending">Payment Pending</option>
+                      <option value="suspended">Suspended</option>
+                      <option value="rejected">Rejected</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.7)", marginBottom: "6px" }}>
+                      Role
+                    </label>
+                    <select
+                      value={editRole}
+                      onChange={(e) => setEditRole(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "10px 14px",
+                        background: "#1E1428",
+                        border: "1px solid rgba(255, 255, 255, 0.15)",
+                        borderRadius: "12px",
+                        color: "#FFFFFF",
+                        fontSize: "13px",
+                        outline: "none",
+                      }}
+                    >
+                      <option value="Subscriber / Member">Subscriber / Member</option>
+                      <option value="Partner">Partner</option>
+                      <option value="Admin">Admin</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 

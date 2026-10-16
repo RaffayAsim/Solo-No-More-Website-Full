@@ -60,7 +60,7 @@ export default function DashboardLoading() {
         </h3>
 
         <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
-          Calibrating real-time hangout coordinates, verified guest vetting, and VIP access passes for Karachi...
+          Calibrating real-time hangout coordinates, verified guest vetting, and VIP access passes nationwide...
         </p>
 
         {/* Shimmering Neon Progress Track */}

@@ -31,26 +31,19 @@ export default function SignUpDropdown({ className = "" }: SignUpDropdownProps) 
         style={{
           background: "linear-gradient(135deg, #FF6F26 0%, #FF5A1F 45%, #E6450A 100%)",
           color: "#FFFFFF",
-          fontSize: "13px",
-          fontWeight: 800,
-          padding: "8px 18px",
-          borderRadius: "8px",
           border: "none",
           cursor: "pointer",
           boxShadow: "0 4px 18px rgba(255, 90, 31, 0.4)",
           transition: "transform 0.15s ease, box-shadow 0.15s ease",
-          display: "inline-flex",
-          alignItems: "center",
-          gap: "6px",
           letterSpacing: "-0.01em",
         }}
-        className="hover:scale-105 active:scale-95 cursor-pointer"
+        className="hover:scale-105 active:scale-95 cursor-pointer inline-flex items-center gap-1 sm:gap-1.5 whitespace-nowrap shrink-0 text-xs sm:text-[13px] font-extrabold px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-lg"
         aria-expanded={isOpen}
       >
-        <Sparkles className="w-3.5 h-3.5" />
+        <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
         <span>Join Squad</span>
         <ChevronDown
-          className="w-3.5 h-3.5 transition-transform duration-200"
+          className="w-3 h-3 sm:w-3.5 sm:h-3.5 transition-transform duration-200"
           style={{ transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}
         />
       </button>

@@ -97,6 +97,10 @@ export async function getSessionUserSecurely(): Promise<SessionUserResult> {
           email: refreshData.user.email,
           user_metadata: refreshData.user.user_metadata,
         };
+      } else if (refreshError && refreshError.message?.toLowerCase().includes("refresh token")) {
+        try {
+          cookieStore.delete("sb-dmmgzpiskyocdsxamrgf-auth-token");
+        } catch {}
       }
     } catch {}
   }

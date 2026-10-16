@@ -22,7 +22,9 @@ import {
 } from "lucide-react";
 import UniversalShareModal from "@/components/share/UniversalShareModal";
 import PublicBeaconShareButton from "./PublicBeaconShareButton";
+import PublicBeaconJoinButton from "./PublicBeaconJoinButton";
 import PublicBeaconInviteCard from "@/components/share/PublicBeaconInviteCard";
+import { getSessionUserSecurely } from "@/lib/supabase/session";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -72,7 +74,11 @@ export default async function PublicBeaconPage({ params }: PageProps) {
       })
     : "Time TBD";
 
-  // 2. Fetch post-hangout memories if completed
+  // 2. Fetch current session user securely
+  const auth = await getSessionUserSecurely();
+  const userId = "error" in auth ? null : auth.userId;
+
+  // 3. Fetch post-hangout memories if completed
   let memories: any[] = [];
   if (beacon.status === "completed") {
     const { data: mems } = await (supabaseAdmin
@@ -229,19 +235,11 @@ export default async function PublicBeaconPage({ params }: PageProps) {
               <strong className="text-white">{beacon.total_slots}</strong> spots claimed so far.
             </div>
 
-            {beacon.status === "completed" ? (
-              <div className="px-5 py-3 rounded-2xl text-xs font-bold bg-zinc-800 text-zinc-400 border border-white/10">
-                This Meetup Has Concluded
-              </div>
-            ) : (
-              <Link
-                href={`/dashboard?beaconId=${beacon.id}`}
-                className="w-full sm:w-auto px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-wider bg-gradient-to-r from-[#FF6F26] to-[#FF5A1F] text-white hover:brightness-110 shadow-[0_4px_20px_rgba(255,111,38,0.45)] transition-all flex items-center justify-center gap-2 group"
-              >
-                <span>⚡ Join This Squad Hangout</span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </Link>
-            )}
+            <PublicBeaconJoinButton
+              beacon={beacon}
+              isLoggedIn={!!userId}
+              currentUserId={userId}
+            />
           </div>
         </div>
 

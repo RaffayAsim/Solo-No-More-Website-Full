@@ -169,7 +169,7 @@ export default function EventsBoardClient({
               Official Events &amp; Raves
             </h1>
             <p className="text-sm text-neutral-400 max-w-xl">
-              Curated club nights, touring DJ sessions, and partner tournaments across Karachi.
+              Curated club nights, touring DJ sessions, and partner tournaments across cities nationwide.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">

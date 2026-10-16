@@ -1,13 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { Sparkles, Eye, EyeOff, Lock, Mail, ArrowRight, ShieldCheck, UserCheck, Store, Shield, Mic2 } from "lucide-react";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectParam = searchParams.get("redirect");
+
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +36,9 @@ export default function LoginPage() {
         return;
       }
 
+      // Determine target destination
+      const safeRedirect = redirectParam && redirectParam.startsWith("/") ? redirectParam : null;
+
       if (loginRole === "team") {
         const { data: profile } = await (supabase.from("profiles") as any)
           .select("subscription_tier")
@@ -50,9 +56,9 @@ export default function LoginPage() {
           return;
         }
 
-        router.push("/admin");
+        router.push(safeRedirect || "/admin");
       } else if (loginRole === "artist" || data.user.email?.toLowerCase().includes("artist")) {
-        router.push("/dashboard/artist");
+        router.push(safeRedirect || "/dashboard/artist");
       } else if (loginRole === "partner" || data.user.email?.toLowerCase().includes("partner")) {
         const { data: profile } = await (supabase.from("profiles") as any)
           .select("is_partner")
@@ -66,9 +72,9 @@ export default function LoginPage() {
           return;
         }
 
-        router.push("/dashboard/partner");
+        router.push(safeRedirect || "/dashboard/partner");
       } else {
-        router.push("/dashboard");
+        router.push(safeRedirect || "/dashboard");
       }
     } catch (err: any) {
       setError(err.message || "Connection failed. Please try again.");
@@ -242,13 +248,14 @@ export default function LoginPage() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(4, 1fr)",
-              gap: "4px",
+              gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+              gap: "3px",
               background: "rgba(0,0,0,0.45)",
               border: "1px solid rgba(255,255,255,0.1)",
               borderRadius: "14px",
               padding: "4px",
               marginBottom: "24px",
+              width: "100%",
             }}
           >
             {[
@@ -268,24 +275,25 @@ export default function LoginPage() {
                     setError(null);
                   }}
                   style={{
-                    padding: "9px 6px",
+                    padding: "8px 2px",
                     borderRadius: "10px",
-                    fontSize: "12px",
+                    fontSize: "clamp(10.5px, 2.7vw, 12px)",
                     fontWeight: 800,
                     border: "none",
                     cursor: "pointer",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    gap: "6px",
+                    gap: "4px",
                     background: isSelected ? "linear-gradient(135deg, #FF6F26 0%, #FF5A1F 100%)" : "transparent",
                     color: isSelected ? "#fff" : "rgba(255,255,255,0.6)",
                     boxShadow: isSelected ? "0 4px 14px rgba(255,90,31,0.4)" : "none",
                     transition: "all 0.15s ease",
+                    minWidth: 0,
                   }}
                 >
-                  <Icon className="w-3.5 h-3.5" />
-                  <span>{role.label}</span>
+                  <Icon className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">{role.label}</span>
                 </button>
               );
             })}
@@ -419,12 +427,24 @@ export default function LoginPage() {
           {/* Footer inside card */}
           <div style={{ marginTop: "24px", paddingTop: "20px", borderTop: "1px solid rgba(255,255,255,0.08)", textAlign: "center", fontSize: "13.5px", color: "rgba(255,255,255,0.6)" }}>
             Don&apos;t have an account yet?{" "}
-            <Link href="/apply" style={{ color: "#FF8A3D", fontWeight: 800, textDecoration: "none" }} className="hover:underline">
+            <Link
+              href={redirectParam ? `/apply?redirect=${encodeURIComponent(redirectParam)}` : "/apply"}
+              style={{ color: "#FF8A3D", fontWeight: 800, textDecoration: "none" }}
+              className="hover:underline"
+            >
               Apply to Join Club
             </Link>
           </div>
         </div>
       </main>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#060408] flex items-center justify-center text-zinc-400">Loading...</div>}>
+      <LoginForm />
+    </Suspense>
   );
 }

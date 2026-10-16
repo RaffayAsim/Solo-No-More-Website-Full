@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { MapPin, Radio, Send, Users, Check, Zap, Sparkles, Smartphone } from "lucide-react";
+import { MapPin, Radio, Send, Users, Check, Zap, Sparkles, Smartphone, Eye } from "lucide-react";
+import { supabase } from "@/lib/supabase/client";
+import BeaconQuickPreviewModal, { BeaconPreviewData } from "@/components/beacons/BeaconQuickPreviewModal";
 
 type City = "Karachi" | "Lahore" | "Islamabad";
 type Vibe = "casual" | "sports" | "nightlife";
@@ -118,6 +120,20 @@ export default function BeaconSimulator() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [joined, setJoined] = useState(1);
   const [feed, setFeed] = useState<FeedItem[]>([]);
+  const [previewBeacon, setPreviewBeacon] = useState<BeaconPreviewData | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setIsLoggedIn(!!user);
+    });
+    const { data: authListener } = supabase.auth.onAuthStateChange((_, session) => {
+      setIsLoggedIn(!!session?.user);
+    });
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
 
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const idRef = useRef(0);
@@ -344,7 +360,21 @@ export default function BeaconSimulator() {
                   key={b.id}
                   type="button"
                   aria-label={b.title}
-                  onClick={() => setSelected(b)}
+                  onClick={() => {
+                    setSelected(b);
+                    setPreviewBeacon({
+                      id: b.id,
+                      title: b.title,
+                      category: b.vibe,
+                      location: b.place,
+                      location_name: b.place,
+                      total_slots: b.slots,
+                      filled_slots: b.joined,
+                      date: "Tonight",
+                      time: "9:30 PM",
+                      description: `Spontaneous squad meetup at ${b.place} in ${city}. Drop in solo, meet verified locals, and experience the city IRL.`,
+                    });
+                  }}
                   style={{
                     position: "absolute",
                     left: `${b.x}%`,
@@ -381,6 +411,27 @@ export default function BeaconSimulator() {
                   <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.6)", display: "flex", alignItems: "center", gap: "5px" }}>
                     <MapPin className="w-3 h-3" style={{ color: "#FF5A1F" }} /> {selected.place}
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPreviewBeacon({
+                        id: selected.id,
+                        title: selected.title,
+                        category: selected.vibe,
+                        location: selected.place,
+                        location_name: selected.place,
+                        total_slots: selected.slots,
+                        filled_slots: selected.joined,
+                        date: "Tonight",
+                        time: "9:30 PM",
+                        description: `Spontaneous squad meetup at ${selected.place} in ${city}. Drop in solo, meet verified locals, and experience the city IRL.`,
+                      });
+                    }}
+                    className="mt-2.5 w-full py-1.5 px-3 rounded-xl text-[11px] font-black uppercase tracking-wider bg-gradient-to-r from-[#FF6F26] to-[#FF5A1F] text-white hover:brightness-110 shadow-[0_4px_12px_rgba(255,111,38,0.35)] transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <Eye className="w-3 h-3 text-white" />
+                    <span>Quick Preview Meetup</span>
+                  </button>
                 </div>
               ) : (
                 <p style={{ fontSize: "12.5px", color: "rgba(255,255,255,0.5)", margin: 0, lineHeight: 1.5 }}>
@@ -651,7 +702,26 @@ export default function BeaconSimulator() {
                   )}
 
                   {BLIPS[city].slice(0, phase === "idle" ? 3 : 2).map((b) => (
-                    <div key={b.id} style={{ borderRadius: "12px", padding: "9px 10px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}>
+                    <div
+                      key={b.id}
+                      onClick={() => {
+                        setSelected(b);
+                        setPreviewBeacon({
+                          id: b.id,
+                          title: b.title,
+                          category: b.vibe,
+                          location: b.place,
+                          location_name: b.place,
+                          total_slots: b.slots,
+                          filled_slots: b.joined,
+                          date: "Tonight",
+                          time: "9:30 PM",
+                          description: `Spontaneous squad meetup at ${b.place} in ${city}. Drop in solo, meet verified locals, and experience the city IRL.`,
+                        });
+                      }}
+                      className="cursor-pointer hover:border-[#FF5A1F]/60 transition-all active:scale-[0.98]"
+                      style={{ borderRadius: "12px", padding: "9px 10px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}
+                    >
                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: "8.5px", fontWeight: 800, color: "rgba(255,255,255,0.45)", letterSpacing: "0.08em" }}>
                         <span>{b.vibe.toUpperCase()}</span>
                         <span>{b.joined}/{b.slots} JOINED</span>
@@ -680,6 +750,16 @@ export default function BeaconSimulator() {
           </div>
         </div>
       </div>
+
+      {/* Quick Preview Modal for Beacons */}
+      {previewBeacon && (
+        <BeaconQuickPreviewModal
+          isOpen={!!previewBeacon}
+          onClose={() => setPreviewBeacon(null)}
+          beacon={previewBeacon}
+          isLoggedIn={isLoggedIn}
+        />
+      )}
     </section>
   );
 }

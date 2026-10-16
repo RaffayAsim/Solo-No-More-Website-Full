@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Ticket,
   Calendar,
@@ -20,7 +20,6 @@ import {
   UserPlus,
 } from "lucide-react";
 import { bookEventTicketAction } from "@/app/actions/event-booking";
-import CompleteProfileModal from "@/components/CompleteProfileModal";
 
 interface TierPackage {
   id: string;
@@ -76,7 +75,30 @@ export default function EventBookingModal({
 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [showCompletenessModal, setShowCompletenessModal] = useState(false);
+
+  // Prevent background scroll bleed while modal is open
+  useEffect(() => {
+    if (!isOpen) return;
+    const originalOverflow = document.body.style.overflow;
+    const originalPaddingRight = document.body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+
+    document.body.style.overflow = "hidden";
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.body.style.paddingRight = originalPaddingRight;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -135,8 +157,7 @@ export default function EventBookingModal({
 
       if (!res.success) {
         if (res.code === "PROFILE_INCOMPLETE") {
-          setShowCompletenessModal(true);
-          setIsLoading(false);
+          window.location.href = `/dashboard/profile/edit?notice=event_booking_required`;
           return;
         }
         setErrorMsg(res.error || "Failed to process booking.");
@@ -164,15 +185,23 @@ export default function EventBookingModal({
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
-        <div className="relative w-full max-w-xl bg-[#0c0817] border border-white/15 rounded-3xl shadow-[0_0_60px_rgba(255,111,38,0.25)] overflow-hidden my-auto flex flex-col max-h-[96vh] animate-in fade-in zoom-in-95 duration-200">
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto overscroll-contain"
+        style={{ overscrollBehavior: "contain" }}
+      >
+        <div
+          className="relative w-full max-w-xl bg-[#0c0817] border border-white/15 rounded-3xl shadow-[0_0_60px_rgba(255,111,38,0.25)] overflow-hidden my-auto flex flex-col max-h-[96vh] animate-in fade-in zoom-in-95 duration-200 overscroll-contain"
+          style={{ overscrollBehavior: "contain" }}
+        >
           {/* Header */}
           <div className="p-4 sm:p-6 border-b border-white/10 relative bg-gradient-to-r from-[#FF6F26]/15 via-purple-600/10 to-transparent shrink-0">
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 sm:top-5 sm:right-5 p-2 rounded-full bg-white/5 hover:bg-white/15 text-zinc-400 hover:text-white transition-colors"
+              aria-label="Close"
+              title="Close (Esc)"
+              className="absolute top-4 right-4 sm:top-5 sm:right-5 w-9 h-9 rounded-full bg-black/80 hover:bg-rose-600 text-white flex items-center justify-center border-2 border-white/40 hover:border-white shadow-[0_4px_16px_rgba(0,0,0,0.8)] backdrop-blur-xl transition-all cursor-pointer hover:scale-110 active:scale-95 z-20"
             >
-              <X className="w-5 h-5" />
+              <X className="w-5 h-5 stroke-[2.5]" />
             </button>
 
             <div className="flex items-center gap-2 mb-1.5 flex-wrap pr-8">
@@ -519,18 +548,6 @@ export default function EventBookingModal({
           </form>
         </div>
       </div>
-
-      {/* Profile Completeness Modal Interception */}
-      <CompleteProfileModal
-        isOpen={showCompletenessModal}
-        onClose={() => setShowCompletenessModal(false)}
-        profile={currentUserProfile}
-        actionContext="booking event tickets"
-        onProfileCompleted={() => {
-          setShowCompletenessModal(false);
-          // Can re-trigger or allow user to proceed
-        }}
-      />
     </>
   );
 }

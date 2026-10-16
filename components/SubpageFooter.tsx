@@ -170,7 +170,7 @@ export default function SubpageFooter() {
               <div style={{ display: "flex", alignItems: "flex-start", gap: "10px", lineHeight: 1.5 }}>
                 <MapPin className="w-4 h-4 text-[#FF5A1F] shrink-0 mt-0.5" />
                 <span>
-                  Zamzama, Defence · Active across Karachi, Lahore, Islamabad &amp; more
+                  Zamzama, Defence · Active across cities nationwide
                 </span>
               </div>
             </div>
@@ -193,41 +193,6 @@ export default function SubpageFooter() {
         >
           <div>© {new Date().getFullYear()} Solo-No-More. All rights reserved. Find Your People IRL.</div>
 
-          <button
-            type="button"
-            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "8px",
-              background: "transparent",
-              border: "none",
-              color: "rgba(255, 255, 255, 0.8)",
-              fontSize: "13px",
-              fontWeight: 700,
-              cursor: "pointer",
-              padding: 0,
-            }}
-            className="hover:text-white group"
-          >
-            <span>Back to Top ⚡</span>
-            <div
-              style={{
-                width: "32px",
-                height: "32px",
-                borderRadius: "50%",
-                background: "linear-gradient(135deg, #FF6F26 0%, #FF5A1F 100%)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow: "0 4px 14px rgba(255, 90, 31, 0.45)",
-                transition: "transform 0.2s ease",
-              }}
-              className="group-hover:scale-110"
-            >
-              <ArrowRight className="w-3.5 h-3.5 -rotate-90 text-white" />
-            </div>
-          </button>
         </div>
       </div>
     </footer>

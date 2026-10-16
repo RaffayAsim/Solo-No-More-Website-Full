@@ -731,7 +731,7 @@ export default function BeaconCard({
                       </div>
                       {errorMessage.includes("PROFILE_INCOMPLETE") && (
                         <Link
-                          href="/dashboard/profile"
+                          href="/dashboard/profile/edit?notice=beacon_required"
                           className="inline-flex items-center gap-1 font-bold text-[#FFA05C] hover:underline text-[11px] pt-1"
                         >
                           <span>Complete Your Safety Profile Now →</span>

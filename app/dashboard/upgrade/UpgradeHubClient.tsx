@@ -109,7 +109,7 @@ export default function UpgradeHubClient({ currentTier: initialTier }: UpgradeHu
             Choose Your Membership Tier
           </h1>
           <p className="text-sm sm:text-base text-neutral-400">
-            Explore hangouts, host unlimited squad beacons across Karachi, or promote your local business.
+            Explore hangouts, host unlimited squad beacons nationwide, or promote your local business.
           </p>
         </div>
       </div>
@@ -162,7 +162,7 @@ export default function UpgradeHubClient({ currentTier: initialTier }: UpgradeHu
             <ul className="space-y-3 pt-2">
               {[
                 "3 Free Approved Hangout Entries",
-                "Access to Karachi Live Radar Discovery",
+                "Access to Nationwide Live Radar Discovery",
                 "Squad Chat Room Access upon Acceptance",
                 "Browse Community Event Calendar",
                 "Option to Pay-As-You-Go after 3 Hangouts",
@@ -222,7 +222,7 @@ export default function UpgradeHubClient({ currentTier: initialTier }: UpgradeHu
             <ul className="space-y-3 pt-2">
               {[
                 "15 Hangout Participations / Month",
-                "UNLIMITED Beacon Hosting Across Karachi",
+                "UNLIMITED Beacon Hosting Nationwide",
                 "Verified Member Glow Badge on Profile & Squads",
                 "15%–20% Discount on Platform Official Events",
                 "Priority Queue in High-Demand Hangouts",
@@ -269,7 +269,7 @@ export default function UpgradeHubClient({ currentTier: initialTier }: UpgradeHu
 
             <h3 className="text-2xl font-bold text-white">Partner Hub</h3>
             <p className="text-xs text-neutral-400 leading-relaxed">
-              For cafes, padel courts, gaming lounges, and restaurants in Karachi.
+              For cafes, padel courts, gaming lounges, and restaurants nationwide.
             </p>
 
             <div className="pt-2 pb-4 border-b border-white/[0.08]">
@@ -319,7 +319,7 @@ export default function UpgradeHubClient({ currentTier: initialTier }: UpgradeHu
             <div className="flex items-center justify-between p-5 border-b border-white/[0.08] bg-white/[0.02]">
               <div className="flex items-center gap-2 text-white font-bold text-base">
                 <CreditCard className="w-5 h-5 text-[#FF6F26]" />
-                <span>Secure Local Payment (Karachi / PK)</span>
+                <span>Secure Local Payment (Pakistan)</span>
               </div>
               <button
                 onClick={() => setModalTier(null)}

@@ -553,7 +553,7 @@ export default function CreatePartnerOfferModal({
           {success && (
             <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>Offer published! Now live on Karachi & citywide radars.</span>
+              <span>Offer published! Now live on nationwide radars.</span>
             </div>
           )}
 

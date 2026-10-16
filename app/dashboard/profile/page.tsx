@@ -21,7 +21,7 @@ export default async function DashboardProfilePage() {
   const [profileRes, hostedRes, joinedRes, friendsRes] = await Promise.all([
     (supabaseAdmin
       .from("profiles") as any)
-      .select("id, full_name, bio, social_link, subscription_tier, account_status, no_show_strikes, city, avatar_icon, is_partner, business_name, vibe_tags, is_active_seeker, seeker_updated_at, created_at")
+      .select("*")
       .eq("id", userId)
       .maybeSingle(),
     (supabaseAdmin

@@ -514,9 +514,10 @@ export async function adminUpdateUserStatusAction(
 export interface SaveUserDetailsInput {
   id: string;
   applicationId?: string;
-  firstName: string;
-  lastName: string;
-  displayName: string;
+  firstName?: string;
+  lastName?: string;
+  displayName?: string;
+  fullName?: string;
   username: string;
   email: string;
   role: string;
@@ -525,9 +526,24 @@ export interface SaveUserDetailsInput {
   cnic?: string;
   city?: string;
   address?: string;
+  gender?: string;
+  dateOfBirth?: string;
+  date_of_birth?: string;
+  emergencyContactName?: string;
+  emergency_contact_name?: string;
+  emergencyContactPhone?: string;
+  emergency_contact_phone?: string;
+  instagramUsername?: string;
+  instagram_username?: string;
   bio?: string;
   profilePictureUrl?: string;
+  photo_url?: string;
   cnicPictureUrl?: string;
+  cnic_picture_url?: string;
+  instagramScreenshotUrl?: string;
+  instagram_screenshot_url?: string;
+  vibeTags?: string[];
+  vibe_tags?: string[];
   instagramScreenshots?: string[];
 }
 
@@ -544,7 +560,8 @@ export async function adminSaveUserDetailsAction(
     return { success: false, error: "Unauthorized. Admin privileges required." };
   }
 
-  const fullName = `${input.firstName.trim()} ${input.lastName.trim()}`.trim() || input.displayName.trim();
+  const computedFirstLast = `${(input.firstName || "").trim()} ${(input.lastName || "").trim()}`.trim();
+  const fullName = input.fullName?.trim() || computedFirstLast || input.displayName?.trim() || "Member User";
   const isPartner = input.role.toLowerCase().includes("partner");
   const subscriptionTier = input.role.toLowerCase().includes("admin")
     ? "admin"
@@ -560,7 +577,16 @@ export async function adminSaveUserDetailsAction(
     rejected: "rejected",
   };
 
-  // 1. Update Profile record
+  const photo = input.photo_url || input.profilePictureUrl;
+  const cnicPic = input.cnic_picture_url || input.cnicPictureUrl;
+  const igScreenshot = input.instagram_screenshot_url || input.instagramScreenshotUrl || (input.instagramScreenshots && input.instagramScreenshots[0]);
+  const dob = input.date_of_birth || input.dateOfBirth;
+  const emergName = input.emergency_contact_name || input.emergencyContactName;
+  const emergPhone = input.emergency_contact_phone || input.emergencyContactPhone;
+  const insta = (input.instagram_username || input.instagramUsername || "").replace(/^@/, "");
+  const vibes = input.vibe_tags || input.vibeTags;
+
+  // 1. Update Profile record with all verified fields
   const updatePayload: any = {
     full_name: fullName,
     phone: input.phone || null,
@@ -571,13 +597,39 @@ export async function adminSaveUserDetailsAction(
     account_status: profileStatusMap[input.status] || input.status,
   };
 
-  if (input.profilePictureUrl) {
-    updatePayload.avatar_icon = input.profilePictureUrl;
+  if (input.firstName) updatePayload.first_name = input.firstName.trim();
+  if (input.lastName) updatePayload.last_name = input.lastName.trim();
+  if (input.gender) updatePayload.gender = input.gender;
+  if (dob) updatePayload.date_of_birth = dob;
+  if (input.cnic) updatePayload.cnic = input.cnic.trim();
+  if (emergName) updatePayload.emergency_contact_name = emergName.trim();
+  if (emergPhone) updatePayload.emergency_contact_phone = emergPhone.trim();
+  if (insta) updatePayload.instagram_username = insta.trim();
+  if (photo) updatePayload.photo_url = photo;
+  if (cnicPic) updatePayload.cnic_picture_url = cnicPic;
+  if (igScreenshot) {
+    updatePayload.instagram_screenshot_url = igScreenshot;
+    updatePayload.social_link = igScreenshot;
   }
+  if (vibes && vibes.length > 0) updatePayload.vibe_tags = vibes;
 
-  await (supabaseAdmin.from("profiles") as any)
-    .update(updatePayload)
-    .eq("id", input.id);
+  // Resilient update with schema cache retry
+  let currentPayload = { ...updatePayload };
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const { error } = await (supabaseAdmin.from("profiles") as any)
+      .update(currentPayload)
+      .eq("id", input.id);
+
+    if (!error) break;
+
+    const match = error.message?.match(/Could not find the '([^']+)' column of 'profiles' in the schema cache/i);
+    if (match && match[1]) {
+      delete currentPayload[match[1]];
+      continue;
+    }
+    console.error("[adminSaveUserDetailsAction] Profile update error:", error);
+    break;
+  }
 
   // 2. Also update membership application if applicable
   const targetAppId = input.applicationId || input.id;
@@ -592,7 +644,7 @@ export async function adminSaveUserDetailsAction(
         cnic: input.cnic,
         vibe: input.bio,
         status: input.status === "pending" ? "pending_admin_approval" : input.status,
-        photo_url: input.profilePictureUrl || undefined,
+        photo_url: photo || undefined,
         updated_at: new Date().toISOString(),
       })
       .eq("id", targetAppId);

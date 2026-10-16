@@ -185,8 +185,10 @@ function ApplyPageContent() {
     }
 
     setGuestSuccess(true);
+    const redirectParam = searchParams.get("redirect");
+    const targetUrl = redirectParam && redirectParam.startsWith("/") ? redirectParam : "/dashboard";
     setTimeout(() => {
-      router.push("/dashboard");
+      router.push(targetUrl);
     }, 1500);
   };
 

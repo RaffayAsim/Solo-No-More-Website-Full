@@ -146,7 +146,7 @@ export default function PartnerRegistrationPage() {
               Partner Registration &amp; Pricing Structure
             </h1>
             <p style={{ fontSize: "18px", color: "rgba(255, 255, 255, 0.65)", lineHeight: 1.6, margin: 0 }}>
-              Connect your venue, court, or creative performance to thousands of active verified members across Karachi, Lahore &amp; Islamabad.
+              Connect your venue, court, or creative performance to thousands of active verified members across cities nationwide.
             </p>
           </div>
 

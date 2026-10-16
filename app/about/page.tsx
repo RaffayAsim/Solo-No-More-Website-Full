@@ -161,7 +161,7 @@ export default function AboutUsPage() {
                   How many times have you wanted to try that new specialty coffee bar on Zamzama, play a quick padel match, or attend a rooftop indie gig, only to end up staying home because your usual friend group was busy or flaked out at the last second?
                 </p>
                 <p>
-                  We built Solo-No-More because friendship in your twenties and thirties shouldn&apos;t depend on endless scheduling logistics. With our live Beacon Radar protocol, anyone in Karachi can broadcast a signal and gather a squad of vetted, like-minded people in under an hour.
+                  We built Solo-No-More because friendship in your twenties and thirties shouldn&apos;t depend on endless scheduling logistics. With our live Beacon Radar protocol, anyone nationwide can broadcast a signal and gather a squad of vetted, like-minded people in under an hour.
                 </p>
                 <p>
                   No dating app awkwardness. No stiff corporate networking. Just authentic young people doing things they love together in safe, vibrant third spaces.
@@ -182,7 +182,7 @@ export default function AboutUsPage() {
                 <Sparkles className="w-7 h-7 text-white" />
               </div>
               <h3 style={{ fontSize: "22px", fontWeight: 900, margin: "0 0 12px", color: "#fff" }}>
-                The Karachi Community Pledge
+                The Community Pledge
               </h3>
               <p style={{ fontSize: "14.5px", color: "rgba(255,255,255,0.7)", lineHeight: 1.65, margin: "0 0 24px" }}>
                 &ldquo;Every table has room for one more. We check our egos at the door, welcome newcomers with warmth, and leave every meetup with higher energy than when we arrived.&rdquo;
@@ -192,8 +192,8 @@ export default function AboutUsPage() {
                   SNM
                 </div>
                 <div>
-                  <div style={{ fontSize: "14px", fontWeight: 800, color: "#fff" }}>Karachi Core Team</div>
-                  <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)" }}>Solo-No-More HQ, Zamzama</div>
+                  <div style={{ fontSize: "14px", fontWeight: 800, color: "#fff" }}>Core Community Team</div>
+                  <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)" }}>Solo-No-More Nationwide</div>
                 </div>
               </div>
             </div>

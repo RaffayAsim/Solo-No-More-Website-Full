@@ -29,6 +29,7 @@ export interface UpdateProfileInput {
   instagram_username?: string;
   instagram?: string;
   cnic_picture_url?: string;
+  instagram_screenshot_url?: string;
   vibe_tags?: string[];
   interests?: string[];
   is_active_seeker?: boolean;
@@ -65,8 +66,10 @@ export async function updateProfileAction(
   if (data.social_link !== undefined) updatePayload.social_link = data.social_link.trim();
   if (data.city !== undefined) updatePayload.city = data.city.trim();
   if (data.avatar_icon !== undefined) updatePayload.avatar_icon = data.avatar_icon;
-  if (data.avatar_url !== undefined) updatePayload.avatar_url = data.avatar_url;
-  if (data.photo_url !== undefined) updatePayload.photo_url = data.photo_url;
+  const userPhoto = data.photo_url || data.avatar_url;
+  if (userPhoto !== undefined) {
+    updatePayload.photo_url = userPhoto;
+  }
   if (data.cnic !== undefined) updatePayload.cnic = data.cnic.trim();
   if (data.address !== undefined) updatePayload.address = data.address.trim();
   if (data.gender !== undefined) updatePayload.gender = data.gender.trim();
@@ -88,6 +91,14 @@ export async function updateProfileAction(
   }
 
   if (data.cnic_picture_url !== undefined) updatePayload.cnic_picture_url = data.cnic_picture_url;
+  
+  if (data.instagram_screenshot_url !== undefined) {
+    updatePayload.instagram_screenshot_url = data.instagram_screenshot_url;
+    // Mirror into social_link to guarantee database persistence
+    if (!data.social_link) {
+      updatePayload.social_link = data.instagram_screenshot_url;
+    }
+  }
   
   const vibes = data.vibe_tags || data.interests;
   if (vibes !== undefined) updatePayload.vibe_tags = vibes;
@@ -111,10 +122,35 @@ export async function updateProfileAction(
   const completeness = checkProfileCompleteness(mergedProfile);
   updatePayload.is_profile_complete = completeness.isComplete;
 
-  // Update profiles table
-  const { error: profileError } = await (supabaseAdmin.from("profiles") as any)
-    .update(updatePayload)
-    .eq("id", auth.userId);
+  // Update profiles table with resilient schema cache error recovery
+  let currentPayload = { ...updatePayload };
+  let profileError: any = null;
+
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const res = await (supabaseAdmin.from("profiles") as any)
+      .update(currentPayload)
+      .eq("id", auth.userId);
+
+    profileError = res.error;
+    if (!profileError) break;
+
+    const errMsg = profileError.message || "";
+    const match = errMsg.match(/Could not find the '([^']+)' column of 'profiles' in the schema cache/i);
+    if (match && match[1]) {
+      const missingCol = match[1];
+      console.warn(`[updateProfileAction] Column '${missingCol}' missing in profiles schema cache. Removing and retrying.`);
+      
+      // If photo_url is missing, retry with avatar_url if userPhoto was provided
+      if (missingCol === "photo_url" && userPhoto && !currentPayload.avatar_url) {
+        currentPayload.avatar_url = userPhoto;
+      }
+      
+      delete currentPayload[missingCol];
+      continue;
+    }
+
+    break;
+  }
 
   if (profileError) {
     console.error("[updateProfileAction] Error:", profileError);
@@ -137,7 +173,9 @@ export async function updateProfileAction(
         emergency_contact_phone: emergencyPhone,
         instagram_username: insta,
         cnic_picture_url: data.cnic_picture_url,
-        avatar_url: data.avatar_url || data.photo_url,
+        instagram_screenshot_url: data.instagram_screenshot_url,
+        avatar_url: userPhoto,
+        photo_url: userPhoto,
         bio: data.bio,
         is_profile_complete: completeness.isComplete,
       },
@@ -147,6 +185,8 @@ export async function updateProfileAction(
   }
 
   revalidatePath("/dashboard");
+  revalidatePath("/dashboard/profile");
+  revalidatePath("/dashboard/profile/edit");
   revalidatePath(`/profile/${auth.userId}`);
   return {
     success: true,

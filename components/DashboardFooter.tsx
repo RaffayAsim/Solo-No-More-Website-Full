@@ -49,7 +49,7 @@ export default function DashboardFooter() {
               solo-no-more
             </span>
             <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.4)", marginLeft: "8px" }}>
-              Curated nightlife &amp; verified meetups across Karachi, Lahore &amp; Islamabad
+              Curated nightlife &amp; verified meetups nationwide
             </span>
           </div>
         </div>

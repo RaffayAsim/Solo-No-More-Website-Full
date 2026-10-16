@@ -5,6 +5,23 @@ import UserVettingClient, { UnifiedUserRecord } from "./UserVettingClient";
 
 export const revalidate = 0; // Disable static caching so modifications are live
 
+function formatDeterministicDate(d: string | number | Date | null | undefined): string {
+  if (!d) return "5/31/2026";
+  const date = new Date(d);
+  if (isNaN(date.getTime())) return "5/31/2026";
+  return `${date.getUTCMonth() + 1}/${date.getUTCDate()}/${date.getUTCFullYear()}`;
+}
+
+function getValidImageUrl(url: any): string {
+  if (typeof url === "string") {
+    const trimmed = url.trim();
+    if (trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("data:") || trimmed.startsWith("/")) {
+      return trimmed;
+    }
+  }
+  return "";
+}
+
 export default async function UserVettingPage() {
   // 1. Fetch user profiles from database
   const { data: profiles } = await (supabaseAdmin
@@ -52,13 +69,9 @@ export default async function UserVettingPage() {
     let cleanUsername = app?.username || email.split("@")[0].replace(/[^a-zA-Z0-9_]/g, "") || "KazimNoor";
     if (cleanUsername.startsWith("@")) cleanUsername = cleanUsername.substring(1);
 
-    // Registration date formatted like "5/31/2026"
-    const createdAt = p.created_at || authUser?.created_at || app?.createdAt || new Date().toISOString();
-    const regDate = new Date(createdAt).toLocaleDateString("en-US", {
-      month: "numeric",
-      day: "numeric",
-      year: "numeric",
-    });
+    // Registration date formatted deterministically
+    const createdAt = p.created_at || authUser?.created_at || app?.createdAt || "2026-05-31T00:00:00.000Z";
+    const regDate = formatDeterministicDate(createdAt);
 
     // Account status mapping
     let status: "approved" | "pending" | "payment_pending" | "suspended" | "rejected" = "approved";
@@ -75,17 +88,19 @@ export default async function UserVettingPage() {
     if (p.subscription_tier === "admin") role = "admin";
     else if (p.is_partner) role = "partner";
 
+    const profilePic = getValidImageUrl(p.photo_url) || getValidImageUrl(p.avatar_url) || getValidImageUrl(app?.photoUrl);
+
     unifiedList.push({
       id: p.id,
       applicationId: app?.id,
       source: "profile",
       fullName: rawName,
-      firstName,
-      lastName,
+      firstName: p.first_name || firstName,
+      lastName: p.last_name || lastName,
       displayName: rawName,
       username: cleanUsername,
       email,
-      phone: p.phone || app?.phone || "0300 1234567",
+      phone: p.phone || app?.phone || "",
       role,
       status,
       subscriptionTier: p.subscription_tier || "member",
@@ -93,12 +108,21 @@ export default async function UserVettingPage() {
       createdAtIso: createdAt,
       city: p.city || app?.city || "Karachi",
       address: app?.city ? `DHA Phase 6, ${app.city}` : "Karachi, Pakistan",
-      cnic: app?.cnic || "42101-1234567-1",
-      bio: p.bio || app?.vibe || "Active community explorer",
-      profilePictureUrl: p.avatar_icon || app?.photoUrl || "",
-      cnicPictureUrl: "",
+      cnic: p.cnic || app?.cnic || "",
+      gender: p.gender || "Male",
+      dateOfBirth: p.date_of_birth || "",
+      emergencyContactName: p.emergency_contact_name || app?.emergencyContactName || "",
+      emergencyContactPhone: p.emergency_contact_phone || app?.emergencyContactPhone || "",
+      instagramUsername: (p.instagram_username || p.social_link || app?.instagram || "").replace(/^@/, ""),
+      bio: p.bio || app?.vibe || "",
+      profilePictureUrl: profilePic,
+      avatarIcon: p.avatar_icon || "👾",
+      cnicPictureUrl: p.cnic_picture_url || "",
+      instagramScreenshotUrl: p.instagram_screenshot_url || p.social_link || (app?.instagramScreenshots && app.instagramScreenshots[0]) || "",
+      vibeTags: Array.isArray(p.vibe_tags) && p.vibe_tags.length > 0 ? p.vibe_tags : ["Techno & House"],
+      isProfileComplete: Boolean(p.is_profile_complete),
       instagramScreenshots: [],
-      instagram: p.social_link || app?.instagram || "",
+      instagram: p.instagram_username || p.social_link || app?.instagram || "",
       packageSelected: app?.packageSelected || "Solo Pass Pro",
       paymentMethod: app?.paymentMethod,
       transactionRef: app?.transactionRef,
@@ -120,12 +144,8 @@ export default async function UserVettingPage() {
       let cleanUsername = app.username || appEmail.split("@")[0].replace(/[^a-zA-Z0-9_]/g, "") || "user";
       if (cleanUsername.startsWith("@")) cleanUsername = cleanUsername.substring(1);
 
-      const createdAt = app.createdAt || new Date().toISOString();
-      const regDate = new Date(createdAt).toLocaleDateString("en-US", {
-        month: "numeric",
-        day: "numeric",
-        year: "numeric",
-      });
+      const createdAt = app.createdAt || "2026-05-31T00:00:00.000Z";
+      const regDate = formatDeterministicDate(createdAt);
 
       let status: "approved" | "pending" | "payment_pending" | "suspended" | "rejected" = "pending";
       if (app.status === "approved" || app.status === "credentials_created") status = "approved";
@@ -143,7 +163,7 @@ export default async function UserVettingPage() {
         displayName: rawName,
         username: cleanUsername,
         email: app.email,
-        phone: app.phone || "0300 1234567",
+        phone: app.phone || "",
         role: app.type === "partner" ? "partner" : "member",
         status,
         subscriptionTier: app.packageSelected?.toLowerCase().includes("vip") ? "family" : "member",
@@ -151,10 +171,19 @@ export default async function UserVettingPage() {
         createdAtIso: createdAt,
         city: app.city || "Karachi",
         address: `${app.city || "Karachi"}, Pakistan`,
-        cnic: app.cnic || "42101-1234567-1",
-        bio: app.vibe || "New community applicant",
-        profilePictureUrl: app.photoUrl || "",
+        cnic: app.cnic || "",
+        gender: "Male",
+        dateOfBirth: "",
+        emergencyContactName: app.emergencyContactName || "",
+        emergencyContactPhone: app.emergencyContactPhone || "",
+        instagramUsername: (app.instagram || "").replace(/^@/, ""),
+        bio: app.vibe || "",
+        profilePictureUrl: getValidImageUrl(app.photoUrl),
+        avatarIcon: "👾",
         cnicPictureUrl: "",
+        instagramScreenshotUrl: (app.instagramScreenshots && app.instagramScreenshots[0]) || "",
+        vibeTags: ["Techno & House"],
+        isProfileComplete: false,
         instagramScreenshots: [],
         instagram: app.instagram || "",
         packageSelected: app.packageSelected || "Solo Pass Pro",

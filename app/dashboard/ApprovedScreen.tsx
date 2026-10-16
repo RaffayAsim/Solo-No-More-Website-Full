@@ -12,7 +12,6 @@ import { parseEventDescription } from "@/lib/event-metadata";
 
 const CreateBeaconModal = dynamic(() => import("./CreateBeaconModal"), { ssr: false });
 const VipTicketPassModal = dynamic(() => import("@/components/VipTicketPassModal"), { ssr: false });
-import CompleteProfileModal from "@/components/CompleteProfileModal";
 import EventBookingModal from "@/components/events/EventBookingModal";
 import { checkProfileCompleteness } from "@/lib/profile-completeness";
 import {
@@ -103,8 +102,6 @@ export default function ApprovedScreen({
   const [selectedTicketForModal, setSelectedTicketForModal] = useState<any | null>(null);
   const [eventToShare, setEventToShare] = useState<OfficialEvent | null>(null);
   const [bookingEventForModal, setBookingEventForModal] = useState<OfficialEvent | null>(null);
-  const [showProfileCompleteModal, setShowProfileCompleteModal] = useState(false);
-  const [completenessActionContext, setCompletenessActionContext] = useState("participating");
 
   // Filter States
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -166,8 +163,7 @@ export default function ApprovedScreen({
     }
     const completeness = checkProfileCompleteness(profile);
     if (!completeness.isComplete) {
-      setCompletenessActionContext("booking event passes");
-      setShowProfileCompleteModal(true);
+      router.push("/dashboard/profile/edit?notice=event_booking_required");
       return;
     }
     setBookingEventForModal(event);
@@ -492,8 +488,7 @@ export default function ApprovedScreen({
                 onClick={() => {
                   const completeness = checkProfileCompleteness(profile);
                   if (!completeness.isComplete) {
-                    setCompletenessActionContext("hosting a hangout");
-                    setShowProfileCompleteModal(true);
+                    router.push("/dashboard/profile/edit?notice=beacon_required");
                     return;
                   }
                   setIsBeaconModalOpen(true);
@@ -580,8 +575,7 @@ export default function ApprovedScreen({
           </div>
           <button
             onClick={() => {
-              setCompletenessActionContext("upgrading to full membership");
-              setShowProfileCompleteModal(true);
+              router.push("/dashboard/profile/edit?notice=membership_upgrade");
             }}
             className="px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-wider bg-gradient-to-r from-[#FF6F26] to-[#FF5A1F] text-white hover:brightness-110 shadow-[0_4px_20px_rgba(255,111,38,0.4)] shrink-0 transition-all cursor-pointer"
           >
@@ -2049,18 +2043,6 @@ export default function ApprovedScreen({
           }}
         />
       )}
-
-      {/* 6. Profile Completeness Enforcement Modal */}
-      <CompleteProfileModal
-        isOpen={showProfileCompleteModal}
-        onClose={() => setShowProfileCompleteModal(false)}
-        profile={profile || null}
-        actionContext={completenessActionContext}
-        onProfileCompleted={() => {
-          setShowProfileCompleteModal(false);
-          router.refresh();
-        }}
-      />
     </div>
   );
 }

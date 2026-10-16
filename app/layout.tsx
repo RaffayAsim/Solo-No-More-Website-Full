@@ -41,9 +41,9 @@ const ibmPlexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Solo-No-More — Find Your People IRL in Karachi",
+  title: "Solo-No-More — Find Your People IRL Nationwide",
   description:
-    "Never go out alone again. Join squads for padel, chai runs, gigs and rooftop hangs across Karachi — or host your own in seconds.",
+    "Never go out alone again. Join squads for padel, chai runs, gigs and rooftop hangs across cities nationwide — or host your own in seconds.",
 };
 
 // Locks the skin to the modern website theme ('partiful')

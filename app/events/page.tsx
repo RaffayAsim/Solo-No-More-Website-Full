@@ -1,10 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase/client";
 import SubpageNavbar from "@/components/SubpageNavbar";
 import SubpageFooter from "@/components/SubpageFooter";
-import { MapPin, Users, Calendar, Clock, Ticket, Search, Sparkles, Filter, Check, ArrowRight, ShieldCheck } from "lucide-react";
+import EventQuickPreviewModal, { EventPreviewData } from "@/components/events/EventQuickPreviewModal";
+import {
+  MapPin,
+  Users,
+  Calendar,
+  Clock,
+  Ticket,
+  Search,
+  Sparkles,
+  Filter,
+  Check,
+  ArrowRight,
+  ShieldCheck,
+  Eye,
+} from "lucide-react";
 
 interface EventItem {
   id: string;
@@ -21,6 +37,10 @@ interface EventItem {
   hostName: string;
   hostRole: string;
   tag: string;
+  flyer_image_url?: string;
+  description?: string;
+  scheduled_at?: string;
+  isOfficial?: boolean;
 }
 
 const EVENTS_DATA: EventItem[] = [
@@ -155,10 +175,64 @@ const EVENTS_DATA: EventItem[] = [
 ];
 
 export default function BrowseEventsPage() {
+  const router = useRouter();
   const [selectedCity, setSelectedCity] = useState<string>("All");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [joinedEvent, setJoinedEvent] = useState<string | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [selectedPreviewEvent, setSelectedPreviewEvent] = useState<EventPreviewData | null>(null);
+  const [dbEvents, setDbEvents] = useState<EventItem[]>([]);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setIsLoggedIn(!!user);
+    });
+    const { data: authListener } = supabase.auth.onAuthStateChange((_, session) => {
+      setIsLoggedIn(!!session?.user);
+    });
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    const fetchOfficialEvents = async () => {
+      try {
+        const { data } = await (supabase.from("official_events") as any)
+          .select("*")
+          .order("scheduled_at", { ascending: true })
+          .limit(20);
+        if (data && data.length > 0) {
+          const mapped: EventItem[] = data.map((d: any) => {
+            const dt = d.scheduled_at ? new Date(d.scheduled_at) : null;
+            return {
+              id: d.id,
+              title: d.title,
+              category: (d.category?.toLowerCase() || "casual") as any,
+              city: (d.city || "Karachi") as any,
+              location: d.venue_name || "Curated Venue",
+              neighborhood: d.address || "Karachi",
+              date: dt ? dt.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) : "Upcoming",
+              time: dt ? dt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "Time TBA",
+              joined: d.joined_count || Math.floor(Math.random() * 8) + 4,
+              capacity: d.max_capacity || 50,
+              price: d.price > 0 ? `PKR ${d.price.toLocaleString()}` : "Free RSVP",
+              hostName: "Solo-No-More Official",
+              hostRole: "Verified Curator",
+              tag: "OFFICIAL PASS",
+              flyer_image_url: d.flyer_image_url,
+              description: d.description,
+              scheduled_at: d.scheduled_at,
+              isOfficial: true,
+            };
+          });
+          setDbEvents(mapped);
+        }
+      } catch {}
+    };
+    fetchOfficialEvents();
+  }, []);
 
   const categories = [
     { id: "all", label: "All Vibes" },
@@ -169,7 +243,9 @@ export default function BrowseEventsPage() {
     { id: "arts", label: "Mixers & Creatives 🎨" },
   ];
 
-  const filteredEvents = EVENTS_DATA.filter((e) => {
+  const allEvents = [...dbEvents, ...EVENTS_DATA];
+
+  const filteredEvents = allEvents.filter((e) => {
     const matchCity = selectedCity === "All" || e.city === selectedCity;
     const matchCategory = selectedCategory === "all" || e.category === selectedCategory;
     const matchSearch =
@@ -179,6 +255,26 @@ export default function BrowseEventsPage() {
       e.neighborhood.toLowerCase().includes(searchQuery.toLowerCase());
     return matchCity && matchCategory && matchSearch;
   });
+
+  const handleOpenPreview = (event: EventItem) => {
+    setSelectedPreviewEvent({
+      id: event.id,
+      title: event.title,
+      description: event.description,
+      venue_name: event.location,
+      location: event.neighborhood ? `${event.location}, ${event.neighborhood}` : event.location,
+      date: event.date,
+      time: event.time,
+      scheduled_at: event.scheduled_at,
+      flyer_image_url: event.flyer_image_url,
+      price: event.price,
+      category: event.category,
+      tag: event.tag,
+      joined: event.joined,
+      capacity: event.capacity,
+      hostName: event.hostName,
+    });
+  };
 
   return (
     <div style={{ background: "#060408", minHeight: "100vh", color: "#FFFFFF", position: "relative" }}>
@@ -507,54 +603,47 @@ export default function BrowseEventsPage() {
                     </div>
 
                     {/* Bottom Row: Price & Action */}
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: "14px", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: "14px", borderTop: "1px solid rgba(255,255,255,0.08)", gap: "10px", flexWrap: "wrap" }}>
                       <div>
                         <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.45)", fontWeight: 700, textTransform: "uppercase" }}>Pass</div>
                         <div style={{ fontSize: "14.5px", fontWeight: 800, color: "#fff" }}>{event.price}</div>
                       </div>
 
-                      {isJoined ? (
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                         <button
                           type="button"
-                          onClick={() => setJoinedEvent(null)}
-                          style={{
-                            background: "rgba(39, 201, 63, 0.18)",
-                            border: "1px solid rgba(39, 201, 63, 0.45)",
-                            color: "#27C93F",
-                            fontSize: "12.5px",
-                            fontWeight: 800,
-                            padding: "9px 16px",
-                            borderRadius: "10px",
-                            cursor: "pointer",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "6px",
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenPreview(event);
                           }}
+                          className="px-3 py-2 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/15 text-zinc-300 hover:text-white border border-white/15 transition-all flex items-center gap-1.5 cursor-pointer"
+                          title="Quick Preview Event"
                         >
-                          <Check className="w-3.5 h-3.5" /> RSVP Confirmed
+                          <Eye className="w-3.5 h-3.5 text-[#FF6F26]" />
+                          <span>Preview</span>
                         </button>
-                      ) : (
+
                         <button
                           type="button"
-                          onClick={() => setJoinedEvent(event.id)}
-                          style={{
-                            background: "linear-gradient(135deg, #FF6F26 0%, #FF5A1F 100%)",
-                            border: "none",
-                            color: "#fff",
-                            fontSize: "12.5px",
-                            fontWeight: 900,
-                            padding: "9px 18px",
-                            borderRadius: "10px",
-                            cursor: "pointer",
-                            boxShadow: "0 4px 14px rgba(255,90,31,0.35)",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "6px",
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (event.isOfficial) {
+                              if (isLoggedIn) {
+                                router.push(`/events/${event.id}?book=true`);
+                              } else {
+                                const targetUrl = `/events/${event.id}?book=true`;
+                                router.push(`/login?redirect=${encodeURIComponent(targetUrl)}`);
+                              }
+                            } else {
+                              handleOpenPreview(event);
+                            }
                           }}
+                          className="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-gradient-to-r from-[#FF6F26] to-[#FF5A1F] text-white hover:brightness-110 shadow-[0_4px_14px_rgba(255,90,31,0.35)] transition-all flex items-center gap-1.5 cursor-pointer"
                         >
-                          Join Squad <ArrowRight className="w-3.5 h-3.5" />
+                          <span>{event.isOfficial ? "Book Pass" : "Join Squad"}</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
                         </button>
-                      )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -693,6 +782,25 @@ export default function BrowseEventsPage() {
           </div>
         </div>
       </section>
+
+      {/* QHQ-Style Quick Preview Modal */}
+      {selectedPreviewEvent && (
+        <EventQuickPreviewModal
+          isOpen={!!selectedPreviewEvent}
+          onClose={() => setSelectedPreviewEvent(null)}
+          event={selectedPreviewEvent}
+          isLoggedIn={isLoggedIn}
+          onBookNow={(ev) => {
+            if (ev.id.startsWith("e") && !ev.id.includes("-")) {
+              // Sample event
+              setJoinedEvent(ev.id);
+              setSelectedPreviewEvent(null);
+            } else {
+              router.push(`/events/${ev.id}?book=true`);
+            }
+          }}
+        />
+      )}
 
       <SubpageFooter />
     </div>

@@ -53,16 +53,11 @@ export default function SubpageNavbar({ activePage }: SubpageNavbarProps) {
           href="/"
           style={{
             textDecoration: "none",
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-            flexShrink: 0,
           }}
-          className="group cursor-pointer"
+          className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 group cursor-pointer"
         >
           <svg
-            width="28"
-            height="28"
+            className="w-5 h-5 sm:w-7 sm:h-7"
             viewBox="0 0 28 28"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
@@ -77,11 +72,10 @@ export default function SubpageNavbar({ activePage }: SubpageNavbarProps) {
           <span
             style={{
               fontFamily: "var(--font-display), 'Plus Jakarta Sans', system-ui, sans-serif",
-              fontSize: "23px",
-              fontWeight: 900,
               letterSpacing: "-0.04em",
               color: "#FFFFFF",
             }}
+            className="text-[17px] sm:text-[23px] font-black whitespace-nowrap"
           >
             solo-no-more
           </span>
@@ -116,23 +110,21 @@ export default function SubpageNavbar({ activePage }: SubpageNavbarProps) {
         </nav>
 
         {/* Right Action Buttons */}
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
           <Link
             href="/login"
             style={{
               background: "rgba(255, 255, 255, 0.06)",
               border: "1px solid rgba(255, 255, 255, 0.18)",
               color: "#FFFFFF",
-              fontSize: "13px",
               fontWeight: 800,
               textDecoration: "none",
-              padding: "7px 18px",
               borderRadius: "8px",
               transition: "all 0.15s ease",
             }}
-            className="hover:bg-white/15 active:scale-95 hidden sm:inline-flex"
+            className="hover:bg-white/15 active:scale-95 inline-flex items-center text-xs sm:text-[13px] px-2.5 py-1.5 sm:px-4 sm:py-2 whitespace-nowrap shrink-0"
           >
-            Login
+            Sign In
           </Link>
           <SignUpDropdown />
 

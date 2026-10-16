@@ -7,6 +7,9 @@ import OverlapFeatureCards from "./OverlapFeatureCards";
 import BeaconSimulator from "./BeaconSimulator";
 import ScrollToTopButton from "./ScrollToTopButton";
 import SignUpDropdown from "./SignUpDropdown";
+import { supabase } from "@/lib/supabase/client";
+import EventQuickPreviewModal, { EventPreviewData } from "./events/EventQuickPreviewModal";
+import BeaconQuickPreviewModal, { BeaconPreviewData } from "./beacons/BeaconQuickPreviewModal";
 import {
   Sparkles,
   MapPin,
@@ -18,6 +21,7 @@ import {
   CreditCard,
   Camera,
   MessageSquare,
+  Eye,
   Send,
   Zap,
   Flame,
@@ -190,7 +194,7 @@ const PRESS_PARTNER_REVIEWS = [
     stars: 5,
   },
   {
-    quote: "Hangouts in Karachi are officially back.",
+    quote: "Hangouts nationwide are officially back.",
     source: "DAWN IMAGES",
     type: "partner",
     tag: "LOCAL SPOTLIGHT",
@@ -204,14 +208,14 @@ const PRESS_PARTNER_REVIEWS = [
     stars: 5,
   },
   {
-    quote: "How Gen-Z in Karachi is ditching algorithms for real scenes.",
+    quote: "How Gen-Z nationwide is ditching algorithms for real scenes.",
     source: "PROPAKISTANI",
     type: "partner",
     tag: "COMMUNITY REPORT",
     stars: 5,
   },
   {
-    quote: "The antidote to Karachi's social isolation and flaky plans.",
+    quote: "The antidote to social isolation and flaky plans nationwide.",
     source: "THE EXPRESS TRIBUNE",
     type: "partner",
     tag: "CULTURE DESK",
@@ -260,7 +264,7 @@ const COMMUNITY_HOST_REVIEWS = [
     quote: "Midnight chai runs and 10k midnight runs are actually happening now. Instant RSVP changes everything.",
     author: "Hamza Tariq",
     handle: "@hamzat",
-    role: "Karachi Night Runner",
+    role: "Night Scene Explorer",
     avatar: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=120&h=120&fit=crop&crop=faces",
     stars: 5,
     zone: "Sea View / DHA",
@@ -686,6 +690,73 @@ export default function LandingPageClient({
     setEventFavorites((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
+  // Preview Modals State
+  const [previewEvent, setPreviewEvent] = useState<EventPreviewData | null>(null);
+  const [previewBeacon, setPreviewBeacon] = useState<BeaconPreviewData | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setIsLoggedIn(!!user);
+    });
+    const { data: authListener } = supabase.auth.onAuthStateChange((_, session) => {
+      setIsLoggedIn(!!session?.user);
+    });
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
+  const openEventPreview = (event: MembersOnlyEventItem) => {
+    const priceNum = parseInt(event.price.replace(/[^0-9]/g, "")) || 2500;
+    const publicPriceNum = parseInt(event.publicPrice.replace(/[^0-9]/g, "")) || 3500;
+    setPreviewEvent({
+      id: event.id,
+      title: event.title,
+      description: `${event.title} curated by ${event.curator}. Verified members-only IRL community experience. Includes ${event.perkBadge}.`,
+      venue_name: event.location,
+      location: event.location,
+      date: event.date,
+      flyer_image_url: event.image,
+      price: event.price,
+      category: event.category,
+      tag: event.hotBadge || "MEMBERS ONLY",
+      capacity: event.totalSpots,
+      joined: event.totalSpots - event.spotsRemaining,
+      hostName: event.curator,
+      metadata: {
+        is_members_only: true,
+        tier_packages: [
+          { id: "member_tier", name: "Member Tier Pass", price: priceNum, perks: event.perkBadge },
+          { id: "guest_tier", name: "Guest Pass", price: publicPriceNum, perks: "Standard Admission" },
+        ],
+      },
+    });
+  };
+
+  const openBeaconPreview = (tmpl: TrendingTemplateItem) => {
+    const cat =
+      tmpl.category.toLowerCase().includes("padel") || tmpl.category.toLowerCase().includes("cricket")
+        ? "sports"
+        : tmpl.category.toLowerCase().includes("chai")
+        ? "casual"
+        : "nightlife";
+
+    setPreviewBeacon({
+      id: tmpl.id,
+      title: tmpl.name,
+      category: cat,
+      location_name: tmpl.subtext,
+      location: tmpl.location,
+      time: tmpl.time,
+      date: "Tonight",
+      total_slots: 8,
+      filled_slots: 5,
+      description: `${tmpl.headline} — ${tmpl.name}. Join verified squad members at ${tmpl.location}. Real people showing up.`,
+      hostName: "Verified Squad Host",
+    });
+  };
+
   // Beacons Carousel Ref & Cursor Drag Scroll State
   const carouselRef = useRef<HTMLDivElement>(null);
   const isDownRef = useRef(false);
@@ -843,38 +914,28 @@ export default function LandingPageClient({
 
   return (
     <div className="min-h-screen flex flex-col font-sans" style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}>
-      
-      <ScrollToTopButton />
-
+      {/* ── 2. NAVBAR (MATCHING SUBPAGES, NON-STICKY) ── */}
       {/* ── 2. NAVBAR (MATCHING SUBPAGES, NON-STICKY) ── */}
       <header
+        className="px-3 py-3 sm:px-6 sm:py-5 md:px-10 w-full flex items-center justify-between gap-2 sm:gap-4 relative z-[60]"
         style={{
-          position: "relative",
-          zIndex: 60,
           background: "transparent",
-          padding: "20px clamp(20px, 3.5vw, 48px)",
-          width: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "16px",
         }}
       >
         {/* Left: Brand Logo on far-left edge */}
-        <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }} className="cursor-pointer">
-          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.6))" }}>
+        <Link href="/" style={{ textDecoration: "none" }} className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 cursor-pointer">
+          <svg className="w-5 h-5 sm:w-7 sm:h-7" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.6))" }}>
             <path d="M14 3C8.477 3 4 7.477 4 13C4 16.866 6.189 20.216 9.4 21.895L7.8 25L13.5 24.2C13.666 24.215 13.832 24.223 14 24.223C19.523 24.223 24 19.746 24 14.223C24 8.7 19.523 3 14 3Z" fill="white" />
             <circle cx="14" cy="13" r="4" fill="#FF5A1F" />
           </svg>
           <span
             style={{
               fontFamily: "var(--font-display), 'Plus Jakarta Sans', system-ui, sans-serif",
-              fontSize: "25px",
-              fontWeight: 900,
               letterSpacing: "-0.04em",
               color: "#FFFFFF",
               textShadow: "0 2px 10px rgba(0, 0, 0, 0.8)",
             }}
+            className="text-[17px] sm:text-2xl font-black whitespace-nowrap"
           >
             solo-no-more
           </span>
@@ -913,26 +974,24 @@ export default function LandingPageClient({
         </nav>
 
         {/* Right Action Buttons */}
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
           <Link
             href="/login"
             style={{
               background: "rgba(18, 18, 24, 0.78)",
               border: "1px solid rgba(255, 255, 255, 0.22)",
               color: "#FFFFFF",
-              fontSize: "13.5px",
               fontWeight: 800,
               textDecoration: "none",
-              padding: "8px 18px",
               borderRadius: "8px",
               backdropFilter: "blur(12px)",
               WebkitBackdropFilter: "blur(12px)",
               boxShadow: "0 4px 14px rgba(0, 0, 0, 0.3)",
               transition: "background 0.15s ease, transform 0.15s ease",
             }}
-            className="hover:bg-white/20 active:scale-95 cursor-pointer hidden sm:inline-flex"
+            className="hover:bg-white/20 active:scale-95 cursor-pointer inline-flex items-center text-xs sm:text-[13.5px] px-2.5 py-1.5 sm:px-4 sm:py-2 whitespace-nowrap shrink-0"
           >
-            Login
+            Sign In
           </Link>
           <SignUpDropdown />
         </div>
@@ -940,15 +999,7 @@ export default function LandingPageClient({
 
       {/* ── 3. HERO SECTION (TEXTURED FILM GRAIN + ORANGE/BLACK GRADIENT + USER PHOTO) ── */}
       <section
-        style={{
-          position: "relative",
-          overflow: "hidden",
-          minHeight: "clamp(580px, 85vh, 760px)",
-          display: "flex",
-          alignItems: "center",
-          background: "#050507",
-          paddingTop: "clamp(80px, 12vw, 110px)",
-        }}
+        className="relative overflow-hidden flex items-center bg-[#050507] pt-8 pb-12 sm:pt-14 sm:pb-10 md:pt-20 md:pb-14 md:min-h-[clamp(580px,85vh,760px)]"
       >
         {/* Photography Layer: Hero Image with optimized mobile positioning */}
         <div
@@ -1015,12 +1066,7 @@ export default function LandingPageClient({
 
         {/* Left Column Content Container (Edge-to-Edge Layout: Aligns across left) */}
         <div
-          style={{
-            position: "relative",
-            zIndex: 10,
-            width: "100%",
-            padding: "clamp(24px, 5vw, 40px) clamp(20px, 4vw, 48px) clamp(36px, 8vw, 80px)",
-          }}
+          className="relative z-10 w-full px-5 py-4 sm:px-8 sm:py-6 md:px-12 md:py-10"
         >
           <div style={{ maxWidth: "620px" }}>
             
@@ -1036,39 +1082,41 @@ export default function LandingPageClient({
                 WebkitBackdropFilter: "blur(12px)",
                 padding: "6px 14px",
                 borderRadius: "9999px",
-                fontSize: "12px",
+                fontSize: "11.5px",
                 fontWeight: 800,
                 color: "#FFA05C",
                 letterSpacing: "0.03em",
-                marginBottom: "clamp(14px, 3vw, 22px)",
+                marginBottom: "16px",
                 boxShadow: "0 4px 16px rgba(255, 90, 31, 0.2)",
               }}
             >
               <span className="w-2 h-2 rounded-full bg-[#3DDC97] animate-pulse" style={{ boxShadow: "0 0 10px #3DDC97" }} />
-              <span>14 SQUADS HANGING OUT TONIGHT IN KARACHI</span>
+              <span>14 SQUADS HANGING OUT TONIGHT NATIONWIDE</span>
             </div>
 
-            {/* Giant Headline: Solo-No-More High-Energy Party Branding */}
+            {/* Headline: Clean 2-Line Architecture Across Mobile & Desktop */}
             <h1
               style={{
                 fontFamily: "var(--font-display), 'Plus Jakarta Sans', system-ui, sans-serif",
-                fontSize: "clamp(38px, 8.5vw, 82px)",
+                fontSize: "clamp(24px, 6.4vw, 76px)",
                 fontWeight: 900,
-                letterSpacing: "-0.04em",
-                lineHeight: 1.02,
+                letterSpacing: "-0.035em",
+                lineHeight: 1.1,
                 color: "#FFFFFF",
-                margin: "0 0 clamp(14px, 2.8vw, 22px)",
+                margin: "0 0 16px",
                 textShadow: "0 3px 20px rgba(0, 0, 0, 0.8)",
               }}
             >
-              Never go out alone again.{" "}
+              <span className="block whitespace-normal xs:whitespace-nowrap sm:whitespace-normal">
+                Never go out alone again.
+              </span>
               <span
+                className="block"
                 style={{
                   background: "linear-gradient(135deg, #FF9447 0%, #FF5A1F 55%, #E6450A 100%)",
                   WebkitBackgroundClip: "text",
                   backgroundClip: "text",
                   color: "transparent",
-                  display: "inline",
                 }}
               >
                 Find your people IRL.
@@ -1078,28 +1126,28 @@ export default function LandingPageClient({
             {/* Subtitle */}
             <p
               style={{
-                fontSize: "clamp(15px, 2vw, 19px)",
+                fontSize: "clamp(13.5px, 2vw, 19px)",
                 lineHeight: 1.55,
                 color: "rgba(255, 255, 255, 0.92)",
                 fontWeight: 600,
                 maxWidth: "520px",
-                margin: "0 0 clamp(24px, 4.5vw, 36px)",
+                margin: "0 0 22px",
                 textShadow: "0 2px 12px rgba(0, 0, 0, 0.85)",
               }}
             >
-              Join vetted squads for padel, chai runs, rooftop gigs, and beach sunsets across Karachi — or host your own in 10 seconds. Real people showing up.
+              Join vetted squads for padel, chai runs, rooftop gigs, and beach sunsets nationwide — or host your own in 10 seconds. Real people showing up.
             </p>
 
             {/* CTA Buttons (Sunset Orange Gradient + Glass Secondary) */}
-            <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
               <Link
                 href="/apply"
                 style={{
                   background: "linear-gradient(135deg, #FF6F26 0%, #FF5A1F 45%, #E6450A 100%)",
                   color: "#FFFFFF",
-                  fontSize: "15px",
+                  fontSize: "14.5px",
                   fontWeight: 800,
-                  padding: "13px 26px",
+                  padding: "12px 24px",
                   borderRadius: "12px",
                   textDecoration: "none",
                   boxShadow: "0 8px 25px rgba(255, 90, 31, 0.45)",
@@ -1119,9 +1167,9 @@ export default function LandingPageClient({
                   background: "rgba(255, 255, 255, 0.08)",
                   border: "1px solid rgba(255, 255, 255, 0.2)",
                   color: "#FFFFFF",
-                  fontSize: "15px",
+                  fontSize: "14.5px",
                   fontWeight: 700,
-                  padding: "13px 22px",
+                  padding: "12px 22px",
                   borderRadius: "12px",
                   textDecoration: "none",
                   backdropFilter: "blur(12px)",
@@ -1139,7 +1187,7 @@ export default function LandingPageClient({
 
             {/* Mobile Community Stats Bar */}
             <div
-              className="flex md:hidden items-center gap-4 mt-7 pt-5 border-t border-white/10"
+              className="flex md:hidden items-center gap-4 mt-6 pt-4 border-t border-white/10"
               style={{ maxWidth: "420px" }}
             >
               <div>
@@ -1454,14 +1502,7 @@ export default function LandingPageClient({
 
       {/* ── SECTION FINISHED DIVIDER LINE ── */}
       <div
-        style={{
-          width: "100%",
-          display: "flex",
-          justifyContent: "center",
-          padding: "16px 24px",
-          position: "relative",
-          zIndex: 10,
-        }}
+        className="w-full flex justify-center py-2 px-4 sm:py-4 sm:px-6 relative z-10"
         aria-hidden="true"
       >
         <div
@@ -1491,7 +1532,7 @@ export default function LandingPageClient({
             <span className="pf-ticker-badge">
               <span className="pf-ticker-dot" /> LIVE TICKER
             </span>
-            <span>REAL-WORLD SOCIAL DISCOVERY IN KARACHI</span>
+            <span>REAL-WORLD SOCIAL DISCOVERY NATIONWIDE</span>
           </span>
           <span className="text-black font-black select-none">✦</span>
           <span className="inline-flex items-center gap-2 font-black text-black">
@@ -1506,12 +1547,12 @@ export default function LandingPageClient({
           <span className="text-black font-black select-none">✦</span>
           <span className="inline-flex items-center gap-2 font-black text-black">
             <span className="pf-ticker-badge">🛡️ 100% VETTED</span>
-            <span>REAL KARACHI SQUADS · ZERO FOLLOWER ALGORITHMS · ZERO GHOSTING</span>
+            <span>REAL VETTED SQUADS · ZERO FOLLOWER ALGORITHMS · ZERO GHOSTING</span>
           </span>
           <span className="text-black font-black select-none">★</span>
           <span className="inline-flex items-center gap-2 font-black text-black">
             <span className="pf-ticker-badge">📍 LOCAL HOTSPOTS</span>
-            <span>CLIFTON · DHA · PECHS · KARACHI</span>
+            <span>KARACHI · LAHORE · ISLAMABAD · NATIONWIDE</span>
           </span>
           <span className="text-black font-black select-none">●</span>
           <span className="inline-flex items-center gap-2 font-black text-black">
@@ -1525,7 +1566,7 @@ export default function LandingPageClient({
             <span className="pf-ticker-badge">
               <span className="pf-ticker-dot" /> LIVE TICKER
             </span>
-            <span>REAL-WORLD SOCIAL DISCOVERY IN KARACHI</span>
+            <span>REAL-WORLD SOCIAL DISCOVERY NATIONWIDE</span>
           </span>
           <span className="text-black font-black select-none">✦</span>
           <span className="inline-flex items-center gap-2 font-black text-black">
@@ -1540,12 +1581,12 @@ export default function LandingPageClient({
           <span className="text-black font-black select-none">✦</span>
           <span className="inline-flex items-center gap-2 font-black text-black">
             <span className="pf-ticker-badge">🛡️ 100% VETTED</span>
-            <span>REAL KARACHI SQUADS · ZERO FOLLOWER ALGORITHMS · ZERO GHOSTING</span>
+            <span>REAL VETTED SQUADS · ZERO FOLLOWER ALGORITHMS · ZERO GHOSTING</span>
           </span>
           <span className="text-black font-black select-none">★</span>
           <span className="inline-flex items-center gap-2 font-black text-black">
             <span className="pf-ticker-badge">📍 LOCAL HOTSPOTS</span>
-            <span>CLIFTON · DHA · PECHS · KARACHI</span>
+            <span>KARACHI · LAHORE · ISLAMABAD · NATIONWIDE</span>
           </span>
           <span className="text-black font-black select-none">●</span>
           <span className="inline-flex items-center gap-2 font-black text-black">
@@ -1635,7 +1676,7 @@ export default function LandingPageClient({
                 letterSpacing: "0.06em",
               }}
             >
-              <Radio className="w-3.5 h-3.5 text-[#FF5A1F] animate-pulse" /> LIVE KARACHI RADAR
+              <Radio className="w-3.5 h-3.5 text-[#FF5A1F] animate-pulse" /> LIVE RADAR NATIONWIDE
             </div>
             <h2
               style={{
@@ -1658,7 +1699,7 @@ export default function LandingPageClient({
                 fontWeight: 500,
               }}
             >
-              Real-world scenes broadcasting across Karachi. Scroll or drag with cursor to explore.
+              Real-world scenes broadcasting nationwide. Scroll or drag with cursor to explore.
             </p>
           </div>
 
@@ -1736,8 +1777,9 @@ export default function LandingPageClient({
                   onClick={() => {
                     setSelectedTemplate(tmpl);
                     setIsInteracting(true);
+                    openBeaconPreview(tmpl);
                   }}
-                  className={`pf-beacon-poster-card ${isSelected ? "is-active-beacon" : ""}`}
+                  className={`pf-beacon-poster-card ${isSelected ? "is-active-beacon" : ""} cursor-pointer group`}
                   style={{
                     position: "relative",
                     overflow: "hidden",
@@ -1746,6 +1788,7 @@ export default function LandingPageClient({
                     flex: "0 0 330px",
                     borderRadius: "0px",
                     transition: "all 0.35s cubic-bezier(0.16, 1, 0.3, 1)",
+                    cursor: "pointer",
                   }}
                 >
                   {/* Active Beacon Selection Badge */}
@@ -1870,7 +1913,7 @@ export default function LandingPageClient({
                         <span style={{ color: "#FFFFFF" }}>{tmpl.time}</span>
                       </span>
                       <span style={{ color: "rgba(255, 255, 255, 0.75)", fontWeight: 700, fontSize: "11.5px" }}>
-                        Tap to select
+                        Tap to preview
                       </span>
                     </div>
                   </div>
@@ -2214,7 +2257,8 @@ export default function LandingPageClient({
               return (
                 <div
                   key={event.id}
-                  className="group rounded-3xl transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_28px_65px_rgba(0,0,0,0.65)]"
+                  onClick={() => openEventPreview(event)}
+                  className="group rounded-3xl transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_28px_65px_rgba(0,0,0,0.65)] cursor-pointer"
                   style={{
                     background: "linear-gradient(180deg, #170C14 0%, #10060C 100%)",
                     border: "1.5px solid rgba(255, 255, 255, 0.15)",
@@ -2223,6 +2267,7 @@ export default function LandingPageClient({
                     display: "flex",
                     flexDirection: "column",
                     justifyContent: "space-between",
+                    cursor: "pointer",
                   }}
                 >
                   {/* Larger Thumbnail Container (Height: 275px) */}
@@ -3312,7 +3357,7 @@ export default function LandingPageClient({
                     {/* Party Details */}
                     <div style={{ fontSize: "14px", fontWeight: 800, color: "#FFFFFF", marginTop: "4px" }}>RSVP to my party</div>
                     <div style={{ fontSize: "11px", color: "#FF8A3D", fontWeight: 800, marginTop: "2px" }}>solonomore.com</div>
-                    <div style={{ fontSize: "9px", color: "rgba(255,255,255,0.6)", marginTop: "3px" }}>24 Attending • Karachi</div>
+                    <div style={{ fontSize: "9px", color: "rgba(255,255,255,0.6)", marginTop: "3px" }}>24 Attending • Nationwide</div>
                   </div>
 
                   {/* Barcode & Share Link Stub */}
@@ -4940,7 +4985,7 @@ export default function LandingPageClient({
             }}
           >
             <span>⚡</span>
-            <span>420+ real gatherings live this weekend across Karachi</span>
+            <span>420+ real gatherings live this weekend nationwide</span>
           </div>
         </div>
       </section>
@@ -5092,7 +5137,7 @@ export default function LandingPageClient({
                   maxWidth: "360px",
                 }}
               >
-                Your gateway to exclusive events, premium experiences, and unforgettable moments in Karachi. Join the revolution.
+                Your gateway to exclusive events, premium experiences, and unforgettable moments nationwide. Join the revolution.
               </p>
 
               <a
@@ -5224,44 +5269,28 @@ export default function LandingPageClient({
             <div>© 2026 Solo-No-More. All rights reserved. Find Your People IRL.</div>
 
             <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-              <button
-                onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  background: "transparent",
-                  border: "none",
-                  color: "rgba(255, 255, 255, 0.8)",
-                  fontSize: "13px",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  padding: 0,
-                }}
-                className="hover:text-white group"
-              >
-                <span>Back to Top ⚡</span>
-                <div
-                  style={{
-                    width: "38px",
-                    height: "38px",
-                    borderRadius: "50%",
-                    background: "linear-gradient(135deg, #FF6F26 0%, #FF5A1F 100%)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    boxShadow: "0 4px 18px rgba(255, 90, 31, 0.45)",
-                    transition: "transform 0.2s ease, box-shadow 0.2s ease",
-                  }}
-                  className="group-hover:scale-110 group-hover:shadow-[0_6px_28px_rgba(255,90,31,0.85)]"
-                >
-                  <ArrowRight className="w-4 h-4 -rotate-90 text-white" />
-                </div>
-              </button>
             </div>
           </div>
         </div>
       </footer>
+
+      {/* ── QHQ STYLE QUICK PREVIEW MODALS ── */}
+      {previewEvent && (
+        <EventQuickPreviewModal
+          isOpen={!!previewEvent}
+          onClose={() => setPreviewEvent(null)}
+          event={previewEvent}
+          isLoggedIn={isLoggedIn}
+        />
+      )}
+      {previewBeacon && (
+        <BeaconQuickPreviewModal
+          isOpen={!!previewBeacon}
+          onClose={() => setPreviewBeacon(null)}
+          beacon={previewBeacon}
+          isLoggedIn={isLoggedIn}
+        />
+      )}
     </div>
   );
 }

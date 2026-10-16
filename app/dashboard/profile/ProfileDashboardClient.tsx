@@ -87,6 +87,11 @@ export default function ProfileDashboardClient({
     }
   };
 
+  const rawPhoto = (profile as any).photo_url || (profile as any).avatar_url || profile.avatar_icon;
+  const isRealPhoto = typeof rawPhoto === "string" && (rawPhoto.startsWith("http://") || rawPhoto.startsWith("https://") || rawPhoto.startsWith("data:") || rawPhoto.startsWith("/"));
+  const profilePhoto = isRealPhoto ? rawPhoto : null;
+  const avatarEmoji = (!isRealPhoto && typeof profile.avatar_icon === "string" && profile.avatar_icon.length <= 4) ? profile.avatar_icon : "👤";
+
   return (
     <div className="w-full max-w-5xl mx-auto px-4 py-6 space-y-6">
       {/* ── 1. Hero Identity Profile Card ── */}
@@ -98,10 +103,18 @@ export default function ProfileDashboardClient({
         />
 
         <div className="relative z-10 flex flex-col md:flex-row items-center md:items-start gap-6 text-center md:text-left">
-          {/* Avatar Icon */}
+          {/* Avatar Icon / Photo */}
           <div className="relative shrink-0">
-            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-gradient-to-tr from-[#FF6F26]/20 via-[#181124] to-[#FF8A3D]/20 border-2 border-[#FF6F26]/40 flex items-center justify-center text-5xl shadow-[0_0_30px_rgba(255,111,38,0.25)] select-none">
-              {profile.avatar_icon || "👤"}
+            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-gradient-to-tr from-[#FF6F26]/20 via-[#181124] to-[#FF8A3D]/20 border-2 border-[#FF6F26]/40 flex items-center justify-center shadow-[0_0_30px_rgba(255,111,38,0.25)] select-none overflow-hidden">
+              {profilePhoto ? (
+                <img
+                  src={profilePhoto}
+                  alt={profile.full_name || "Profile"}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="text-5xl">{avatarEmoji}</span>
+              )}
             </div>
             {profile.is_active_seeker && (
               <span

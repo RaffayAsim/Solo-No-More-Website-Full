@@ -24,6 +24,26 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 
 // Sync session to cookie for middleware & server-side rendering
 if (typeof window !== "undefined") {
+  // Gracefully suppress stale refresh token error overlays in Next.js development
+  window.addEventListener("unhandledrejection", (event) => {
+    const msg = event?.reason?.message || "";
+    const name = event?.reason?.name || "";
+    if (
+      msg.toLowerCase().includes("refresh token") ||
+      msg.toLowerCase().includes("invalid refresh token") ||
+      name === "AuthApiError"
+    ) {
+      event.preventDefault(); // Suppresses the red Turbopack dev error modal
+      console.warn("[Supabase Auth] Expired refresh token intercepted. Clearing stale session.");
+      const cookieName = "sb-dmmgzpiskyocdsxamrgf-auth-token";
+      document.cookie = `${cookieName}=; path=/; max-age=0; SameSite=Lax; Secure`;
+      try {
+        localStorage.removeItem(cookieName);
+      } catch {}
+      supabase.auth.signOut({ scope: "local" }).catch(() => {});
+    }
+  });
+
   supabase.auth.onAuthStateChange((event, session) => {
     const cookieName = "sb-dmmgzpiskyocdsxamrgf-auth-token";
     if (session) {
@@ -36,8 +56,11 @@ if (typeof window !== "undefined") {
       // Set the cookie with a max-age of 1 week (matching standard Supabase sessions)
       document.cookie = `${cookieName}=${encodeURIComponent(cookieValue)}; path=/; max-age=${3600 * 24 * 7}; SameSite=Lax; Secure`;
     } else {
-      // Clear the cookie when signed out
+      // Clear the cookie and local storage when signed out
       document.cookie = `${cookieName}=; path=/; max-age=0; SameSite=Lax; Secure`;
+      try {
+        localStorage.removeItem(cookieName);
+      } catch {}
     }
   });
 }

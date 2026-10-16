@@ -71,7 +71,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
     async function checkRoles() {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data, error } = await supabase.auth.getSession();
+        if (error) {
+          if (error.message?.toLowerCase().includes("refresh token")) {
+            await supabase.auth.signOut({ scope: "local" }).catch(() => {});
+            if (typeof window !== "undefined") {
+              const cookieName = "sb-dmmgzpiskyocdsxamrgf-auth-token";
+              document.cookie = `${cookieName}=; path=/; max-age=0; SameSite=Lax; Secure`;
+              try {
+                localStorage.removeItem(cookieName);
+              } catch {}
+            }
+          }
+          return;
+        }
+
+        const session = data?.session;
         if (session?.user) {
           const userEmail = session.user.email?.toLowerCase() || "";
           const metaRole = session.user.user_metadata?.role;
@@ -348,7 +363,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   textTransform: "uppercase",
                 }}
               >
-                {isPartnerRoute ? "Partner Portal" : isArtistRoute ? "Artist & Performer Studio" : "Karachi Radar"}
+                {isPartnerRoute ? "Partner Portal" : isArtistRoute ? "Artist & Performer Studio" : "Live Radar"}
               </span>
             </div>
           </Link>

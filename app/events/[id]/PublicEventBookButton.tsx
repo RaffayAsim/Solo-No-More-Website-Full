@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowRight, Ticket } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import EventBookingModal from "@/components/events/EventBookingModal";
 
 interface PublicEventBookButtonProps {
@@ -17,11 +17,21 @@ export default function PublicEventBookButton({
   isLoggedIn,
 }: PublicEventBookButtonProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const shouldAutoBook = searchParams.get("book") === "true";
+
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (shouldAutoBook && isLoggedIn) {
+      setIsModalOpen(true);
+    }
+  }, [shouldAutoBook, isLoggedIn]);
 
   const handleClick = () => {
     if (!isLoggedIn) {
-      router.push(`/login?redirect=/events/${event.id}`);
+      const returnUrl = `/events/${event.id}?book=true`;
+      router.push(`/login?redirect=${encodeURIComponent(returnUrl)}`);
       return;
     }
     setIsModalOpen(true);

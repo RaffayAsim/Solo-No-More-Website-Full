@@ -13,7 +13,9 @@ ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS emergency_contact_name TEXT
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS emergency_contact_phone TEXT;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS instagram_username TEXT;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS cnic_picture_url TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS instagram_screenshot_url TEXT;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS photo_url TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS avatar_url TEXT;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_guest BOOLEAN DEFAULT false;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_profile_complete BOOLEAN DEFAULT false;
 
