@@ -950,12 +950,12 @@ export default function LandingPageClient({
           paddingTop: "clamp(80px, 12vw, 110px)",
         }}
       >
-        {/* Photography Layer: User's Hero Image (Extended width so left person is fully inside frame) */}
+        {/* Photography Layer: Hero Image with optimized mobile positioning */}
         <div
           className="absolute inset-0 md:left-auto md:right-0 md:top-0 md:bottom-0 md:w-[70%]"
           style={{
             backgroundImage: "url('/images/hero-image.jpg')",
-            backgroundPosition: "center right",
+            backgroundPosition: "top 20% right",
             backgroundSize: "cover",
             backgroundRepeat: "no-repeat",
           }}
@@ -982,19 +982,18 @@ export default function LandingPageClient({
           }}
         />
 
-        {/* Mobile: Full-Cover Ambient Vignette with Warm Orange Light at Top & Dark Scrim Behind Text */}
+        {/* Mobile: Full-Cover Ambient Vignette with Warm Orange Light & High-Contrast Backdrop */}
         <div
           className="block md:hidden absolute inset-0 pointer-events-none"
           style={{
             background: `
               linear-gradient(180deg,
-                rgba(5, 5, 7, 0.88) 0%,
-                rgba(18, 9, 5, 0.82) 25%,
-                rgba(40, 14, 4, 0.72) 45%,
-                rgba(5, 5, 7, 0.92) 80%,
-                #050507 100%
+                rgba(5, 5, 7, 0.45) 0%,
+                rgba(18, 9, 5, 0.55) 20%,
+                rgba(5, 5, 7, 0.88) 55%,
+                #050507 92%
               ),
-              radial-gradient(ellipse 90% 50% at 50% 20%, rgba(255, 90, 31, 0.45) 0%, transparent 75%)
+              radial-gradient(ellipse 90% 50% at 50% 12%, rgba(255, 90, 31, 0.40) 0%, transparent 70%)
             `,
             zIndex: 2,
           }}
@@ -1023,83 +1022,141 @@ export default function LandingPageClient({
             padding: "clamp(24px, 5vw, 40px) clamp(20px, 4vw, 48px) clamp(36px, 8vw, 80px)",
           }}
         >
-          <div style={{ maxWidth: "600px" }}>
+          <div style={{ maxWidth: "620px" }}>
             
-            {/* Rating Badge */}
+            {/* Live Community Pulse Badge */}
             <div
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                gap: "6px",
-                background: "rgba(255, 255, 255, 0.16)",
+                gap: "8px",
+                background: "rgba(255, 111, 38, 0.14)",
+                border: "1px solid rgba(255, 111, 38, 0.35)",
                 backdropFilter: "blur(12px)",
                 WebkitBackdropFilter: "blur(12px)",
                 padding: "6px 14px",
                 borderRadius: "9999px",
-                fontSize: "13px",
-                fontWeight: 700,
-                color: "#FFFFFF",
-                letterSpacing: "0.02em",
-                marginBottom: "clamp(16px, 3.5vw, 24px)",
-                boxShadow: "0 2px 10px rgba(0, 0, 0, 0.5)",
-                border: "1px solid rgba(255, 255, 255, 0.22)",
+                fontSize: "12px",
+                fontWeight: 800,
+                color: "#FFA05C",
+                letterSpacing: "0.03em",
+                marginBottom: "clamp(14px, 3vw, 22px)",
+                boxShadow: "0 4px 16px rgba(255, 90, 31, 0.2)",
               }}
             >
-              <span style={{ fontSize: "14px", letterSpacing: "2px", color: "#FFA578" }}>★★★★★</span>
-              <span>200k+ ratings</span>
+              <span className="w-2 h-2 rounded-full bg-[#3DDC97] animate-pulse" style={{ boxShadow: "0 0 10px #3DDC97" }} />
+              <span>14 SQUADS HANGING OUT TONIGHT IN KARACHI</span>
             </div>
 
-            {/* Giant Headline: "Parties are back" (Exact Partiful Font & Weight) */}
+            {/* Giant Headline: Solo-No-More High-Energy Party Branding */}
             <h1
               style={{
                 fontFamily: "var(--font-display), 'Plus Jakarta Sans', system-ui, sans-serif",
-                fontSize: "clamp(46px, 9.5vw, 102px)",
+                fontSize: "clamp(38px, 8.5vw, 82px)",
                 fontWeight: 900,
                 letterSpacing: "-0.04em",
-                lineHeight: 0.95,
+                lineHeight: 1.02,
                 color: "#FFFFFF",
-                margin: "0 0 clamp(14px, 3vw, 20px)",
-                textShadow: "0 3px 18px rgba(0, 0, 0, 0.75)",
+                margin: "0 0 clamp(14px, 2.8vw, 22px)",
+                textShadow: "0 3px 20px rgba(0, 0, 0, 0.8)",
               }}
             >
-              Parties<br />
-              are back
+              Never go out alone again.{" "}
+              <span
+                style={{
+                  background: "linear-gradient(135deg, #FF9447 0%, #FF5A1F 55%, #E6450A 100%)",
+                  WebkitBackgroundClip: "text",
+                  backgroundClip: "text",
+                  color: "transparent",
+                  display: "inline",
+                }}
+              >
+                Find your people IRL.
+              </span>
             </h1>
 
             {/* Subtitle */}
             <p
               style={{
-                fontSize: "clamp(16px, 2.2vw, 22px)",
-                lineHeight: 1.45,
-                color: "rgba(255, 255, 255, 0.94)",
+                fontSize: "clamp(15px, 2vw, 19px)",
+                lineHeight: 1.55,
+                color: "rgba(255, 255, 255, 0.92)",
                 fontWeight: 600,
-                maxWidth: "460px",
-                margin: "0 0 clamp(22px, 4vw, 34px)",
-                textShadow: "0 2px 10px rgba(0, 0, 0, 0.8)",
+                maxWidth: "520px",
+                margin: "0 0 clamp(24px, 4.5vw, 36px)",
+                textShadow: "0 2px 12px rgba(0, 0, 0, 0.85)",
               }}
             >
-              The easiest way to get your guests on the same page
+              Join vetted squads for padel, chai runs, rooftop gigs, and beach sunsets across Karachi — or host your own in 10 seconds. Real people showing up.
             </p>
 
-            {/* CTA Button (Exact Partiful Style: White background, Black text, 8px radius) */}
-            <Link
-              href="/apply"
-              style={{
-                background: "#FFFFFF",
-                color: "#000000",
-                fontSize: "16px",
-                fontWeight: 800,
-                padding: "14px 32px",
-                borderRadius: "8px",
-                textDecoration: "none",
-                boxShadow: "0 10px 30px rgba(0, 0, 0, 0.6)",
-                display: "inline-block",
-                transition: "transform 0.15s ease, background 0.15s ease",
-              }}
-              className="hover:bg-gray-100 hover:scale-105 active:scale-95 cursor-pointer"
+            {/* CTA Buttons (Sunset Orange Gradient + Glass Secondary) */}
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+              <Link
+                href="/apply"
+                style={{
+                  background: "linear-gradient(135deg, #FF6F26 0%, #FF5A1F 45%, #E6450A 100%)",
+                  color: "#FFFFFF",
+                  fontSize: "15px",
+                  fontWeight: 800,
+                  padding: "13px 26px",
+                  borderRadius: "12px",
+                  textDecoration: "none",
+                  boxShadow: "0 8px 25px rgba(255, 90, 31, 0.45)",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  transition: "transform 0.15s ease, box-shadow 0.15s ease",
+                }}
+                className="hover:scale-105 active:scale-95 cursor-pointer"
+              >
+                <span>Join Squad ➔</span>
+              </Link>
+
+              <Link
+                href="/dashboard"
+                style={{
+                  background: "rgba(255, 255, 255, 0.08)",
+                  border: "1px solid rgba(255, 255, 255, 0.2)",
+                  color: "#FFFFFF",
+                  fontSize: "15px",
+                  fontWeight: 700,
+                  padding: "13px 22px",
+                  borderRadius: "12px",
+                  textDecoration: "none",
+                  backdropFilter: "blur(12px)",
+                  WebkitBackdropFilter: "blur(12px)",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  transition: "background 0.15s ease, transform 0.15s ease",
+                }}
+                className="hover:bg-white/15 active:scale-95 cursor-pointer"
+              >
+                <span>Explore Radar</span>
+              </Link>
+            </div>
+
+            {/* Mobile Community Stats Bar */}
+            <div
+              className="flex md:hidden items-center gap-4 mt-7 pt-5 border-t border-white/10"
+              style={{ maxWidth: "420px" }}
             >
-              Create invite
-            </Link>
+              <div>
+                <div style={{ fontSize: "18px", fontWeight: 900, color: "#FFA05C" }}>500+</div>
+                <div style={{ fontSize: "10.5px", fontWeight: 700, color: "rgba(255, 255, 255, 0.6)", textTransform: "uppercase", letterSpacing: "0.04em" }}>Vetted Members</div>
+              </div>
+              <div style={{ width: "1px", height: "24px", background: "rgba(255, 255, 255, 0.15)" }} />
+              <div>
+                <div style={{ fontSize: "18px", fontWeight: 900, color: "#FFFFFF" }}>14</div>
+                <div style={{ fontSize: "10.5px", fontWeight: 700, color: "rgba(255, 255, 255, 0.6)", textTransform: "uppercase", letterSpacing: "0.04em" }}>Tonight's Squads</div>
+              </div>
+              <div style={{ width: "1px", height: "24px", background: "rgba(255, 255, 255, 0.15)" }} />
+              <div>
+                <div style={{ fontSize: "18px", fontWeight: 900, color: "#3DDC97" }}>0%</div>
+                <div style={{ fontSize: "10.5px", fontWeight: 700, color: "rgba(255, 255, 255, 0.6)", textTransform: "uppercase", letterSpacing: "0.04em" }}>Ghosting Rate</div>
+              </div>
+            </div>
 
           </div>
         </div>
