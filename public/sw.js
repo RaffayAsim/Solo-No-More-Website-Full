@@ -1,18 +1,18 @@
-const CACHE_NAME = "solo-no-more-v1";
-const urlsToCache = ["/"];
-
+// Force immediate upgrade, purge all caches, and self-unregister
 self.addEventListener("install", (event) => {
+  self.skipWaiting();
+});
+
+self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(urlsToCache);
-    })
+    caches
+      .keys()
+      .then((cacheNames) => {
+        return Promise.all(cacheNames.map((cacheName) => caches.delete(cacheName)));
+      })
+      .then(() => self.clients.claim())
   );
 });
 
-self.addEventListener("fetch", (event) => {
-  event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request);
-    })
-  );
-});
+// Network only - do not intercept or cache stale pages
+self.addEventListener("fetch", () => {});
