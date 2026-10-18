@@ -923,22 +923,13 @@ export default function LandingPageClient({
         }}
       >
         {/* Left: Brand Logo on far-left edge */}
-        <Link href="/" style={{ textDecoration: "none" }} className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 cursor-pointer">
-          <svg className="w-5 h-5 sm:w-7 sm:h-7" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.6))" }}>
-            <path d="M14 3C8.477 3 4 7.477 4 13C4 16.866 6.189 20.216 9.4 21.895L7.8 25L13.5 24.2C13.666 24.215 13.832 24.223 14 24.223C19.523 24.223 24 19.746 24 14.223C24 8.7 19.523 3 14 3Z" fill="white" />
-            <circle cx="14" cy="13" r="4" fill="#FF5A1F" />
-          </svg>
-          <span
-            style={{
-              fontFamily: "var(--font-display), 'Plus Jakarta Sans', system-ui, sans-serif",
-              letterSpacing: "-0.04em",
-              color: "#FFFFFF",
-              textShadow: "0 2px 10px rgba(0, 0, 0, 0.8)",
-            }}
-            className="text-[17px] sm:text-2xl font-black whitespace-nowrap"
-          >
-            solo-no-more
-          </span>
+        <Link href="/" style={{ textDecoration: "none" }} className="flex items-center shrink-0 cursor-pointer group">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo.png"
+            alt="solo-no-more"
+            className="h-9 sm:h-11 md:h-12 lg:h-[52px] w-auto object-contain transition-transform duration-200 group-hover:scale-105 drop-shadow-[0_2px_14px_rgba(255,90,31,0.4)]"
+          />
         </Link>
 
         {/* Center: Clean Subpage-matching Navbar Links */}
@@ -3069,7 +3060,7 @@ export default function LandingPageClient({
 
                   {/* Title & Meta */}
                   <div style={{ fontSize: "13px", fontWeight: 800, color: "#FFFFFF" }}>Rooftop Afterhours 🪩</div>
-                  <div style={{ fontSize: "9.5px", color: "rgba(255, 255, 255, 0.7)" }}>Sat, Oct 25 • 10:00 PM • $35.00</div>
+                  <div style={{ fontSize: "9.5px", color: "rgba(255, 255, 255, 0.7)" }}>Sat, Oct 25 • 10:00 PM • PKR 3,500</div>
 
                   {/* Perforated Divider & Barcode lines */}
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px dashed rgba(255,255,255,0.22)", paddingTop: "5px", marginTop: "5px" }}>
@@ -3116,19 +3107,19 @@ export default function LandingPageClient({
                   {/* Amount Display */}
                   <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", margin: "4px 0 6px" }}>
                     <div style={{ display: "flex", alignItems: "baseline" }}>
-                      <span style={{ fontSize: "21px", fontWeight: 900, color: "#FFFFFF", letterSpacing: "-0.03em" }}>$35.00</span>
+                      <span style={{ fontSize: "21px", fontWeight: 900, color: "#FFFFFF", letterSpacing: "-0.03em" }}>PKR 3,500</span>
                       <span style={{ fontSize: "10.5px", color: "rgba(255,255,255,0.55)", marginLeft: "4px" }}>/ guest</span>
                     </div>
                     <span style={{ fontSize: "9px", fontWeight: 600, color: "rgba(255,255,255,0.7)", background: "rgba(255,255,255,0.08)", padding: "2px 8px", borderRadius: "999px" }}>
-                      Apple Pay • Cards
+                      Safepay • Cards
                     </span>
                   </div>
 
                   {/* Live Settlement Feed */}
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "9.5px", color: "#9CA3AF", borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "5px" }}>
-                    <span style={{ color: "#E5E7EB" }}>✓ Maya R. ($35)</span>
+                    <span style={{ color: "#E5E7EB" }}>✓ Maya R. (PKR 3,500)</span>
                     <span>•</span>
-                    <span style={{ color: "#E5E7EB" }}>✓ Liam T. ($35)</span>
+                    <span style={{ color: "#E5E7EB" }}>✓ Liam T. (PKR 3,500)</span>
                     <span style={{ display: "inline-block", width: "6px", height: "6px", borderRadius: "50%", background: "#22C55E", boxShadow: "0 0 6px #22C55E" }} />
                   </div>
                 </div>

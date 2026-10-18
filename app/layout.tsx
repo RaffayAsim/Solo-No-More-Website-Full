@@ -44,6 +44,16 @@ export const metadata: Metadata = {
   title: "Solo-No-More — Find Your People IRL Nationwide",
   description:
     "Never go out alone again. Join squads for padel, chai runs, gigs and rooftop hangs across cities nationwide — or host your own in seconds.",
+  icons: {
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/icon-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512x512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
 };
 
 // Locks the skin to the modern website theme ('partiful')

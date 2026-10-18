@@ -331,34 +331,15 @@ function ApplyPageContent() {
       >
         <Link
           href="/"
-          style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: "10px" }}
+          style={{ textDecoration: "none", display: "flex", alignItems: "center" }}
           className="group cursor-pointer"
         >
-          <svg
-            width="28"
-            height="28"
-            viewBox="0 0 28 28"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            style={{ filter: "drop-shadow(0 2px 8px rgba(255, 90, 31, 0.45))" }}
-          >
-            <path
-              d="M14 3C8.477 3 4 7.477 4 13C4 16.866 6.189 20.216 9.4 21.895L7.8 25L13.5 24.2C13.666 24.215 13.832 24.223 14 24.223C19.523 24.223 24 19.746 24 14.223C24 8.7 19.523 3 14 3Z"
-              fill="white"
-            />
-            <circle cx="14" cy="13" r="4.2" fill="#FF5A1F" />
-          </svg>
-          <span
-            style={{
-              fontFamily: "var(--font-display), 'Plus Jakarta Sans', system-ui, sans-serif",
-              fontSize: "23px",
-              fontWeight: 900,
-              letterSpacing: "-0.04em",
-              color: "#FFFFFF",
-            }}
-          >
-            solo-no-more
-          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo.png"
+            alt="solo-no-more"
+            className="h-9 sm:h-11 md:h-12 lg:h-[50px] w-auto object-contain transition-transform duration-200 group-hover:scale-105 drop-shadow-[0_2px_12px_rgba(255,90,31,0.35)]"
+          />
         </Link>
 
         <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>

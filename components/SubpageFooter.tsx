@@ -54,28 +54,16 @@ export default function SubpageFooter() {
                 textDecoration: "none",
                 display: "inline-flex",
                 alignItems: "center",
-                gap: "10px",
                 marginBottom: "16px",
               }}
+              className="group cursor-pointer"
             >
-              <svg width="26" height="26" viewBox="0 0 28 28" fill="none">
-                <path
-                  d="M14 3C8.477 3 4 7.477 4 13C4 16.866 6.189 20.216 9.4 21.895L7.8 25L13.5 24.2C13.666 24.215 13.832 24.223 14 24.223C19.523 24.223 24 19.746 24 14.223C24 8.7 19.523 3 14 3Z"
-                  fill="white"
-                />
-                <circle cx="14" cy="13" r="4.2" fill="#FF5A1F" />
-              </svg>
-              <span
-                style={{
-                  fontFamily: "var(--font-display), 'Plus Jakarta Sans', system-ui, sans-serif",
-                  fontSize: "22px",
-                  fontWeight: 900,
-                  letterSpacing: "-0.04em",
-                  color: "#FFFFFF",
-                }}
-              >
-                solo-no-more
-              </span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/logo.png"
+                alt="solo-no-more"
+                className="h-10 sm:h-12 md:h-14 w-auto object-contain transition-transform duration-200 group-hover:scale-105 drop-shadow-[0_2px_12px_rgba(255,90,31,0.35)]"
+              />
             </Link>
             <p style={{ fontSize: "14px", lineHeight: 1.6, color: "rgba(255, 255, 255, 0.6)", marginBottom: "20px" }}>
               Never go out alone again. Verified IRL squads for padel, chai runs, live gigs, and rooftop hangs across your city.

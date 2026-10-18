@@ -316,7 +316,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 alignItems: "center",
                 justifyContent: "center",
                 boxShadow: "0 4px 14px rgba(255, 90, 31, 0.45)",
-                border: "1px solid rgba(255, 255, 255, 0.3)",
+                overflow: "hidden",
               }}
             >
               {isPartnerRoute ? (
@@ -324,19 +324,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               ) : isArtistRoute ? (
                 <Mic2 className="w-5 h-5 text-white" />
               ) : (
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 28 28"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M14 3C8.477 3 4 7.477 4 13C4 16.866 6.189 20.216 9.4 21.895L7.8 25L13.5 24.2C13.666 24.215 13.832 24.223 14 24.223C19.523 24.223 24 19.746 24 14.223C24 8.7 19.523 3 14 3Z"
-                    fill="white"
-                  />
-                  <circle cx="14" cy="13" r="4.2" fill="#FF5A1F" />
-                </svg>
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src="/icon-192x192.png"
+                  alt="Solo-No-More"
+                  className="w-full h-full object-cover"
+                />
               )}
             </div>
 

@@ -31,19 +31,12 @@ export default function DashboardFooter() {
       >
         {/* Brand & Mission */}
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <div
-            style={{
-              width: "26px",
-              height: "26px",
-              borderRadius: "8px",
-              background: "linear-gradient(135deg, #FF6F26, #FF5A1F)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Sparkles className="w-3.5 h-3.5 text-white" />
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/icon-192x192.png"
+            alt="Solo-No-More"
+            className="w-[26px] h-[26px] rounded-[8px] object-cover shadow-[0_2px_8px_rgba(255,90,31,0.35)]"
+          />
           <div>
             <span style={{ fontWeight: 800, color: "#FFFFFF", fontSize: "13px" }}>
               solo-no-more

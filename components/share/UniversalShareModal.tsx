@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Copy, Check, MessageCircle, X } from "lucide-react";
 
 function InstagramIcon({ className = "w-4 h-4" }: { className?: string }) {
@@ -63,11 +64,16 @@ export default function UniversalShareModal({
   const [copied, setCopied] = useState(false);
   const [copiedTag, setCopiedTag] = useState(false);
   const [instaShared, setInstaShared] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Compute clean shortened URL
   const shortUrl = useMemo(() => formatShortUrl(shareUrl, type), [shareUrl, type]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !isMounted || typeof document === "undefined") return null;
 
   const fullShareText = `${shareText} ${shortUrl}`;
   const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(fullShareText)}`;
@@ -102,8 +108,13 @@ export default function UniversalShareModal({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div className="relative w-full max-w-md rounded-3xl border border-white/10 bg-[#0d0916] p-6 space-y-5 shadow-2xl overflow-hidden">
         {/* Glow Accent */}
         <div
@@ -223,6 +234,7 @@ export default function UniversalShareModal({
           </p>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

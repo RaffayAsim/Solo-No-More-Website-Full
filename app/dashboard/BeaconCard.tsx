@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import type { Beacon, BeaconCategory } from "@/lib/supabase/types";
 import { applyToBeacon, withdrawFromBeacon } from "@/app/actions/applications";
@@ -145,6 +146,11 @@ export default function BeaconCard({
   const [budgetAgreed, setBudgetAgreed] = useState(true);
   const [appliedSuccess, setAppliedSuccess] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const shortCode = beacon.id.length >= 8 ? beacon.id.slice(0, 8) : beacon.id;
   const shortUrl = typeof window !== "undefined"
@@ -430,8 +436,16 @@ export default function BeaconCard({
 
         {/* Host avatar & name */}
         <div style={{ display: "flex", alignItems: "center", gap: "8px", paddingTop: "8px", borderTop: "1px solid rgba(255,255,255,0.08)", fontSize: "12px", color: "rgba(255,255,255,0.6)" }}>
-          <span style={{ fontSize: "14px" }}>{beacon.profiles?.avatar_icon || "👤"}</span>
-          <span>Hosted by <strong>{beacon.profiles?.full_name || "Community Host"}</strong></span>
+          {beacon.profiles?.avatar_icon && (beacon.profiles.avatar_icon.startsWith("http") || beacon.profiles.avatar_icon.startsWith("/")) ? (
+            <img
+              src={beacon.profiles.avatar_icon}
+              alt={beacon.profiles.full_name || "Host"}
+              style={{ width: "22px", height: "22px", borderRadius: "50%", objectFit: "cover", border: "1px solid rgba(255,255,255,0.2)", flexShrink: 0 }}
+            />
+          ) : (
+            <span style={{ fontSize: "15px", flexShrink: 0 }}>{beacon.profiles?.avatar_icon || "👤"}</span>
+          )}
+          <span>Hosted by <strong style={{ color: "#FFFFFF" }}>{beacon.profiles?.full_name || "Community Host"}</strong></span>
         </div>
 
         {/* Slot Progress Dots */}
@@ -631,38 +645,68 @@ export default function BeaconCard({
             </button>
           )}
 
-          {isChatOpen && (
+          {isMounted && isChatOpen && typeof document !== "undefined" && createPortal(
             <SquadChatModal
               beaconId={beacon.id}
               beaconTitle={beacon.title}
               onClose={() => setIsChatOpen(false)}
-            />
+            />,
+            document.body
           )}
 
-          {/* Interactive Squad Apply Modal with Budget Agreement and Icebreaker */}
-          {showApplyModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-              <div className="w-full max-w-md p-6 rounded-3xl border border-white/10 bg-zinc-950 space-y-4 shadow-2xl text-left">
+          {/* Interactive Squad Apply Modal Popup (Portal to document.body to avoid parent card clipping) */}
+          {isMounted && showApplyModal && typeof document !== "undefined" && createPortal(
+            <div
+              className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn"
+              onClick={(e) => {
+                if (e.target === e.currentTarget) {
+                  setShowApplyModal(false);
+                  setAppliedSuccess(false);
+                }
+              }}
+            >
+              <div
+                className="w-full max-w-[440px] rounded-3xl border border-white/15 p-6 space-y-4 shadow-[0_24px_70px_rgba(0,0,0,0.9),0_0_40px_rgba(255,90,31,0.25)] text-left relative z-10 animate-scaleIn"
+                style={{
+                  background: "linear-gradient(165deg, #180D24 0%, #0B0612 100%)",
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Modal Header */}
                 <div className="flex items-center justify-between pb-3 border-b border-white/10">
-                  <div className="flex items-center gap-2">
-                    <span className="w-8 h-8 rounded-xl bg-[#FF6F26]/20 border border-[#FF6F26]/30 flex items-center justify-center text-sm">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="w-9 h-9 rounded-xl bg-[#FF6F26]/20 border border-[#FF6F26]/35 flex items-center justify-center text-base shrink-0">
                       🔥
                     </span>
-                    <div>
-                      <h3 className="text-sm font-bold text-white truncate max-w-[260px]">
-                        Join Squad: {beacon.title}
-                      </h3>
-                      <span className="text-[10px] text-zinc-400">
-                        Host: {beacon.profiles?.full_name || "Verified Host"}
+                    <div className="min-w-0">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-[#FFA05C] block">
+                        Join Squad Hangout
                       </span>
+                      <h3 className="text-sm font-bold text-white truncate max-w-[280px]">
+                        {beacon.title}
+                      </h3>
+                      <div className="flex items-center gap-1.5 text-[11px] text-zinc-400 pt-0.5">
+                        {beacon.profiles?.avatar_icon && (beacon.profiles.avatar_icon.startsWith("http") || beacon.profiles.avatar_icon.startsWith("/")) ? (
+                          <img
+                            src={beacon.profiles.avatar_icon}
+                            alt={beacon.profiles.full_name || "Host"}
+                            className="w-3.5 h-3.5 rounded-full object-cover border border-white/20 shrink-0"
+                          />
+                        ) : (
+                          <span>{beacon.profiles?.avatar_icon || "👤"}</span>
+                        )}
+                        <span>Host: <strong className="text-zinc-200">{beacon.profiles?.full_name || "Verified Host"}</strong></span>
+                      </div>
                     </div>
                   </div>
                   <button
+                    type="button"
                     onClick={() => {
                       setShowApplyModal(false);
                       setAppliedSuccess(false);
                     }}
-                    className="p-1 rounded-lg text-zinc-400 hover:text-white"
+                    className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-zinc-300 hover:text-white flex items-center justify-center transition-all cursor-pointer shrink-0"
+                    aria-label="Close"
                   >
                     ✕
                   </button>
@@ -690,7 +734,7 @@ export default function BeaconCard({
                       <button
                         type="button"
                         onClick={handleCopyShortLink}
-                        className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-[#FF6F26] hover:bg-[#FF5A1F] text-white flex items-center gap-1.5 shrink-0 transition-colors"
+                        className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-[#FF6F26] hover:bg-[#FF5A1F] text-white flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer"
                       >
                         {copiedLink ? "✓ Copied!" : "Copy Link"}
                       </button>
@@ -704,7 +748,7 @@ export default function BeaconCard({
                           setAppliedSuccess(false);
                           setShowShareModal(true);
                         }}
-                        className="flex-1 py-2 rounded-xl text-xs font-bold bg-white/5 hover:bg-white/10 text-[#FFA05C] border border-white/10 flex items-center justify-center gap-1.5 transition-colors"
+                        className="flex-1 py-2 rounded-xl text-xs font-bold bg-white/5 hover:bg-white/10 text-[#FFA05C] border border-white/10 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                       >
                         <Share2 className="w-3.5 h-3.5 text-[#FF6F26]" />
                         <span>Share With Friends</span>
@@ -715,7 +759,7 @@ export default function BeaconCard({
                           setShowApplyModal(false);
                           setAppliedSuccess(false);
                         }}
-                        className="px-5 py-2 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/20 text-white transition-colors"
+                        className="px-5 py-2 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
                       >
                         Done
                       </button>
@@ -723,86 +767,91 @@ export default function BeaconCard({
                   </div>
                 ) : (
                   <form onSubmit={handleJoinSubmit} className="space-y-4">
-                  {errorMessage && (
-                    <div className="p-3 rounded-2xl bg-red-500/10 border border-red-500/30 text-xs text-red-300 space-y-1.5">
-                      <div className="flex items-start gap-2">
-                        <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-                        <span>{errorMessage}</span>
+                    {errorMessage && (
+                      <div className="p-3 rounded-2xl bg-red-500/10 border border-red-500/30 text-xs text-red-300 space-y-1.5">
+                        <div className="flex items-start gap-2">
+                          <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                          <span>{errorMessage}</span>
+                        </div>
+                        {errorMessage.includes("PROFILE_INCOMPLETE") && (
+                          <Link
+                            href="/dashboard/profile/edit?notice=beacon_required"
+                            className="inline-flex items-center gap-1 font-bold text-[#FFA05C] hover:underline text-[11px] pt-1"
+                          >
+                            <span>Complete Your Safety Profile Now →</span>
+                          </Link>
+                        )}
                       </div>
-                      {errorMessage.includes("PROFILE_INCOMPLETE") && (
-                        <Link
-                          href="/dashboard/profile/edit?notice=beacon_required"
-                          className="inline-flex items-center gap-1 font-bold text-[#FFA05C] hover:underline text-[11px] pt-1"
-                        >
-                          <span>Complete Your Safety Profile Now →</span>
-                        </Link>
-                      )}
-                    </div>
-                  )}
+                    )}
 
-                  {/* Budget Pact Alignment */}
-                  <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 space-y-2">
-                    <div className="flex items-center gap-2 text-xs font-bold text-amber-300">
-                      <Coins className="w-3.5 h-3.5 text-amber-400" />
-                      <span>Meetup Budget Pact</span>
-                    </div>
-                    <p className="text-[11px] text-zinc-300">
-                      {parsedMeta.budgetTier}
-                    </p>
-                    <label className="flex items-center gap-2 text-[11px] text-zinc-300 cursor-pointer pt-1">
-                      <input
-                        type="checkbox"
-                        checked={budgetAgreed}
-                        onChange={(e) => setBudgetAgreed(e.target.checked)}
-                        required
-                        className="rounded accent-[#FF6F26]"
-                      />
-                      <span>I confirm I am comfortable with this expense pact.</span>
-                    </label>
-                  </div>
-
-                  {/* Host's Custom Icebreaker Question */}
-                  {parsedMeta.customQuestion && (
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
-                        <HelpCircle className="w-3.5 h-3.5 text-[#FF6F26]" />
-                        <span>Host Question: &ldquo;{parsedMeta.customQuestion}&rdquo;</span>
+                    {/* Meetup Budget Pact Box */}
+                    <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 space-y-2">
+                      <div className="flex items-center gap-2 text-xs font-bold text-amber-300">
+                        <Coins className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Meetup Budget Pact</span>
+                      </div>
+                      <p className="text-[11.5px] text-zinc-300 font-medium">
+                        {parsedMeta.budgetTier}
+                      </p>
+                      <label className="flex items-center gap-2 text-[11px] text-zinc-300 cursor-pointer pt-1 border-t border-amber-500/15">
+                        <input
+                          type="checkbox"
+                          checked={budgetAgreed}
+                          onChange={(e) => setBudgetAgreed(e.target.checked)}
+                          required
+                          className="rounded accent-[#FF6F26] cursor-pointer"
+                        />
+                        <span>I confirm I am comfortable with this expense pact.</span>
                       </label>
-                      <input
-                        type="text"
-                        value={applicantAnswer}
-                        onChange={(e) => setApplicantAnswer(e.target.value)}
-                        placeholder="Your answer..."
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-xs placeholder:text-zinc-600 focus:outline-none focus:border-[#FF6F26] transition-colors"
-                      />
                     </div>
-                  )}
 
-                  {/* Info Notice */}
-                  <p className="text-[10px] text-zinc-500">
-                    Your profile vibe and history will be shared with the host during vetting. If approved, you unlock the private squad chat stream!
-                  </p>
+                    {/* Host's Custom Icebreaker Question (Enhanced Highlight Card) */}
+                    {parsedMeta.customQuestion && (
+                      <div className="p-3.5 rounded-2xl bg-[#FF6F26]/[0.08] border border-[#FF6F26]/30 space-y-2.5">
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-white">
+                          <HelpCircle className="w-4 h-4 text-[#FF6F26]" />
+                          <span>Host&apos;s Icebreaker Question</span>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-black/40 border border-[#FF6F26]/20 text-xs font-semibold text-[#FFA05C] leading-snug">
+                          &ldquo;{parsedMeta.customQuestion}&rdquo;
+                        </div>
+                        <textarea
+                          value={applicantAnswer}
+                          onChange={(e) => setApplicantAnswer(e.target.value)}
+                          placeholder="Type your brief answer for the host..."
+                          rows={2}
+                          required
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-black/50 border border-white/15 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-[#FF6F26] transition-colors resize-none"
+                        />
+                      </div>
+                    )}
 
-                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
-                    <button
-                      type="button"
-                      onClick={() => setShowApplyModal(false)}
-                      className="px-4 py-2 rounded-xl text-xs font-bold text-zinc-400 hover:text-white bg-white/5"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={isPending || !budgetAgreed}
-                      className="px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-[#FF6F26] to-[#FF5A1F] text-white hover:brightness-110 shadow-[0_0_15px_rgba(255,111,38,0.3)] transition-all disabled:opacity-40"
-                    >
-                      {isPending ? "Sending..." : "Submit Join Request ➔"}
-                    </button>
-                  </div>
+                    {/* Info Notice */}
+                    <p className="text-[10px] text-zinc-400 leading-normal">
+                      Your profile and verification status will be shared with the host. If approved, you unlock the private squad chat hub!
+                    </p>
+
+                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
+                      <button
+                        type="button"
+                        onClick={() => setShowApplyModal(false)}
+                        className="px-4 py-2 rounded-xl text-xs font-bold text-zinc-400 hover:text-white bg-white/5 cursor-pointer transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={isPending || !budgetAgreed}
+                        className="px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-[#FF6F26] to-[#FF5A1F] text-white hover:brightness-110 shadow-[0_0_15px_rgba(255,111,38,0.3)] transition-all disabled:opacity-40 cursor-pointer"
+                      >
+                        {isPending ? "Sending..." : "Submit Join Request ➔"}
+                      </button>
+                    </div>
                   </form>
                 )}
               </div>
-            </div>
+            </div>,
+            document.body
           )}
         </div>
       )}
