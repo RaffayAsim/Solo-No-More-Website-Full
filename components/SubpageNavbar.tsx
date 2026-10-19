@@ -11,6 +11,7 @@ interface SubpageNavbarProps {
 }
 
 const NAV_LINKS = [
+  { href: "/early-bird", label: "Early Bird VIP", highlight: true },
   { href: "/events", label: "Browse Events" },
   { href: "/how-it-works", label: "How Beacon Works" },
   { href: "/memberships", label: "Memberships" },
@@ -68,25 +69,54 @@ export default function SubpageNavbar({ activePage }: SubpageNavbarProps) {
         <nav className="hidden xl:flex items-center gap-1">
           {NAV_LINKS.map((link) => {
             const isActive = pathname === link.href || activePage === link.href;
+            const isHighlight = (link as { highlight?: boolean }).highlight;
             return (
               <Link
                 key={link.href}
                 href={link.href}
                 style={{
-                  color: isActive ? "#FF8A3D" : "rgba(255, 255, 255, 0.8)",
-                  fontWeight: isActive ? 800 : 600,
+                  color: isActive ? "#FF8A3D" : isHighlight ? "#FFA05C" : "rgba(255, 255, 255, 0.8)",
+                  fontWeight: isActive || isHighlight ? 800 : 600,
                   fontSize: "13.5px",
                   textDecoration: "none",
                   padding: "7px 13px",
                   borderRadius: "8px",
-                  background: isActive ? "rgba(255, 90, 31, 0.12)" : "transparent",
-                  border: "1px solid " + (isActive ? "rgba(255, 90, 31, 0.3)" : "transparent"),
+                  background: isActive
+                    ? "rgba(255, 90, 31, 0.15)"
+                    : isHighlight
+                    ? "rgba(255, 90, 31, 0.08)"
+                    : "transparent",
+                  border:
+                    "1px solid " +
+                    (isActive
+                      ? "rgba(255, 90, 31, 0.4)"
+                      : isHighlight
+                      ? "rgba(255, 90, 31, 0.25)"
+                      : "transparent"),
                   transition: "all 0.15s ease",
                   letterSpacing: "-0.01em",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
                 }}
-                className="hover:text-white hover:bg-white/5 transition-all"
+                className="hover:text-white hover:bg-white/10 transition-all"
               >
-                {link.label}
+                <span>{link.label}</span>
+                {isHighlight && (
+                  <span
+                    style={{
+                      background: "linear-gradient(135deg, #FF6F26 0%, #FF5A1F 100%)",
+                      color: "#FFFFFF",
+                      fontSize: "9px",
+                      fontWeight: 900,
+                      padding: "1px 5px",
+                      borderRadius: "4px",
+                      letterSpacing: "0.05em",
+                    }}
+                  >
+                    HOT
+                  </span>
+                )}
               </Link>
             );
           })}

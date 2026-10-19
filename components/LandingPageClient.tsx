@@ -1132,7 +1132,7 @@ export default function LandingPageClient({
             {/* CTA Buttons (Sunset Orange Gradient + Glass Secondary) */}
             <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
               <Link
-                href="/apply"
+                href="/early-bird"
                 style={{
                   background: "linear-gradient(135deg, #FF6F26 0%, #FF5A1F 45%, #E6450A 100%)",
                   color: "#FFFFFF",
@@ -1149,11 +1149,12 @@ export default function LandingPageClient({
                 }}
                 className="hover:scale-105 active:scale-95 cursor-pointer"
               >
-                <span>Join Squad ➔</span>
+                <Sparkles className="w-4 h-4" />
+                <span>Early Bird VIP ➔</span>
               </Link>
 
               <Link
-                href="/dashboard"
+                href="/apply"
                 style={{
                   background: "rgba(255, 255, 255, 0.08)",
                   border: "1px solid rgba(255, 255, 255, 0.2)",
@@ -1171,6 +1172,26 @@ export default function LandingPageClient({
                   transition: "background 0.15s ease, transform 0.15s ease",
                 }}
                 className="hover:bg-white/15 active:scale-95 cursor-pointer"
+              >
+                <span>Join Squad</span>
+              </Link>
+
+              <Link
+                href="/dashboard"
+                style={{
+                  background: "rgba(255, 255, 255, 0.04)",
+                  border: "1px solid rgba(255, 255, 255, 0.12)",
+                  color: "rgba(255, 255, 255, 0.8)",
+                  fontSize: "14.5px",
+                  fontWeight: 600,
+                  padding: "12px 20px",
+                  borderRadius: "12px",
+                  textDecoration: "none",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+                className="hover:bg-white/10 active:scale-95 cursor-pointer"
               >
                 <span>Explore Radar</span>
               </Link>

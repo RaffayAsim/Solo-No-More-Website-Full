@@ -1,15 +1,18 @@
-import LandingPageClient from "@/components/LandingPageClient";
-import { getReviewWallDataAction } from "@/app/actions/review-wall";
+import EarlyBirdPage from "@/app/early-bird/page";
 
-export const revalidate = 0; // Live reload on every page load as requested
+export const revalidate = 0;
 
 export const metadata = {
-  title: "Solo-No-More — Find Your Vibe IRL",
+  title: "Solo-No-More — Early Bird VIP Access",
   description:
-    "An invite-only community for Gen Z who want genuine, real-world connection. Apply for membership today.",
+    "Join Solo-No-More before our official launch. Claim your early bird founding member pass, choose your vibes, and unlock exclusive IRL squad meetups in Karachi.",
+  openGraph: {
+    title: "Solo-No-More — Early Bird VIP Access",
+    description: "Never go out alone again. Claim your early bird spot to join vetted IRL squads for padel, chai runs, and rooftop hangs.",
+    images: [{ url: "/images/hero-image.jpg" }],
+  },
 };
 
-export default async function LandingPage() {
-  const reviewWallData = await getReviewWallDataAction();
-  return <LandingPageClient reviewWallData={reviewWallData} />;
+export default function Home() {
+  return <EarlyBirdPage />;
 }

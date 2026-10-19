@@ -75,6 +75,54 @@ export default function SignUpDropdown({ className = "" }: SignUpDropdownProps) 
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginTop: "6px" }}>
+            {/* 0. Early Bird VIP Pass */}
+            <Link
+              href="/early-bird"
+              onClick={() => setIsOpen(false)}
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: "12px",
+                padding: "10px 12px",
+                borderRadius: "12px",
+                textDecoration: "none",
+                color: "#FFFFFF",
+                background: "linear-gradient(135deg, rgba(255, 90, 31, 0.22) 0%, rgba(255, 90, 31, 0.08) 100%)",
+                border: "1px solid rgba(255, 90, 31, 0.4)",
+                transition: "background 0.15s ease",
+              }}
+              className="hover:bg-[rgba(255,90,31,0.28)] group cursor-pointer"
+            >
+              <div
+                style={{
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "10px",
+                  background: "rgba(255, 90, 31, 0.25)",
+                  border: "1px solid rgba(255, 90, 31, 0.5)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <Sparkles className="w-4 h-4 text-[#FFA05C]" />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: "13.5px", fontWeight: 800, color: "#FFA05C" }}>
+                    Early Bird VIP Pass
+                  </span>
+                  <span style={{ fontSize: "9.5px", fontWeight: 900, background: "rgba(200, 255, 0, 0.2)", color: "#C8FF00", padding: "2px 6px", borderRadius: "999px" }}>
+                    Pre-Launch
+                  </span>
+                </div>
+                <p style={{ fontSize: "11.5px", color: "rgba(255, 255, 255, 0.7)", margin: "3px 0 0", lineHeight: 1.4 }}>
+                  Claim founding member status & priority squad drops.
+                </p>
+              </div>
+            </Link>
+
             {/* 1. Guest Signup */}
             <Link
               href="/apply?type=guest"
