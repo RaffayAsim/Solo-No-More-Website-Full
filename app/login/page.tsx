@@ -339,7 +339,7 @@ function LoginForm() {
                 <label style={{ fontSize: "11.5px", fontWeight: 800, color: "rgba(255,255,255,0.6)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
                   Password
                 </label>
-                <a href="mailto:hello.solonomore@gmail.com?subject=Password%20Reset%20Request" style={{ fontSize: "12px", color: "#FF8A3D", textDecoration: "none" }} className="hover:underline">
+                <a href="mailto:thesolonomore@gmail.com?subject=Password%20Reset%20Request" style={{ fontSize: "12px", color: "#FF8A3D", textDecoration: "none" }} className="hover:underline">
                   Forgot?
                 </a>
               </div>

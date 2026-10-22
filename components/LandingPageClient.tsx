@@ -5244,21 +5244,15 @@ export default function LandingPageClient({
               <div style={{ display: "flex", flexDirection: "column", gap: "16px", fontSize: "14px", color: "rgba(255, 255, 255, 0.7)" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                   <Mail className="w-4 h-4 text-[#FF5A1F] shrink-0" />
-                  <a href="mailto:hello.solonomore@gmail.com" style={{ color: "inherit", textDecoration: "none" }} className="hover:text-[#FF8A3D] transition-colors">
-                    hello.solonomore@gmail.com
+                  <a href="mailto:thesolonomore@gmail.com" style={{ color: "inherit", textDecoration: "none" }} className="hover:text-[#FF8A3D] transition-colors">
+                    thesolonomore@gmail.com
                   </a>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                   <Smartphone className="w-4 h-4 text-[#FF5A1F] shrink-0" />
-                  <span>+92 300 1234567</span>
-                </div>
-                <div style={{ display: "flex", alignItems: "flex-start", gap: "10px", lineHeight: 1.5 }}>
-                  <MapPin className="w-4 h-4 text-[#FF5A1F] shrink-0 mt-1" />
-                  <span>
-                    Sajid Moosani, 1st Floor, 4th Zamzama Lane,<br />
-                    Zamzama Commercial Area,<br />
-                    Defence Phase V, Karachi, 75600
-                  </span>
+                  <a href="tel:03332877852" style={{ color: "inherit", textDecoration: "none" }} className="hover:text-[#FF8A3D] transition-colors">
+                    03332877852
+                  </a>
                 </div>
               </div>
             </div>

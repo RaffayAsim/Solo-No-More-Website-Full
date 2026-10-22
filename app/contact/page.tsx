@@ -324,7 +324,7 @@ export default function ContactPage() {
                     <span style={{ fontSize: "12.5px", color: "rgba(255,255,255,0.5)" }}>Fastest for meetup coordination</span>
                   </div>
                 </div>
-                <div style={{ fontSize: "18px", fontWeight: 900, color: "#fff", marginBottom: "4px" }}>+92 300 1234567</div>
+                <a href="tel:03332877852" style={{ fontSize: "18px", fontWeight: 900, color: "#fff", marginBottom: "4px", textDecoration: "none", display: "block" }} className="hover:text-[#27C93F] transition-colors">03332877852</a>
                 <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.6)", margin: 0 }}>
                   Active daily 12:00 PM – 2:00 AM for live squad events and assistance.
                 </p>
@@ -349,33 +349,9 @@ export default function ContactPage() {
                     <span style={{ fontSize: "12.5px", color: "rgba(255,255,255,0.5)" }}>Partnerships, sponsors &amp; press</span>
                   </div>
                 </div>
-                <a href="mailto:hello.solonomore@gmail.com" style={{ fontSize: "16px", fontWeight: 800, color: "#FF8A3D", textDecoration: "none" }}>
-                  hello.solonomore@gmail.com
+                <a href="mailto:thesolonomore@gmail.com" style={{ fontSize: "16px", fontWeight: 800, color: "#FF8A3D", textDecoration: "none" }} className="hover:underline">
+                  thesolonomore@gmail.com
                 </a>
-              </div>
-
-              {/* Channel 3: Hubs */}
-              <div
-                style={{
-                  background: "linear-gradient(160deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 100%)",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  borderRadius: "24px",
-                  padding: "26px",
-                  backdropFilter: "blur(12px)",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
-                  <div style={{ width: "42px", height: "42px", borderRadius: "12px", background: "rgba(255, 255, 255, 0.1)", border: "1px solid rgba(255, 255, 255, 0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <MapPin className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h3 style={{ fontSize: "16px", fontWeight: 800, margin: 0 }}>Community Studio</h3>
-                    <span style={{ fontSize: "12.5px", color: "rgba(255,255,255,0.5)" }}>Zamzama Commercial Area</span>
-                  </div>
-                </div>
-                <p style={{ fontSize: "13.5px", color: "rgba(255,255,255,0.75)", lineHeight: 1.6, margin: 0 }}>
-                  Zamzama Commercial Area, Defence Phase V · Active community across all major urban hubs.
-                </p>
               </div>
             </div>
           </div>

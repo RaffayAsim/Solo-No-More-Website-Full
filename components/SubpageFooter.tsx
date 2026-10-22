@@ -141,25 +141,21 @@ export default function SubpageFooter() {
                 marginBottom: "20px",
               }}
             >
-              <MapPin className="w-4 h-4 text-[#FF5A1F]" />
-              <span>Community Hubs</span>
+              <Sparkles className="w-4 h-4 text-[#FF5A1F]" />
+              <span>Get in Touch</span>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "14px", fontSize: "13.5px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                 <Mail className="w-4 h-4 text-[#FF5A1F] shrink-0" />
-                <a href="mailto:hello.solonomore@gmail.com" style={{ color: "inherit", textDecoration: "none" }} className="hover:text-[#FF8A3D] transition-colors">
-                  hello.solonomore@gmail.com
+                <a href="mailto:thesolonomore@gmail.com" style={{ color: "inherit", textDecoration: "none" }} className="hover:text-[#FF8A3D] transition-colors">
+                  thesolonomore@gmail.com
                 </a>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                 <Smartphone className="w-4 h-4 text-[#FF5A1F] shrink-0" />
-                <span>+92 300 1234567</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "flex-start", gap: "10px", lineHeight: 1.5 }}>
-                <MapPin className="w-4 h-4 text-[#FF5A1F] shrink-0 mt-0.5" />
-                <span>
-                  Zamzama, Defence · Active across cities nationwide
-                </span>
+                <a href="tel:03332877852" style={{ color: "inherit", textDecoration: "none" }} className="hover:text-[#FF8A3D] transition-colors">
+                  03332877852
+                </a>
               </div>
             </div>
           </div>

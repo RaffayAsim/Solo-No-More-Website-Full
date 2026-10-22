@@ -255,7 +255,7 @@ export default function PrivacyAndRefundPage() {
                 <ul style={{ paddingLeft: "20px", display: "flex", flexDirection: "column", gap: "12px", fontSize: "15px", lineHeight: 1.7, color: "rgba(255,255,255,0.75)" }}>
                   <li><strong>Notice greater than 24 hours prior to event start:</strong> 90% refund issued (10% retained for payment gateway transaction costs).</li>
                   <li><strong>Notice less than 24 hours prior:</strong> Non-refundable. Because squad slots and partner venue bookings (like padel court rentals or private dining tables) are locked in advance, last-minute cancellations forfeit tickets to protect the host.</li>
-                  <li><strong>Verified Emergency / Illness:</strong> Contact support at <a href="mailto:hello.solonomore@gmail.com" style={{ color: "#FF8A3D" }}>hello.solonomore@gmail.com</a> with event reference code for review.</li>
+                  <li><strong>Verified Emergency / Illness:</strong> Contact support at <a href="mailto:thesolonomore@gmail.com" style={{ color: "#FF8A3D" }}>thesolonomore@gmail.com</a> with event reference code for review.</li>
                 </ul>
               </div>
 
@@ -276,7 +276,7 @@ export default function PrivacyAndRefundPage() {
                   <h2 style={{ fontSize: "22px", fontWeight: 800, margin: 0 }}>3. How to Request a Refund</h2>
                 </div>
                 <p style={{ fontSize: "15px", lineHeight: 1.7, color: "rgba(255,255,255,0.75)" }}>
-                  You can initiate an automated cancellation directly from your member dashboard under <em>My Squad Passes</em> or by sending an email with your booking ID and mobile number to <a href="mailto:hello.solonomore@gmail.com" style={{ color: "#FF8A3D" }}>hello.solonomore@gmail.com</a>.
+                  You can initiate an automated cancellation directly from your member dashboard under <em>My Squad Passes</em> or by sending an email with your booking ID and mobile number to <a href="mailto:thesolonomore@gmail.com" style={{ color: "#FF8A3D" }}>thesolonomore@gmail.com</a>.
                 </p>
               </div>
             </div>

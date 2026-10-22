@@ -224,7 +224,7 @@ export default function TermsPage() {
               </div>
 
               <div style={{ marginTop: "20px", paddingTop: "16px", borderTop: "1px solid rgba(255,255,255,0.08)", fontSize: "12px", color: "rgba(255,255,255,0.5)" }}>
-                Questions about these terms? Email <a href="mailto:hello.solonomore@gmail.com" style={{ color: "#FF8A3D" }}>hello.solonomore@gmail.com</a>
+                Questions about these terms? Email <a href="mailto:thesolonomore@gmail.com" style={{ color: "#FF8A3D" }}>thesolonomore@gmail.com</a>
               </div>
             </div>
 
