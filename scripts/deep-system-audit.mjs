@@ -17,8 +17,8 @@ const env = Object.fromEntries(
 
 const SUPABASE_URL = env.NEXT_PUBLIC_SUPABASE_URL;
 const SERVICE_KEY = env.SUPABASE_SERVICE_ROLE_KEY;
-const SAFEPAY_SECRET = env.SAFEPAY_SECRET_KEY || "556f21c19b40c0d74a38bd0287956ba1645fe873e672209068b445515c60d14e";
-const SAFEPAY_KEY = env.SAFEPAY_PUBLIC_KEY || "sec_80befc29-3269-443f-abd7-dafa6bdd4662";
+const SAFEPAY_SECRET = env.SAFEPAY_SECRET_KEY || "";
+const SAFEPAY_KEY = env.SAFEPAY_PUBLIC_KEY || "";
 
 if (!SUPABASE_URL || !SERVICE_KEY) {
   console.error("❌ Missing Supabase URL or Service Role Key in .env.local");
@@ -132,7 +132,8 @@ async function main() {
     if (!authUser) {
       const { data: newU, error } = await supabase.auth.admin.createUser({
         email: r.email,
-        password: "Password123!",
+        // Random per account (never a fixed, guessable password); reset it in Supabase if you need to log in.
+        password: crypto.randomBytes(18).toString("base64url"),
         email_confirm: true,
         user_metadata: { full_name: r.name },
       });

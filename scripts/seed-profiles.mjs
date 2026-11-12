@@ -29,11 +29,22 @@ const supabase = createClient(supabaseUrl, serviceRoleKey, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
+// Passwords are never committed. Provide them when running the script, e.g.
+//   SEED_ADMIN_PASSWORD=... SEED_MEMBER_PASSWORD=... node scripts/seed-profiles.mjs
+function seedPassword(role) {
+  const value = process.env[`SEED_${role}_PASSWORD`];
+  if (!value || value.length < 12) {
+    console.error(`Set SEED_${role}_PASSWORD (at least 12 characters) before running this script.`);
+    process.exit(1);
+  }
+  return value;
+}
+
 const ACCOUNTS = [
   {
     roleName: "Admin Profile",
     email: "admin@solonomore.com",
-    password: "Admin@SoloNoMore2026!#",
+    password: seedPassword("ADMIN"),
     profile: {
       full_name: "Admin Commander",
       bio: "Platform Operations, Vetting Lead & Security Administrator.",
@@ -51,7 +62,7 @@ const ACCOUNTS = [
   {
     roleName: "Member Profile",
     email: "member@solonomore.com",
-    password: "Member@SoloVibe2026!#",
+    password: seedPassword("MEMBER"),
     profile: {
       full_name: "Zainab Ahmed",
       bio: "Padel fanatic, weekend chai explorer & social foodie in Karachi.",
@@ -69,7 +80,7 @@ const ACCOUNTS = [
   {
     roleName: "Artist Partner Profile",
     email: "artist@solonomore.com",
-    password: "Artist@RaveTrack2026!#",
+    password: seedPassword("ARTIST"),
     profile: {
       full_name: "Bilal K. (DJ Synapse)",
       bio: "Resident Touring DJ & Underground Techno Producer across Karachi circuits.",
@@ -87,7 +98,7 @@ const ACCOUNTS = [
   {
     roleName: "Business Partner Profile",
     email: "partner@solonomore.com",
-    password: "Partner@KarachiVenue2026!#",
+    password: seedPassword("PARTNER"),
     profile: {
       full_name: "Farhan Malik (Arena Padel)",
       bio: "Premier indoor padel club, artisanal cafe & community tournament arena in DHA Phase 6.",

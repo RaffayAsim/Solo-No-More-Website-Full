@@ -3132,7 +3132,7 @@ export default function LandingPageClient({
                       <span style={{ fontSize: "10.5px", color: "rgba(255,255,255,0.55)", marginLeft: "4px" }}>/ guest</span>
                     </div>
                     <span style={{ fontSize: "9px", fontWeight: 600, color: "rgba(255,255,255,0.7)", background: "rgba(255,255,255,0.08)", padding: "2px 8px", borderRadius: "999px" }}>
-                      Safepay • Cards
+                      Bank Transfer
                     </span>
                   </div>
 

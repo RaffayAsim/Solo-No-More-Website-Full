@@ -1,13 +1,17 @@
 import { createClient } from "@supabase/supabase-js";
 import fs from "fs";
 import path from "path";
+import crypto from "crypto";
+
+// Fresh random password per run (never a fixed, guessable password). Reset in Supabase to log in manually.
+const randomPassword = () => crypto.randomBytes(18).toString("base64url");
 
 // 1. Read .env.local
 const envPath = path.resolve(process.cwd(), ".env.local");
 let supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 let serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-let safepayPubKey = process.env.NEXT_PUBLIC_SAFEPAY_PUBLIC_KEY || "sec_80befc29-3269-443f-abd7-dafa6bdd4662";
-let safepaySecKey = process.env.SAFEPAY_SECRET_KEY || "556f21c19b40c0d74a38bd0287956ba1645fe873e672209068b445515c60d14e";
+let safepayPubKey = process.env.NEXT_PUBLIC_SAFEPAY_PUBLIC_KEY || "";
+let safepaySecKey = process.env.SAFEPAY_SECRET_KEY || "";
 
 if (fs.existsSync(envPath)) {
   const content = fs.readFileSync(envPath, "utf-8");
@@ -166,7 +170,7 @@ async function runAllTests() {
   logSection("STEP 1: SEEDING & VERIFYING ALL TEST ACCOUNTS");
 
   // 1. Admin
-  const { user: adminUser } = await getOrCreateUser("admin@solonomore.com", "Admin@SoloNoMore2026!#", {
+  const { user: adminUser } = await getOrCreateUser("admin@solonomore.com", randomPassword(), {
     full_name: "Admin Commander",
     first_name: "Admin",
     last_name: "Commander",
@@ -190,7 +194,7 @@ async function runAllTests() {
   logTest("1.1", "Admin Account", "PASS", adminUser.email);
 
   // 2. Sub-Admin
-  const { user: subAdminUser } = await getOrCreateUser("subadmin@solonomore.com", "SubAdmin@Solo2026!#", {
+  const { user: subAdminUser } = await getOrCreateUser("subadmin@solonomore.com", randomPassword(), {
     full_name: "Usman Ghani (Sub-Admin)",
     first_name: "Usman",
     last_name: "Ghani",
@@ -214,7 +218,7 @@ async function runAllTests() {
   logTest("1.2", "Sub-Admin Account", "PASS", subAdminUser.email);
 
   // 3. Artist Partner
-  const { user: artistUser } = await getOrCreateUser("artist@solonomore.com", "Artist@RaveTrack2026!#", {
+  const { user: artistUser } = await getOrCreateUser("artist@solonomore.com", randomPassword(), {
     full_name: "Bilal K. (DJ Synapse)",
     first_name: "Bilal",
     last_name: "Khan",
@@ -239,7 +243,7 @@ async function runAllTests() {
   logTest("1.3", "Artist Account", "PASS", artistUser.email);
 
   // 4. Venue Partner
-  const { user: partnerUser } = await getOrCreateUser("partner@solonomore.com", "Partner@KarachiVenue2026!#", {
+  const { user: partnerUser } = await getOrCreateUser("partner@solonomore.com", randomPassword(), {
     full_name: "Farhan Malik (Arena Padel)",
     first_name: "Farhan",
     last_name: "Malik",
@@ -264,7 +268,7 @@ async function runAllTests() {
   logTest("1.4", "Partner Account", "PASS", partnerUser.email);
 
   // 5. Manager (Door Checking Manager for Artist & Partner)
-  const { user: managerUser } = await getOrCreateUser("manager@solonomore.com", "Manager@DoorGate2026!#", {
+  const { user: managerUser } = await getOrCreateUser("manager@solonomore.com", randomPassword(), {
     full_name: "Tariq Mehmood (Door Manager)",
     first_name: "Tariq",
     last_name: "Mehmood",
@@ -288,7 +292,7 @@ async function runAllTests() {
   logTest("1.5", "Door Scanner Manager Account", "PASS", managerUser.email);
 
   // 6. Member 1 (Complete Profile)
-  const { user: member1, profile: member1Prof } = await getOrCreateUser("member@solonomore.com", "Member@SoloVibe2026!#", {
+  const { user: member1, profile: member1Prof } = await getOrCreateUser("member@solonomore.com", randomPassword(), {
     full_name: "Zainab Ahmed",
     first_name: "Zainab",
     last_name: "Ahmed",
@@ -312,7 +316,7 @@ async function runAllTests() {
   logTest("1.6", "Member 1 (Verified Complete)", "PASS", member1.email);
 
   // 7. Member 2 (Complete Profile)
-  const { user: member2, profile: member2Prof } = await getOrCreateUser("member2@solonomore.com", "MemberTwo@Solo2026!#", {
+  const { user: member2, profile: member2Prof } = await getOrCreateUser("member2@solonomore.com", randomPassword(), {
     full_name: "Ayesha Khan",
     first_name: "Ayesha",
     last_name: "Khan",
@@ -336,7 +340,7 @@ async function runAllTests() {
   logTest("1.7", "Member 2 (Verified Complete)", "PASS", member2.email);
 
   // 8. Member 3 (INCOMPLETE Profile - Missing CNIC & Emergency Contact)
-  const { user: member3, profile: member3Prof } = await getOrCreateUser("member3@solonomore.com", "MemberThree@Solo2026!#", {
+  const { user: member3, profile: member3Prof } = await getOrCreateUser("member3@solonomore.com", randomPassword(), {
     full_name: "Hamza Tariq (Incomplete)",
     first_name: "Hamza",
     last_name: "Tariq",
@@ -360,7 +364,7 @@ async function runAllTests() {
   logTest("1.8", "Member 3 (Incomplete Profile - Gate Target)", "PASS", member3.email);
 
   // 9. Guest Account (Enters via Open Event)
-  const { user: guestUser, profile: guestProf } = await getOrCreateUser("guest@solonomore.com", "Guest@SoloNoMore2026!#", {
+  const { user: guestUser, profile: guestProf } = await getOrCreateUser("guest@solonomore.com", randomPassword(), {
     full_name: "Ali Raza (Guest Attendee)",
     first_name: "Ali",
     last_name: "Raza",
