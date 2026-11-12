@@ -1,6 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./types";
 
+const SESSION_COOKIE = "sb-dmmgzpiskyocdsxamrgf-auth-token";
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key";
 
@@ -44,23 +46,27 @@ if (typeof window !== "undefined") {
     }
   });
 
-  supabase.auth.onAuthStateChange((event, session) => {
-    const cookieName = "sb-dmmgzpiskyocdsxamrgf-auth-token";
-    if (session) {
-      // Serialize as base64-encoded JSON array containing [access_token, refresh_token]
-      const sessionData = [session.access_token, session.refresh_token];
-      const rawValue = JSON.stringify(sessionData);
-      const base64Value = btoa(rawValue);
-      const cookieValue = `base64-${base64Value}`;
-      
-      // Set the cookie with a max-age of 1 week (matching standard Supabase sessions)
-      document.cookie = `${cookieName}=${encodeURIComponent(cookieValue)}; path=/; max-age=${3600 * 24 * 7}; SameSite=Lax; Secure`;
-    } else {
-      // Clear the cookie and local storage when signed out
-      document.cookie = `${cookieName}=; path=/; max-age=0; SameSite=Lax; Secure`;
-      try {
-        localStorage.removeItem(cookieName);
-      } catch {}
-    }
+  supabase.auth.onAuthStateChange((_event, session) => {
+    syncSessionCookie(session);
   });
+}
+
+
+/**
+ * Mirrors the browser session into the cookie the server reads.
+ * Serialized as base64-encoded JSON: [access_token, refresh_token].
+ */
+export function syncSessionCookie(
+  session: { access_token: string; refresh_token: string } | null | undefined
+) {
+  if (typeof document === "undefined") return;
+  if (session) {
+    const cookieValue = `base64-${btoa(JSON.stringify([session.access_token, session.refresh_token]))}`;
+    document.cookie = `${SESSION_COOKIE}=${encodeURIComponent(cookieValue)}; path=/; max-age=${3600 * 24 * 7}; SameSite=Lax; Secure`;
+  } else {
+    document.cookie = `${SESSION_COOKIE}=; path=/; max-age=0; SameSite=Lax; Secure`;
+    try {
+      localStorage.removeItem(SESSION_COOKIE);
+    } catch {}
+  }
 }

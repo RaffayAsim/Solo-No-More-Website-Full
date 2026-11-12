@@ -4,44 +4,8 @@ import { Terminal, Shield, Sparkles, Activity } from "lucide-react";
 export const revalidate = 0; // Disable static caching
 
 export default function AdminLogsPage() {
-  const logEvents = [
-    {
-      timestamp: "2026-05-30 14:02:11",
-      service: "AUTH_GATEWAY",
-      level: "INFO",
-      message: "Admin session authenticated for vibe.tester@solonomore.com from team dashboard.",
-    },
-    {
-      timestamp: "2026-05-30 13:45:15",
-      service: "NO_SHOW_ENGINE",
-      level: "WARN",
-      message: "User warning strike logged for applicant due to host ghost flake flagging. Strikes count = 1.",
-    },
-    {
-      timestamp: "2026-05-30 13:21:50",
-      service: "VETTING_MANAGER",
-      level: "INFO",
-      message: "New applicant profile approved. Lobby access granted securely.",
-    },
-    {
-      timestamp: "2026-05-30 12:05:11",
-      service: "VIP_PASS_ENGINE",
-      level: "INFO",
-      message: "Free ticket claimed for 'official_event = VIP Padel Tournament' by family tier user.",
-    },
-    {
-      timestamp: "2026-05-30 10:15:33",
-      service: "POSTGRES_POOL",
-      level: "INFO",
-      message: "Successfully synchronized database connection pools. 0 leaks detected.",
-    },
-    {
-      timestamp: "2026-05-30 08:30:00",
-      service: "STRIKE_MONITOR",
-      level: "INFO",
-      message: "Scanning active beacon applications... Vibe parameters checking completed.",
-    },
-  ];
+  // No sample entries: this list stays empty until real audit logging is connected.
+  const logEvents: { timestamp: string; service: string; level: string; message: string }[] = [];
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">

@@ -28,14 +28,15 @@ export default async function EventsPage() {
     (supabaseAdmin
       .from("event_tickets") as any)
       .select("event_id")
-      .eq("user_id", auth.userId),
+      .eq("user_id", auth.userId)
+      .neq("ticket_status", "cancelled"),
   ]);
 
   const currentTier = profileRes?.data?.subscription_tier || "none";
   const userEmail = auth.email || "";
   const isPartner = Boolean(profileRes?.data?.is_partner || profileRes?.data?.subscription_tier === "partner");
-  const isAdmin = profileRes?.data?.subscription_tier === "admin" || userEmail.toLowerCase() === "admin@solonomore.com" || userEmail.toLowerCase() === "raffay@solonomore.com";
-  const isArtist = profileRes?.data?.subscription_tier === "artist" || userEmail.toLowerCase().includes("artist") || userEmail.toLowerCase().includes("dj");
+  const isAdmin = profileRes?.data?.subscription_tier === "admin";
+  const isArtist = profileRes?.data?.subscription_tier === "artist";
   const isRestrictedRole = isPartner || isAdmin || isArtist;
   const roleLabel = isPartner ? "Partner" : isAdmin ? "Admin" : isArtist ? "Artist" : "";
 

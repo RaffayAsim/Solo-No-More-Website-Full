@@ -1,6 +1,8 @@
 import React from "react";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import EventsManagerClient from "./EventsManagerClient";
+import { withDoorStatus } from "@/lib/ticket-status";
+import { verifyAdminStatus } from "@/app/actions/admin";
 
 import { redirect } from "next/navigation";
 
@@ -11,6 +13,9 @@ export default async function AdminEventsPage({
 }: {
   searchParams: Promise<{ tab?: string }>;
 }) {
+  // Pages check access themselves — the layout guard alone is not re-run on every navigation.
+  await verifyAdminStatus();
+
   const { tab } = await searchParams;
   if (tab === "manual") {
     redirect("/admin/manual-ticketing");
@@ -27,6 +32,8 @@ export default async function AdminEventsPage({
         event_id,
         user_id,
         ticket_status,
+        payment_status,
+        user_name,
         created_at,
         profiles (
           full_name,
@@ -38,7 +45,7 @@ export default async function AdminEventsPage({
   return (
     <EventsManagerClient
       initialEvents={events || []}
-      initialTickets={tickets || []}
+      initialTickets={withDoorStatus(tickets as any[])}
     />
   );
 }

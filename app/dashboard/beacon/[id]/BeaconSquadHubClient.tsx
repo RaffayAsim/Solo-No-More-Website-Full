@@ -109,8 +109,13 @@ export default function BeaconSquadHubClient({
   const pendingApps = applications.filter((a) => a.status === "pending");
   const approvedApps = applications.filter((a) => a.status === "approved");
 
-  // Fetch messages
+  const isFetchingChatRef = useRef(false);
+
+  // Fetch messages with concurrency & visibility guards
   const loadMessages = async () => {
+    if (isFetchingChatRef.current) return;
+    if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+    isFetchingChatRef.current = true;
     try {
       const res = await getBeaconMessages(beacon.id);
       if (res.success && res.data) {
@@ -118,13 +123,25 @@ export default function BeaconSquadHubClient({
       }
     } catch {} finally {
       setChatLoading(false);
+      isFetchingChatRef.current = false;
     }
   };
 
   useEffect(() => {
     loadMessages();
     const interval = setInterval(loadMessages, 3500);
-    return () => clearInterval(interval);
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        loadMessages();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
   }, [beacon.id]);
 
   // Scroll inner chat container only — NEVER hijack or scroll the whole browser page window!

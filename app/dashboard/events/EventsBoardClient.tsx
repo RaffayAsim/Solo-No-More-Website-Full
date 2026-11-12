@@ -3,7 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { claimTicket, submitEventTicketPaymentAction, buyTicketDevInstantAction } from "@/app/actions/events";
+import { claimTicket } from "@/app/actions/events";
+import EventBookingModal from "@/components/events/EventBookingModal";
+import { parseEventDescription } from "@/lib/event-metadata";
 import type { OfficialEvent } from "@/lib/supabase/types";
 import {
   Calendar,
@@ -54,12 +56,8 @@ export default function EventsBoardClient({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Modal State for Purchasing Event Tickets via Raast / Bank
+  // Paid passes are booked through the shared booking modal (bank transfer + proof upload)
   const [activeEventForPayment, setActiveEventForPayment] = useState<OfficialEvent | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<"raast" | "sadapay" | "bank_transfer">("raast");
-  const [transactionRef, setTransactionRef] = useState("");
-  const [submittingPayment, setSubmittingPayment] = useState(false);
-  const [modalSuccess, setModalSuccess] = useState(false);
 
   const router = useRouter();
   const isFamily = currentTier === "family" || currentTier === "admin";
@@ -98,61 +96,31 @@ export default function EventsBoardClient({
     }
     setErrorMsg(null);
     setSuccessMsg(null);
-    setTransactionRef("");
-    setModalSuccess(false);
     setActiveEventForPayment(event);
   };
 
-  // Submit payment proof for event ticket
-  const handleTicketPaymentSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!activeEventForPayment || !transactionRef.trim()) return;
-
-    setSubmittingPayment(true);
-    setErrorMsg(null);
-
-    try {
-      const res = await submitEventTicketPaymentAction({
-        eventId: activeEventForPayment.id,
-        amountPkr: Number(activeEventForPayment.price),
-        paymentMethod,
-        transactionRef: transactionRef.trim(),
-      });
-
-      if (res.success) {
-        setModalSuccess(true);
-        setSuccessMsg(
-          `Payment proof received for "${activeEventForPayment.title}"! TID: ${transactionRef.trim()} submitted for verification.`
-        );
-        setTimeout(() => {
-          setActiveEventForPayment(null);
-          router.refresh();
-        }, 2200);
-      } else {
-        setErrorMsg(res.error);
-      }
-    } catch {
-      setErrorMsg("Network error submitting ticket payment.");
-    } finally {
-      setSubmittingPayment(false);
-    }
-  };
-
-  // Developer instant buy for testing
-  const handleDevInstantTicket = async (eventId: string) => {
-    setSubmittingPayment(true);
-    try {
-      const res = await buyTicketDevInstantAction(eventId);
-      if (res.success) {
-        setClaimedIds((prev) => [...prev, eventId]);
-        setSuccessMsg("[DEV SIMULATOR] Ticket pass booked instantly!");
-        setActiveEventForPayment(null);
-        router.refresh();
-      }
-    } finally {
-      setSubmittingPayment(false);
-    }
-  };
+  // Tiers for the booking modal. Events made without the rich editor get a single
+  // General Admission tier at the event's real price.
+  const bookingEvent = activeEventForPayment
+    ? (() => {
+        const ev: any = activeEventForPayment;
+        const hasRichMeta = (ev.description || "").includes("SNM_EVENT_META");
+        const parsed = parseEventDescription(ev.description || "");
+        const tierPackages = hasRichMeta
+          ? (parsed.metadata.tier_packages || []).map((t) => ({ id: t.id, name: t.name, price: t.price, perks: t.perks }))
+          : [{ id: "general", name: "General Admission", price: Number(ev.price) || 0 }];
+        return {
+          id: ev.id as string,
+          title: ev.title as string,
+          description: parsed.cleanDescription,
+          venue_name: ev.venue_name || undefined,
+          scheduled_at: ev.scheduled_at || undefined,
+          flyer_image_url: hasRichMeta ? parsed.metadata.feature_image || undefined : undefined,
+          price: Number(ev.price) || 0,
+          metadata: { tier_packages: tierPackages },
+        };
+      })()
+    : null;
 
   return (
     <div className="p-3 sm:p-6 lg:p-8 max-w-6xl mx-auto space-y-4 sm:space-y-6">
@@ -367,164 +335,21 @@ export default function EventsBoardClient({
         </div>
       )}
 
-      {/* ── EVENT TICKET PAYMENT MODAL ──── */}
-      {activeEventForPayment && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-          <div className="relative w-full max-w-lg max-h-[94vh] overflow-y-auto rounded-2xl bg-[#0B080E] border border-white/[0.12] shadow-2xl shadow-black/80 animate-in fade-in zoom-in-95 duration-200">
-            {/* Modal Title Bar */}
-            <div className="flex items-center justify-between p-5 border-b border-white/[0.08] bg-white/[0.02]">
-              <div className="flex items-center gap-2 text-white font-bold text-base">
-                <Ticket className="w-5 h-5 text-[#FF6F26]" />
-                <span>Book Event Ticket</span>
-              </div>
-              <button
-                onClick={() => setActiveEventForPayment(null)}
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-neutral-400 hover:text-white hover:bg-white/10 transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="p-6">
-              {modalSuccess ? (
-                <div className="text-center py-8 space-y-4">
-                  <div className="w-14 h-14 mx-auto rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
-                    <CheckCircle2 className="w-7 h-7" />
-                  </div>
-                  <h3 className="text-lg font-bold text-white">Payment Proof Submitted</h3>
-                  <p className="text-xs text-neutral-400 max-w-sm mx-auto leading-relaxed">
-                    Your Transaction ID has been recorded. Admin will verify and activate your pass shortly.
-                  </p>
-                </div>
-              ) : (
-                <form onSubmit={handleTicketPaymentSubmit} className="space-y-5">
-                  {/* Event & Amount notice */}
-                  <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-between">
-                    <div>
-                      <div className="font-bold text-white text-sm">{activeEventForPayment.title}</div>
-                      <div className="text-xs text-neutral-400 flex items-center gap-1 mt-0.5">
-                        <MapPin className="w-3 h-3 text-[#FF6F26]" />
-                        <span>{activeEventForPayment.venue_name || "Karachi"}</span>
-                      </div>
-                    </div>
-                    <div className="text-xl font-bold bg-gradient-to-r from-[#FF6F26] to-[#FF5A1F] bg-clip-text text-transparent">
-                      PKR {Number(activeEventForPayment.price).toLocaleString()}
-                    </div>
-                  </div>
-
-                  {/* Payment method selector */}
-                  <div>
-                    <label className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-2.5">
-                      Select Payment Method
-                    </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      {[
-                        { id: "raast", label: "Raast (Instant)" },
-                        { id: "sadapay", label: "SadaPay" },
-                        { id: "bank_transfer", label: "Bank IBFT" },
-                      ].map((m) => (
-                        <button
-                          type="button"
-                          key={m.id}
-                          onClick={() => setPaymentMethod(m.id as any)}
-                          className={`py-2.5 px-2 rounded-xl text-xs font-semibold border transition-all text-center ${
-                            paymentMethod === m.id
-                              ? "bg-gradient-to-r from-[#FF6F26] to-[#FF5A1F] text-white border-transparent shadow-lg shadow-[#FF6F26]/20"
-                              : "bg-white/[0.03] border-white/10 text-neutral-300 hover:bg-white/[0.06]"
-                          }`}
-                        >
-                          {m.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Account instructions box */}
-                  <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08] space-y-2">
-                    {paymentMethod === "raast" && (
-                      <div className="text-xs space-y-1">
-                        <div className="text-emerald-400 font-semibold flex items-center gap-1.5">
-                          <Zap className="w-3.5 h-3.5" />
-                          <span>RAAST ID (Instant & Free)</span>
-                        </div>
-                        <div className="text-lg font-mono font-bold text-white tracking-wider">
-                          0300-SOLONOMORE
-                        </div>
-                        <div className="text-neutral-400 text-[11px]">
-                          Account Title: Solo-No-More / Abdul Raffay
-                        </div>
-                      </div>
-                    )}
-
-                    {paymentMethod === "sadapay" && (
-                      <div className="text-xs space-y-1">
-                        <div className="text-[#FF6F26] font-semibold flex items-center gap-1.5">
-                          <CreditCard className="w-3.5 h-3.5" />
-                          <span>SadaPay / NayaPay Wallet</span>
-                        </div>
-                        <div className="text-lg font-mono font-bold text-white tracking-wider">
-                          0300-1234567
-                        </div>
-                        <div className="text-neutral-400 text-[11px]">
-                          Account Title: Solo-No-More / Abdul Raffay
-                        </div>
-                      </div>
-                    )}
-
-                    {paymentMethod === "bank_transfer" && (
-                      <div className="text-xs space-y-1">
-                        <div className="text-[#FF6F26] font-semibold flex items-center gap-1.5">
-                          <Building2 className="w-3.5 h-3.5" />
-                          <span>Meezan Bank IBFT</span>
-                        </div>
-                        <div className="text-white font-medium">Account Title: Abdul Raffay</div>
-                        <div className="font-mono text-neutral-300 text-[11px]">
-                          IBAN: PK00MEZN0001020304050607
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Transaction Ref input */}
-                  <div>
-                    <label className="block text-xs font-semibold text-neutral-300 mb-2">
-                      Transaction Reference / TID (From Banking App) *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. 9840210294 or STAN/RRN"
-                      value={transactionRef}
-                      onChange={(e) => setTransactionRef(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/10 text-white text-sm focus:outline-none focus:border-[#FF6F26] transition-colors font-mono"
-                    />
-                    <span className="block text-[11px] text-neutral-400 mt-1.5">
-                      Enter the Transaction ID shown on your receipt after sending PKR {Number(activeEventForPayment.price).toLocaleString()}.
-                    </span>
-                  </div>
-
-                  {/* Action buttons */}
-                  <div className="space-y-2 pt-2">
-                    <button
-                      type="submit"
-                      disabled={submittingPayment || !transactionRef.trim()}
-                      className="w-full py-3.5 px-4 rounded-xl text-xs font-bold bg-gradient-to-r from-[#FF6F26] to-[#FF5A1F] text-white shadow-lg shadow-[#FF6F26]/20 hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50"
-                    >
-                      {submittingPayment ? "Submitting Proof..." : "Submit Ticket Payment Proof"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDevInstantTicket(activeEventForPayment.id)}
-                      className="w-full py-2 px-3 rounded-xl text-[11px] text-neutral-400 hover:text-neutral-200 bg-white/[0.02] hover:bg-white/[0.05] transition-colors"
-                    >
-                      ⚡ [DEV TEST: Instant Pass Confirmation]
-                    </button>
-                  </div>
-                </form>
-              )}
-            </div>
-          </div>
-        </div>
+      {/* ── EVENT PASS BOOKING (bank transfer + payment proof) ──── */}
+      {activeEventForPayment && bookingEvent && (
+        <EventBookingModal
+          isOpen
+          onClose={() => {
+            setActiveEventForPayment(null);
+            router.refresh();
+          }}
+          event={bookingEvent}
+          currentUserProfile={null}
+          onSuccess={() => {
+            setSuccessMsg(`Booking for "${activeEventForPayment.title}" received. Track it under your passes.`);
+            router.refresh();
+          }}
+        />
       )}
     </div>
   );

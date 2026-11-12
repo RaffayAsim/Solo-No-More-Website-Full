@@ -1,4 +1,5 @@
 import React from "react";
+import { verifyAdminStatus } from "@/app/actions/admin";
 import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import {
@@ -34,6 +35,9 @@ function formatRelativeTime(dateStr: string): string {
 }
 
 export default async function AdminDashboardPage() {
+  // Each admin page checks access itself — the layout guard is not re-run on every navigation.
+  await verifyAdminStatus();
+
   // 1. Fetch user profiles
   const { data: profiles } = await (supabaseAdmin
     .from("profiles") as any)

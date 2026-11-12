@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getSessionUserSecurely } from "@/lib/supabase/session";
 import ProfileEditClient from "./ProfileEditClient";
+import { resolveStoredImage } from "@/lib/server/storage";
 
 export const dynamic = "force-dynamic";
 
@@ -47,8 +48,13 @@ export default async function DashboardProfileEditPage({
     emergency_contact_name: profile.emergency_contact_name || userMetadata.emergency_contact_name || "",
     emergency_contact_phone: profile.emergency_contact_phone || userMetadata.emergency_contact_phone || "",
     instagram_username: (profile.instagram_username || userMetadata.instagram_username || "").replace(/^@/, ""),
-    cnic_picture_url: profile.cnic_picture_url || userMetadata.cnic_picture_url || "",
-    instagram_screenshot_url: profile.instagram_screenshot_url || userMetadata.instagram_screenshot_url || profile.social_link || "",
+    // Private documents are shown to their owner through short-lived signed links.
+    cnic_picture_url:
+      (await resolveStoredImage(profile.cnic_picture_url || userMetadata.cnic_picture_url || "")) || "",
+    instagram_screenshot_url:
+      (await resolveStoredImage(
+        profile.instagram_screenshot_url || userMetadata.instagram_screenshot_url || profile.social_link || ""
+      )) || "",
     photo_url: profile.photo_url || userMetadata.photo_url || profile.avatar_url || userMetadata.avatar_url || "",
     bio: profile.bio || userMetadata.bio || "",
     vibe_tags: Array.isArray(profile.vibe_tags) && profile.vibe_tags.length > 0 ? profile.vibe_tags : ["Techno & House"],

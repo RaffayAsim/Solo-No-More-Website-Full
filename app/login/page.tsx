@@ -1,15 +1,20 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { supabase } from "@/lib/supabase/client";
+import { supabase, syncSessionCookie } from "@/lib/supabase/client";
 import { Sparkles, Eye, EyeOff, Lock, Mail, ArrowRight, ShieldCheck, UserCheck, Store, Shield, Mic2 } from "lucide-react";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectParam = searchParams.get("redirect");
+  const rawRedirect = searchParams.get("redirect") || searchParams.get("next");
+  // Only same-site paths are allowed as a post-login destination.
+  const redirectParam =
+    rawRedirect && rawRedirect.startsWith("/") && !rawRedirect.startsWith("//") && !rawRedirect.includes("\\")
+      ? rawRedirect
+      : null;
 
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -17,6 +22,27 @@ function LoginForm() {
   const [loginRole, setLoginRole] = useState<"member" | "artist" | "partner" | "team">("member");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  // If the browser still holds a valid session (e.g. the cookie lapsed while the tab
+  // was closed), restore it silently and continue to the intended page.
+  useEffect(() => {
+    let cancelled = false;
+    supabase.auth.getSession().then(({ data }) => {
+      if (cancelled || !data?.session) return;
+      // Guard against redirect loops: only auto-restore once per minute.
+      try {
+        const last = Number(sessionStorage.getItem("snm_session_restore") || 0);
+        if (Date.now() - last < 60_000) return;
+        sessionStorage.setItem("snm_session_restore", String(Date.now()));
+      } catch {}
+      syncSessionCookie(data.session);
+      window.location.replace(redirectParam || "/dashboard");
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,38 +66,13 @@ function LoginForm() {
       const safeRedirect = redirectParam && redirectParam.startsWith("/") ? redirectParam : null;
 
       if (loginRole === "team") {
-        const { data: profile } = await (supabase.from("profiles") as any)
-          .select("subscription_tier")
-          .eq("id", data.user.id)
-          .single();
-
-        const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "admin@solonomore.com";
-        const isEmailAdmin = data.user.email?.toLowerCase() === adminEmail.toLowerCase();
-        const isTierAdmin = profile?.subscription_tier === "admin";
-
-        if (!isEmailAdmin && !isTierAdmin) {
-          setError("Unauthorized. This account does not have admin team access.");
-          await supabase.auth.signOut();
-          setIsLoading(false);
-          return;
-        }
-
+        // The server decides who may enter /admin (owner, admins and delegated sub-admins);
+        // anyone else is sent on to their normal dashboard.
         router.push(safeRedirect || "/admin");
-      } else if (loginRole === "artist" || data.user.email?.toLowerCase().includes("artist")) {
+      } else if (loginRole === "artist") {
         router.push(safeRedirect || "/dashboard/artist");
-      } else if (loginRole === "partner" || data.user.email?.toLowerCase().includes("partner")) {
-        const { data: profile } = await (supabase.from("profiles") as any)
-          .select("is_partner")
-          .eq("id", data.user.id)
-          .single();
-
-        if (!profile?.is_partner && !data.user.email?.toLowerCase().includes("partner")) {
-          setError("Unauthorized. This account is not registered under the Partner Ecosystem.");
-          await supabase.auth.signOut();
-          setIsLoading(false);
-          return;
-        }
-
+      } else if (loginRole === "partner") {
+        // The partner hub itself verifies partner / delegated-manager access.
         router.push(safeRedirect || "/dashboard/partner");
       } else {
         router.push(safeRedirect || "/dashboard");

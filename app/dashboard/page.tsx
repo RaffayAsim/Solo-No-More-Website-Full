@@ -3,7 +3,9 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { AccountStatus, OfficialEvent, Profile } from "@/lib/supabase/types";
 import SignOutButton from "./SignOutButton";
 import ApprovedScreen from "./ApprovedScreen";
-import { writeLazyTimeAlerts } from "@/app/actions/notifications";
+import { writeLazyTimeAlerts } from "@/lib/server/notify";
+import { applySubscriptionRules } from "@/lib/server/subscriptions";
+import { getSiteUrl } from "@/lib/server/site-url";
 import { autoExpireStaleBeacons } from "@/app/actions/beacons";
 import { getSessionUserSecurely } from "@/lib/supabase/session";
 import { parseEventDescription } from "@/lib/event-metadata";
@@ -129,9 +131,31 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   // 2. Fetch full profile and status
   const { data: profile } = (await (supabaseAdmin
     .from("profiles") as any)
-    .select("id, full_name, phone, bio, social_link, city, avatar_icon, subscription_tier, account_status, is_partner, vibe_tags, is_active_seeker")
+    // Includes every field checkProfileCompleteness() reads, so the booking / beacon gates see the real profile.
+    .select("id, full_name, phone, bio, social_link, city, avatar_icon, subscription_tier, account_status, is_partner, vibe_tags, is_active_seeker, gender, date_of_birth, cnic_picture_url, instagram_screenshot_url, emergency_contact_name, emergency_contact_phone, instagram_username")
     .eq("id", user.id)
     .maybeSingle()) as { data: Profile | null; error: unknown };
+
+  // 2b. Membership expiry: send the renewal reminder / end a lapsed paid tier.
+  //     Read separately with "*" so the dashboard keeps working even before the
+  //     expiry columns exist in the database.
+  if (profile && ["member", "family", "partner"].includes(profile.subscription_tier as string)) {
+    try {
+      const { data: sub } = await (supabaseAdmin.from("profiles") as any)
+        .select("*")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (sub?.subscription_expires_at) {
+        const outcome = await applySubscriptionRules(sub, { siteUrl: await getSiteUrl() });
+        if (outcome === "expired") {
+          (profile as any).subscription_tier = "none";
+          if (sub.subscription_tier === "partner") (profile as any).is_partner = false;
+        }
+      }
+    } catch (err) {
+      console.error("[dashboard] Subscription check failed:", err);
+    }
+  }
 
   const status = (profile?.account_status ?? "pending_vetting") as AccountStatus;
   const fullName = profile?.full_name ?? (user.user_metadata?.full_name as string | undefined) ?? "";
@@ -235,6 +259,9 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       f.user_id_1 === user.id ? f.user_id_2 : f.user_id_1
     );
 
+    const feedNowIso = new Date().toISOString();
+    const feedStaleIso = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
     // Fetch live hangout beacons
     const filterString = `visibility_mode.eq.stranger,host_id.eq.${user.id}${
       friendIds.length > 0 ? `,host_id.in.(${friendIds.join(",")})` : ""
@@ -252,6 +279,10 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       .eq("status", "active")
       .eq("city", selectedCity)
       .or(filterString)
+      // The feed only shows meetups that are still ahead. Once the start time passes
+      // (or an undated beacon is over a week old) it drops off the feed; the host and
+      // approved squad members still reach it from their own activity and chats.
+      .or(`scheduled_at.gte."${feedNowIso}",and(scheduled_at.is.null,created_at.gte."${feedStaleIso}")`)
       .order("is_partner_offer", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false });
 

@@ -5,6 +5,7 @@ import Link from "next/link";
 import SubpageNavbar from "@/components/SubpageNavbar";
 import SubpageFooter from "@/components/SubpageFooter";
 import { Handshake, Store, Music, Sparkles, Check, ArrowRight, ShieldCheck, TrendingUp, Users, Send } from "lucide-react";
+import { submitPartnerApplicationAction } from "@/app/actions/member-applications";
 
 export default function PartnerRegistrationPage() {
   const [partnerType, setPartnerType] = useState<"venue" | "artist" | "sports">("venue");
@@ -16,14 +17,40 @@ export default function PartnerRegistrationPage() {
   const [instagram, setInstagram] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
+    setErrorMsg("");
+    try {
+      const categoryLabel =
+        partnerType === "venue"
+          ? "Cafe / Restaurant"
+          : partnerType === "artist"
+          ? "Artist / Musician"
+          : "Padel / Sports Court";
+
+      const res = await submitPartnerApplicationAction({
+        fullName: contactName.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        city: location.trim() || "Karachi",
+        partnerBusinessName: businessName.trim(),
+        partnerCategory: categoryLabel,
+        partnerPerks: instagram ? `Instagram: ${instagram.trim()}` : "Partner Candidate",
+      });
+
+      if (res.success) {
+        setSubmitted(true);
+      } else {
+        setErrorMsg(res.error || "Failed to submit application.");
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to submit application.");
+    } finally {
       setLoading(false);
-      setSubmitted(true);
-    }, 700);
+    }
   };
 
   const partnerTiers = [
@@ -495,6 +522,22 @@ export default function PartnerRegistrationPage() {
                     />
                   </div>
                 </div>
+
+                {errorMsg && (
+                  <div
+                    style={{
+                      background: "rgba(239, 68, 68, 0.15)",
+                      border: "1px solid rgba(239, 68, 68, 0.4)",
+                      color: "#FCA5A5",
+                      padding: "10px 14px",
+                      borderRadius: "10px",
+                      fontSize: "13px",
+                      fontWeight: 600,
+                    }}
+                  >
+                    ⚠️ {errorMsg}
+                  </div>
+                )}
 
                 <button
                   type="submit"

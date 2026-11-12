@@ -2,6 +2,7 @@
 
 import fs from "fs";
 import path from "path";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { verifyAdminStatus } from "@/app/actions/admin";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 
@@ -99,33 +100,32 @@ const DEFAULT_REVIEW_WALL: ReviewWallData = {
   ],
 };
 
-function ensureDataFile(): ReviewWallData {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
-  if (!fs.existsSync(REVIEW_WALL_FILE)) {
-    fs.writeFileSync(REVIEW_WALL_FILE, JSON.stringify(DEFAULT_REVIEW_WALL, null, 2), "utf-8");
-    return DEFAULT_REVIEW_WALL;
-  }
-  try {
-    const raw = fs.readFileSync(REVIEW_WALL_FILE, "utf-8");
-    const parsed = JSON.parse(raw);
-    if (parsed && Array.isArray(parsed.slots)) {
-      return parsed;
-    }
-    fs.writeFileSync(REVIEW_WALL_FILE, JSON.stringify(DEFAULT_REVIEW_WALL, null, 2), "utf-8");
-    return DEFAULT_REVIEW_WALL;
-  } catch (err) {
-    console.error("Error reading review_wall.json:", err);
-    return DEFAULT_REVIEW_WALL;
-  }
-}
-
 /**
- * Get Review Wall data for home page and admin
+ * Get Review Wall data for home page and admin (Cloud first with local file fallback)
  */
 export async function getReviewWallDataAction(): Promise<ReviewWallData> {
-  return ensureDataFile();
+  try {
+    const { data, error } = await (supabaseAdmin.from("platform_settings") as any)
+      .select("value")
+      .eq("key", "review_wall")
+      .single();
+
+    if (!error && data?.value && Array.isArray(data.value.slots)) {
+      return data.value as ReviewWallData;
+    }
+  } catch (err) {
+    // Database query failed or table not created yet, fall back to file/default
+  }
+
+  // Read-only fallback to the bundled file (used until the wall is first saved to the database).
+  try {
+    if (fs.existsSync(REVIEW_WALL_FILE)) {
+      const parsed = JSON.parse(fs.readFileSync(REVIEW_WALL_FILE, "utf-8"));
+      if (parsed && Array.isArray(parsed.slots)) return parsed as ReviewWallData;
+    }
+  } catch {}
+
+  return DEFAULT_REVIEW_WALL;
 }
 
 /**
@@ -135,20 +135,29 @@ export async function saveReviewWallDataAction(
   data: ReviewWallData
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    await verifyAdminStatus();
+    await verifyAdminStatus("root");
   } catch (err) {
     if (isRedirectError(err)) throw err;
     return { success: false, error: "Unauthorized. Admin privileges required." };
   }
 
-  try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
-    fs.writeFileSync(REVIEW_WALL_FILE, JSON.stringify(data, null, 2), "utf-8");
-    return { success: true };
-  } catch (err: any) {
-    console.error("Error saving review wall data:", err);
-    return { success: false, error: err.message || "Failed to save review wall settings." };
+  if (!data || !Array.isArray((data as any).slots)) {
+    return { success: false, error: "Invalid review wall data." };
   }
+
+  const { error } = await (supabaseAdmin.from("platform_settings") as any).upsert({
+    key: "review_wall",
+    value: data,
+    updated_at: new Date().toISOString(),
+  });
+
+  if (error) {
+    console.error("[saveReviewWallDataAction] Save failed:", error);
+    return {
+      success: false,
+      error: "Could not save the review wall. Make sure the latest Supabase migration (phase18) has been run.",
+    };
+  }
+
+  return { success: true };
 }

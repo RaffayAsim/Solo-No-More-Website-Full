@@ -105,6 +105,15 @@ export async function uploadMemory(
   } catch (err) {
     return { success: false, error: "Invalid image format." };
   }
+  if (!["image/png", "image/jpeg", "image/jpg", "image/webp"].includes(mimeType.toLowerCase())) {
+    return { success: false, error: "Only JPG, PNG or WebP photos can be uploaded." };
+  }
+  if (imageBuffer.length === 0 || imageBuffer.length > 4 * 1024 * 1024) {
+    return { success: false, error: "That photo is too large. Please choose a smaller one." };
+  }
+  if (caption && caption.length > 280) {
+    return { success: false, error: "Caption must be 280 characters or less." };
+  }
 
   // 3. Create Storage bucket dynamically if missing
   try {
@@ -223,7 +232,31 @@ export async function getMemoriesForProfile(
 export async function getMemoriesForBeacon(
   beaconId: string
 ): Promise<{ success: true; memories: (BeaconMemory & { uploader_name?: string; uploader_avatar?: string })[] } | { success: false; error: string }> {
+  const authCheck = await getUserIdSecurely();
+  if ("error" in authCheck) {
+    return { success: false, error: authCheck.error };
+  }
+
   try {
+    // The squad gallery (which includes private photos) is for the squad only.
+    const { data: beacon } = await (supabaseAdmin.from("beacons") as any)
+      .select("host_id")
+      .eq("id", beaconId)
+      .maybeSingle();
+    let allowed = !!beacon && beacon.host_id === authCheck.userId;
+    if (beacon && !allowed) {
+      const { data: app } = await (supabaseAdmin.from("beacon_applications") as any)
+        .select("id")
+        .eq("beacon_id", beaconId)
+        .eq("applicant_id", authCheck.userId)
+        .eq("status", "approved")
+        .maybeSingle();
+      allowed = !!app;
+    }
+    if (!allowed) {
+      return { success: false, error: "Only squad members can view this gallery." };
+    }
+
     const { data, error } = await (supabaseAdmin
       .from("beacon_memories") as any)
       .select(`

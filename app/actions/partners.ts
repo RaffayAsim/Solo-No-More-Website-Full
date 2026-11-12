@@ -3,6 +3,7 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { verifyAdminStatus } from "@/app/actions/admin";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
+import { findAuthUserByEmail, isDuplicateUserError, isValidEmail, listAllAuthUsers } from "@/lib/server/auth-users";
 
 export interface PartnerRecord {
   id: string;
@@ -31,7 +32,7 @@ export async function getAdminPartnersDataAction(): Promise<{
   approvedMembers: ApprovedMemberOption[];
 }> {
   try {
-    await verifyAdminStatus();
+    await verifyAdminStatus("partners.manage");
   } catch (err) {
     if (isRedirectError(err)) throw err;
     return { partners: [], approvedMembers: [] };
@@ -43,16 +44,8 @@ export async function getAdminPartnersDataAction(): Promise<{
     .select("*")
     .order("created_at", { ascending: false });
 
-  // 2. Fetch auth users
-  let authUsers: any[] = [];
-  try {
-    const { data: authData } = await supabaseAdmin.auth.admin.listUsers();
-    if (authData && authData.users) {
-      authUsers = authData.users;
-    }
-  } catch (err) {
-    console.error("Error loading auth users:", err);
-  }
+  // 2. Fetch auth users (all pages)
+  const authUsers: any[] = await listAllAuthUsers().catch(() => []);
 
   const authMap = new Map(authUsers.map((u) => [u.id, u]));
 
@@ -65,17 +58,9 @@ export async function getAdminPartnersDataAction(): Promise<{
     const email = authUser?.email || p.email || "";
     if (!email) return;
 
-    // Filter out dedicated artists from business partners
-    const isArtist =
-      email.toLowerCase().includes("artist") ||
-      (p.business_name && /dj|music|synapse|beats|touring/i.test(p.business_name)) ||
-      (p.full_name && /dj/i.test(p.full_name));
-
-    const isPartner =
-      p.is_partner === true ||
-      p.subscription_tier === "partner" ||
-      Boolean(p.business_name) ||
-      email.toLowerCase().includes("partner");
+    // Roles come from the account itself — nothing is guessed from names or emails.
+    const isArtist = p.subscription_tier === "artist" || p.role === "artist";
+    const isPartner = p.is_partner === true || p.subscription_tier === "partner";
 
     if (isPartner && !isArtist) {
       const regDate = p.created_at
@@ -99,7 +84,7 @@ export async function getAdminPartnersDataAction(): Promise<{
         avatar_url: p.avatar_icon || undefined,
         business_name: p.business_name || undefined,
       });
-    } else if (p.account_status === "approved" || p.subscription_tier === "member") {
+    } else if (!isArtist && p.account_status === "approved" && p.subscription_tier !== "admin") {
       approvedMembers.push({
         id: p.id,
         name: p.full_name || email.split("@")[0] || "Approved Member",
@@ -121,7 +106,7 @@ export async function updatePartnerStatusAction(
   newStatus: "approved" | "pending" | "suspended"
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    await verifyAdminStatus();
+    await verifyAdminStatus("partners.manage");
 
     const dbAccountStatus =
       newStatus === "approved"
@@ -131,10 +116,9 @@ export async function updatePartnerStatusAction(
         : "pending_vetting";
 
     const { error } = await (supabaseAdmin.from("profiles") as any)
-      .update({
-        account_status: dbAccountStatus,
-        is_partner: newStatus === "approved" ? true : false,
-      })
+      // Suspending or re-queuing a partner changes their access, not who they are:
+      // the partner flag stays so they remain listed here and can be re-approved.
+      .update({ account_status: dbAccountStatus })
       .eq("id", partnerId);
 
     if (error) {
@@ -154,7 +138,7 @@ export async function grantPartnerAccessAction(
   memberId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    await verifyAdminStatus();
+    await verifyAdminStatus("partners.manage");
   } catch (err) {
     if (isRedirectError(err)) throw err;
     return { success: false, error: "Unauthorized. Admin privileges required." };
@@ -165,14 +149,16 @@ export async function grantPartnerAccessAction(
   }
 
   try {
-    await (supabaseAdmin.from("profiles") as any)
+    const { error } = await (supabaseAdmin.from("profiles") as any)
       .update({
         is_partner: true,
         subscription_tier: "partner",
         account_status: "approved",
       })
-      .eq("id", memberId);
+      .eq("id", memberId)
+      .neq("subscription_tier", "admin");
 
+    if (error) return { success: false, error: "Failed to grant partner access." };
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message || "Failed to grant partner access." };
@@ -190,7 +176,7 @@ export async function createNewPartnerAccountAction(params: {
   password?: string;
 }): Promise<{ success: boolean; error?: string; partnerId?: string }> {
   try {
-    await verifyAdminStatus();
+    await verifyAdminStatus("partners.manage");
   } catch (err) {
     if (isRedirectError(err)) throw err;
     return { success: false, error: "Unauthorized. Admin privileges required." };
@@ -200,40 +186,38 @@ export async function createNewPartnerAccountAction(params: {
     return { success: false, error: "Full Name and Email are required." };
   }
 
-  const generatedPassword =
-    params.password && params.password.length >= 6
-      ? params.password
-      : "PartnerAccess2026!";
+  if (!isValidEmail(params.email)) {
+    return { success: false, error: "Please enter a valid email address." };
+  }
+  if (!params.password || params.password.length < 8) {
+    return { success: false, error: "Set a password of at least 8 characters for the partner's login." };
+  }
 
   // Create auth user
   const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
     email: params.email.trim(),
-    password: generatedPassword,
+    password: params.password,
     email_confirm: true,
     user_metadata: {
       full_name: params.fullName.trim(),
-      phone: params.phone.trim(),
-      cnic: params.cnic?.trim() || "",
-      is_partner: true,
+      phone: (params.phone || "").trim(),
     },
   });
 
   let userId = authData?.user?.id;
 
   if (authError) {
-    if (
-      authError.message.toLowerCase().includes("already registered") ||
-      authError.message.toLowerCase().includes("duplicate")
-    ) {
-      const { data: userLookup } = await supabaseAdmin.auth.admin.listUsers();
-      const existingUser = userLookup.users.find(
-        (u) => u.email?.toLowerCase() === params.email.trim().toLowerCase()
-      );
-      if (existingUser) {
-        userId = existingUser.id;
-      } else {
-        return { success: false, error: authError.message };
+    if (isDuplicateUserError(authError.message)) {
+      const existingUser = await findAuthUserByEmail(params.email);
+      if (!existingUser) return { success: false, error: authError.message };
+      const { data: existingProfile } = await (supabaseAdmin.from("profiles") as any)
+        .select("subscription_tier")
+        .eq("id", existingUser.id)
+        .maybeSingle();
+      if (existingProfile?.subscription_tier === "admin") {
+        return { success: false, error: "This email belongs to an admin account." };
       }
+      userId = existingUser.id;
     } else {
       return { success: false, error: authError.message };
     }
@@ -244,6 +228,7 @@ export async function createNewPartnerAccountAction(params: {
       id: userId,
       full_name: params.fullName.trim(),
       phone: params.phone?.trim() || null,
+      ...(params.cnic?.trim() ? { cnic: params.cnic.trim() } : {}),
       is_partner: true,
       subscription_tier: "partner",
       account_status: "approved",

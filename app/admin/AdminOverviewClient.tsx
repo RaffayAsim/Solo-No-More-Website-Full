@@ -74,7 +74,12 @@ export default function AdminOverviewClient({ recentActivities }: AdminOverviewC
       if (!res.success) {
         setErrorMsg(res.error || "Failed to create member");
       } else {
-        setSuccessMsg(`✓ Member ${formData.fullName} onboarded and verified successfully!`);
+        setSuccessMsg(
+          res.tempPassword
+            ? `✓ Member ${formData.fullName} onboarded. One-time password (copy it now): ${res.tempPassword}`
+            : `✓ Member ${formData.fullName} onboarded and verified successfully!`
+        );
+        const hadTempPassword = !!res.tempPassword;
         setTimeout(() => {
           setIsAddModalOpen(false);
           setSuccessMsg("");
@@ -87,7 +92,7 @@ export default function AdminOverviewClient({ recentActivities }: AdminOverviewC
             password: "",
           });
           router.refresh();
-        }, 1200);
+        }, hadTempPassword ? 20000 : 1200);
       }
     } catch (err: any) {
       setErrorMsg(err?.message || "An unexpected error occurred");

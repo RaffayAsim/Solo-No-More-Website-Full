@@ -88,8 +88,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         const session = data?.session;
         if (session?.user) {
-          const userEmail = session.user.email?.toLowerCase() || "";
-          const metaRole = session.user.user_metadata?.role;
           const { data: profile } = await (supabase
             .from("profiles") as any)
             .select("is_partner, subscription_tier")
@@ -99,12 +97,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           const tier = profile?.subscription_tier;
 
           // 1. ADMIN CHECK (Highest Priority)
-          if (
-            tier === "admin" ||
-            userEmail === "admin@solonomore.com" ||
-            userEmail === "raffay@solonomore.com" ||
-            metaRole === "admin"
-          ) {
+          // Roles come from the profile only (never guessed from the email address).
+          if (tier === "admin") {
             setUserRole("admin");
             sessionStorage.setItem("snm_user_role", "admin");
             sessionStorage.removeItem("snm_is_partner");
@@ -112,12 +106,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           }
 
           // 2. ARTIST CHECK (Artists must NEVER see Partner Hub)
-          if (
-            tier === "artist" ||
-            metaRole === "artist" ||
-            userEmail.includes("artist") ||
-            userEmail.includes("dj")
-          ) {
+          if (tier === "artist") {
             setUserRole("artist");
             sessionStorage.setItem("snm_user_role", "artist");
             sessionStorage.removeItem("snm_is_partner");
@@ -125,7 +114,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           }
 
           // 3. PARTNER CHECK (Only actual partners, never artists or admins)
-          if (profile?.is_partner === true || tier === "partner" || metaRole === "partner") {
+          if (profile?.is_partner === true || tier === "partner") {
             setUserRole("partner");
             sessionStorage.setItem("snm_user_role", "partner");
             return;

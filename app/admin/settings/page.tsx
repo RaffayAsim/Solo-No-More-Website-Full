@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { verifyAdminStatus } from "@/app/actions/admin";
 import AdminSettingsClient from "./AdminSettingsClient";
 import {
@@ -14,6 +15,10 @@ export const metadata = {
 
 export default async function AdminSettingsPage() {
   const admin = await verifyAdminStatus();
+  // Team & access settings are for the platform owner only.
+  if (!admin.isRoot) {
+    redirect("/admin");
+  }
   const [subAdmins, platformUsers] = await Promise.all([
     getTeamDelegationsAction({ type: "sub_admin" }),
     getAllPlatformUsersForAdminAction(),

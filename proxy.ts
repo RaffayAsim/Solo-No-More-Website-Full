@@ -2,25 +2,50 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 // Protected routes — require an active Supabase session
-const protectedRoutes = ["/dashboard"];
+const protectedRoutes = ["/dashboard", "/admin"];
 
 // Auth routes — redirect logged-in users away from these
 const authRoutes = ["/login", "/apply"];
 
 /**
- * Solo-No-More Route Guard Middleware.
+ * Solo-No-More Route Guard Proxy.
  * 
  * We check if the Supabase auth token cookie exists.
  * Actual JWT verification is handled in Server Components/API handlers.
  */
-export function middleware(request: NextRequest) {
+function hasUnexpiredSession(cookieValue: string | undefined): boolean {
+  if (!cookieValue) return false;
+  try {
+    let raw = cookieValue;
+    try {
+      raw = decodeURIComponent(raw);
+    } catch {}
+    if (raw.startsWith("base64-")) raw = atob(raw.slice(7));
+    const parsed = JSON.parse(raw);
+    const token: string | undefined = Array.isArray(parsed) ? parsed[0] : parsed?.access_token;
+    if (!token) return false;
+    const part = token.split(".")[1];
+    if (!part) return false;
+    let b64 = part.replace(/-/g, "+").replace(/_/g, "/");
+    while (b64.length % 4) b64 += "=";
+    const payload = JSON.parse(atob(b64));
+    return typeof payload?.exp === "number" && payload.exp > Math.floor(Date.now() / 1000);
+  } catch {
+    return false;
+  }
+}
+
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Supabase session cookie name for this project
   const sessionCookie = request.cookies.get(
     "sb-dmmgzpiskyocdsxamrgf-auth-token"
   );
-  const isLoggedIn = !!sessionCookie?.value;
+  // Routing hint only: an expired cookie is treated as signed-out so the user is
+  // sent through /login (which silently restores the session) instead of looping.
+  // The signature is verified server-side in lib/supabase/session.ts.
+  const isLoggedIn = hasUnexpiredSession(sessionCookie?.value);
 
   const isProtectedRoute = protectedRoutes.some((route) =>
     pathname.startsWith(route)
@@ -30,7 +55,7 @@ export function middleware(request: NextRequest) {
   // 1. Redirect unauthenticated users away from protected routes
   if (isProtectedRoute && !isLoggedIn) {
     const loginUrl = new URL("/login", request.nextUrl);
-    loginUrl.searchParams.set("next", pathname); // preserve destination
+    loginUrl.searchParams.set("redirect", pathname + request.nextUrl.search); // preserve destination
     return NextResponse.redirect(loginUrl);
   }
 
@@ -45,7 +70,7 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Run middleware on all paths except:
+     * Run proxy on all paths except:
      * - _next/static (static assets)
      * - _next/image (image optimization)
      * - favicon.ico, sitemap.xml, robots.txt

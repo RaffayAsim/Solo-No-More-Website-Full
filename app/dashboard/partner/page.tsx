@@ -5,6 +5,8 @@ import { getSessionUserSecurely } from "@/lib/supabase/session";
 import PartnerDashboardClient from "./PartnerDashboardClient";
 import type { Beacon, OfficialEvent } from "@/lib/supabase/types";
 import { parseEventDescription } from "@/lib/event-metadata";
+import { readDelegations } from "@/lib/server/delegations";
+import { withDoorStatus } from "@/lib/ticket-status";
 
 export const metadata = {
   title: "Partner Command Center — Solo-No-More",
@@ -39,7 +41,12 @@ export default async function PartnerDashboardPage(props: {
   ]);
 
   const profile = profileRes.data;
-  if (!profile || !profile.is_partner) {
+  // Partners, plus gate managers a partner has delegated access to.
+  const delegations = (await readDelegations()).filter(
+    (d) => d.status === "active" && d.manager_user_id === userId && d.type === "partner_manager"
+  );
+  const delegatorIds = new Set(delegations.map((d) => d.delegator_id));
+  if (!profile || (!profile.is_partner && delegatorIds.size === 0)) {
     redirect("/dashboard");
   }
 
@@ -49,12 +56,16 @@ export default async function PartnerDashboardPage(props: {
   const partnerEvents: OfficialEvent[] = (allEventsData || []).filter((ev: any) => {
     try {
       const { metadata } = parseEventDescription(ev.description);
-      const isCreator = metadata.creator_id === userId;
+      if (!(ev.description || "").includes("SNM_EVENT_META")) return false;
+      const isCreator =
+        !!metadata.creator_id && (metadata.creator_id === userId || delegatorIds.has(metadata.creator_id));
+      // Collaborations are matched on the exact business name, never a partial match.
       const isPartnerCollab =
-        metadata.partner_id === userId ||
-        (profile.business_name &&
-          metadata.partner_name &&
-          metadata.partner_name.toLowerCase().includes(profile.business_name.toLowerCase()));
+        !!profile.is_partner &&
+        (metadata.partner_id === userId ||
+          (!!profile.business_name &&
+            !!metadata.partner_name &&
+            metadata.partner_name.trim().toLowerCase() === String(profile.business_name).trim().toLowerCase()));
       return isCreator || isPartnerCollab;
     } catch {
       return false;
@@ -72,6 +83,8 @@ export default async function PartnerDashboardPage(props: {
         event_id,
         user_id,
         ticket_status,
+        payment_status,
+        user_name,
         created_at,
         profiles (
           full_name,
@@ -79,7 +92,7 @@ export default async function PartnerDashboardPage(props: {
         )
       `)
       .in("event_id", eventIds);
-    partnerTickets = ticketsData || [];
+    partnerTickets = withDoorStatus(ticketsData as any[]);
   }
 
   // 5. Fetch squad member applications for partner promo offers

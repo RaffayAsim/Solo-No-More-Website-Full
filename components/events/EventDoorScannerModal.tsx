@@ -33,6 +33,8 @@ export interface ScannerTicket {
   event_id: string;
   user_id: string;
   ticket_status: string;
+  /** "paid" once Solo-No-More admin verified the payment. */
+  payment_status?: string | null;
   created_at: string;
   profiles?: {
     full_name?: string | null;
@@ -404,16 +406,8 @@ export default function EventDoorScannerModal({
     setVerifying(true);
     try {
       if (onApprove) await onApprove(ticketId);
-      await onToggleAdmit(ticketId, "pending");
-      setLocalTickets((prev) =>
-        prev.map((t) => (t.id === ticketId ? { ...t, ticket_status: "admitted" } : t))
-      );
-      playGateSound("success");
-      setScanResult({
-        success: true,
-        verdict: "valid_admitted",
-        message: "Approved & Admitted at Door!",
-      });
+      // Re-scan so the screen shows what the server actually did (admitted, or still refused).
+      await executeVerification(ticketId);
     } finally {
       setVerifying(false);
     }
@@ -677,16 +671,19 @@ export default function EventDoorScannerModal({
                       </div>
                       <div className="space-y-1">
                         <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 bg-amber-500/15 px-2.5 py-0.5 rounded-full border border-amber-500/30">
-                          ⏳ PENDING HOST APPROVAL
+                          {scanResult.ticket?.paymentVerified ? "⏳ PENDING HOST APPROVAL" : "⛔ ENTRY DENIED"}
                         </span>
                         <h3 className="text-base font-black text-white">
                           {scanResult.ticket?.attendeeName}
                         </h3>
                         <p className="text-xs text-zinc-400 leading-relaxed max-w-xs">
-                          This booking is waiting for your approval. As the creator, you can clear it right now:
+                          {scanResult.ticket?.paymentVerified
+                            ? "This booking is waiting for your approval. As the creator, you can clear it right now:"
+                            : "Payment not verified. Ask the guest to contact the Solo-No-More admin."}
                         </p>
                       </div>
-                      {scanResult.ticket?.id && (
+                      {/* Only a pass whose payment was verified can be approved at the door. */}
+                      {scanResult.ticket?.id && scanResult.ticket.paymentVerified && (
                         <button
                           type="button"
                           onClick={() => handleApproveAndAdmitFromScan(scanResult.ticket!.id)}
@@ -895,7 +892,12 @@ export default function EventDoorScannerModal({
 
                       {/* Action buttons */}
                       <div className="flex items-center gap-2 self-end sm:self-auto shrink-0 flex-wrap">
-                        {isPending && onApprove && onReject && (
+                        {isPending && t.payment_status !== "paid" && (
+                          <span className="text-[11px] text-amber-300 max-w-[220px] leading-snug">
+                            Payment not verified. Ask the guest to contact the Solo-No-More admin.
+                          </span>
+                        )}
+                        {isPending && t.payment_status === "paid" && onApprove && onReject && (
                           <>
                             <button
                               type="button"

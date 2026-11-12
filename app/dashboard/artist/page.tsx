@@ -4,6 +4,9 @@ import { getSessionUserSecurely } from "@/lib/supabase/session";
 import ArtistDashboardClient from "./ArtistDashboardClient";
 import type { OfficialEvent } from "@/lib/supabase/types";
 import { parseEventDescription } from "@/lib/event-metadata";
+import { readDelegations } from "@/lib/server/delegations";
+import { isAdminEmail, isArtistProfile } from "@/lib/server/auth";
+import { withDoorStatus } from "@/lib/ticket-status";
 
 export const metadata = {
   title: "Artist & Performer Hub — Solo-No-More",
@@ -33,7 +36,11 @@ export default async function ArtistDashboardPage({ searchParams }: PageProps) {
     supabaseAdmin.auth.admin.getUserById(userId),
   ]);
 
-  const userMeta = userRecord?.user?.user_metadata || {};
+  // Payout details live in server-controlled app_metadata (older saves were in user_metadata).
+  const userMeta = {
+    ...(userRecord?.user?.user_metadata || {}),
+    ...((userRecord?.user?.app_metadata as any)?.payout || {}),
+  };
 
   // 2. Fetch all events
   const { data: events } = await (supabaseAdmin
@@ -43,14 +50,23 @@ export default async function ArtistDashboardPage({ searchParams }: PageProps) {
 
   const allEvents: OfficialEvent[] = events || [];
 
-  // Filter strictly for this artist's events (Data Isolation)
+  // Only artists, admins and gate managers an artist has delegated may open this hub.
+  const delegations = (await readDelegations()).filter(
+    (d) => d.status === "active" && d.manager_user_id === userId && d.type === "artist_manager"
+  );
+  const delegatorIds = new Set(delegations.map((d) => d.delegator_id));
+  const isAdminUser = profile?.subscription_tier === "admin" || isAdminEmail(sessionResult.email);
+  if (!isArtistProfile(profile) && !isAdminUser && delegatorIds.size === 0) {
+    redirect("/dashboard");
+  }
+
+  // Strict data isolation: events this account created, plus events of artists who
+  // delegated gate access to it. Ownership is decided by account id, never by name.
   const artistEvents = allEvents.filter((ev) => {
     try {
       const { metadata: meta } = parseEventDescription(ev.description);
-      if (meta.creator_id === userId) return true;
-      if (meta.creator_name && (meta.creator_name === profile?.full_name || meta.creator_name === profile?.business_name)) return true;
-      if (meta.organizer?.name && (meta.organizer.name === profile?.business_name || meta.organizer.name === profile?.full_name)) return true;
-      return false;
+      if (!meta.creator_id || !(ev.description || "").includes("SNM_EVENT_META")) return false;
+      return meta.creator_id === userId || delegatorIds.has(meta.creator_id);
     } catch {
       return false;
     }
@@ -66,6 +82,8 @@ export default async function ArtistDashboardPage({ searchParams }: PageProps) {
       event_id,
       user_id,
       ticket_status,
+      payment_status,
+      user_name,
       created_at,
       profiles (
         full_name,
@@ -73,7 +91,7 @@ export default async function ArtistDashboardPage({ searchParams }: PageProps) {
       )
     `);
 
-  const allTickets = tickets || [];
+  const allTickets = withDoorStatus(tickets as any[]);
   const artistTickets = allTickets.filter((t: any) => artistEventIds.has(t.event_id));
 
   return (

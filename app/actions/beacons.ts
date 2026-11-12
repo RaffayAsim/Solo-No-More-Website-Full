@@ -2,9 +2,35 @@
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { CreateBeaconInput, BeaconCategory } from "@/lib/supabase/types";
-import { writeNotification } from "@/app/actions/notifications";
+import { writeNotification } from "@/lib/server/notify";
 import { getSessionUserSecurely } from "@/lib/supabase/session";
 import { checkProfileCompleteness } from "@/lib/profile-completeness";
+import { PUBLIC_MEDIA_BUCKET, isImageDataUrl, storePublicImageDataUrl } from "@/lib/server/storage";
+
+const BEACON_CATEGORIES = ["sports", "casual", "nightlife"];
+const BEACON_VISIBILITY = ["stranger", "friend"];
+const BEACON_CITIES = ["Karachi", "Lahore", "Islamabad"];
+
+/** Accepts only http(s) links (blocks javascript: and other schemes). */
+function cleanHttpUrl(value: string | null | undefined): string | null {
+  const v = (value || "").trim();
+  if (!v) return null;
+  return /^https?:\/\//i.test(v) ? v.slice(0, 600) : null;
+}
+
+function isSameInstant(a: string | null | undefined, b: string | null | undefined): boolean {
+  if (!a || !b) return !a && !b;
+  return new Date(a).getTime() === new Date(b).getTime();
+}
+
+/** Returns an error message when a meetup time is missing/invalid or already in the past. */
+function validateFutureTime(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return "Please choose a valid date and time.";
+  if (t < Date.now() - 5 * 60 * 1000) return "The meetup time must be in the future.";
+  return null;
+}
 
 export type CreateBeaconResult =
   | { success: true; beaconId: string }
@@ -67,12 +93,28 @@ export async function createBeacon(
     }
   }
 
-  const { title, category, visibility_mode, total_slots } = data;
-  if (!title.trim()) return { success: false, error: "Title is required." };
-  if (total_slots < 1 || total_slots > 10) return { success: false, error: "Slots must be between 1 and 10." };
+  const { title, category, visibility_mode } = data;
+  const total_slots = Math.round(Number(data.total_slots));
+  if (!title?.trim()) return { success: false, error: "Title is required." };
+  if (title.trim().length > 120) return { success: false, error: "Title must be 120 characters or less." };
+  if (!(total_slots >= 1 && total_slots <= 10)) return { success: false, error: "Slots must be between 1 and 10." };
+  if (!BEACON_CATEGORIES.includes(category)) return { success: false, error: "Please choose a valid category." };
+  if (!BEACON_VISIBILITY.includes(visibility_mode)) return { success: false, error: "Please choose a valid visibility." };
+
+  const timeError = validateFutureTime(data.scheduled_at);
+  if (timeError) return { success: false, error: timeError };
 
   const isPartnerPromo = data.is_partner_offer && isPartner ? true : false;
-  const beaconCity = data.city || profile.city || "Karachi";
+  const requestedCity = data.city || profile.city || "Karachi";
+  const beaconCity = BEACON_CITIES.includes(requestedCity) ? requestedCity : "Karachi";
+
+  // Cover images go to storage; the row only keeps a URL.
+  let imageUrl: string | null = null;
+  if (isImageDataUrl(data.image_url)) {
+    imageUrl = await storePublicImageDataUrl(PUBLIC_MEDIA_BUCKET, `beacons/${userId}`, data.image_url);
+  } else {
+    imageUrl = cleanHttpUrl(data.image_url);
+  }
 
   const { data: beacon, error: insertError } = await ((supabaseAdmin
     .from("beacons") as any)
@@ -85,10 +127,10 @@ export async function createBeacon(
       total_slots,
       location_name: data.location_name?.trim() || null,
       scheduled_at: data.scheduled_at || null,
-      google_maps_url: data.google_maps_url || null,
+      google_maps_url: cleanHttpUrl(data.google_maps_url),
       status: "active",
       city: beaconCity,
-      image_url: data.image_url || null,
+      image_url: imageUrl,
       is_partner_offer: isPartnerPromo,
     })
     .select("id")
@@ -215,13 +257,19 @@ export async function cancelPartnerOfferAction(offerId: string): Promise<BeaconA
  * Server Action: Check if an empty beacon has reached/approached time, sending host auto-cancel alert with 0 penalty.
  */
 export async function checkEmptyBeaconTimeAlert(beaconId: string): Promise<BeaconActionResult> {
+  const authCheck = await getSessionUserSecurely();
+  if ("error" in authCheck) return { success: false, error: authCheck.error };
+
   const { data: beacon } = await (supabaseAdmin
     .from("beacons") as any)
     .select("host_id, filled_slots, status, scheduled_at, title")
     .eq("id", beaconId)
     .single();
 
-  if (!beacon || beacon.status !== "active" || (beacon.filled_slots || 0) > 0 || !beacon.scheduled_at) {
+  if (!beacon || beacon.host_id !== authCheck.userId) {
+    return { success: true };
+  }
+  if (beacon.status !== "active" || (beacon.filled_slots || 0) > 0 || !beacon.scheduled_at) {
     return { success: true };
   }
 
@@ -256,7 +304,8 @@ export async function updateBeaconCapacity(
   if ("error" in authCheck) return { success: false, error: authCheck.error };
   const userId = authCheck.userId;
 
-  if (newTotal < 1 || newTotal > 10) return { success: false, error: "Capacity must be between 1 and 10." };
+  newTotal = Math.round(Number(newTotal));
+  if (!(newTotal >= 1 && newTotal <= 10)) return { success: false, error: "Capacity must be between 1 and 10." };
 
   const { data: beacon, error: fetchError } = await (supabaseAdmin
     .from("beacons") as any)
@@ -330,12 +379,17 @@ export async function updateLiveBeacon(
   if (beacon.host_id !== userId) return { success: false, error: "Unauthorized. Only the host can reschedule this event." };
   if (beacon.status === "cancelled") return { success: false, error: "Cannot modify a cancelled beacon." };
 
+  if (newTime && !isSameInstant(newTime, beacon.scheduled_at)) {
+    const timeError = validateFutureTime(newTime);
+    if (timeError) return { success: false, error: timeError };
+  }
+
   const { error: updateError } = await (supabaseAdmin
     .from("beacons") as any)
     .update({
-      location_name: newLocation.trim() || null,
+      location_name: (newLocation || "").trim() || null,
       scheduled_at: newTime || null,
-      google_maps_url: newGoogleMapsUrl ? newGoogleMapsUrl.trim() : null
+      google_maps_url: cleanHttpUrl(newGoogleMapsUrl)
     })
     .eq("id", beaconId);
 
@@ -396,22 +450,37 @@ export async function updateFullBeacon(
 
   const { data: beacon, error: fetchError } = await (supabaseAdmin
     .from("beacons") as any)
-    .select("host_id, title, status, filled_slots, total_slots")
+    .select("host_id, title, status, filled_slots, total_slots, scheduled_at")
     .eq("id", beaconId)
     .single();
 
   if (fetchError || !beacon) return { success: false, error: "Beacon not found." };
   if (beacon.host_id !== userId) return { success: false, error: "Unauthorized. Only the host can edit this beacon." };
   if (beacon.status === "cancelled") return { success: false, error: "Cannot modify a cancelled beacon." };
+  if (beacon.status === "completed") return { success: false, error: "This meetup has concluded and can no longer be edited." };
 
   const updates: any = {};
   if (data.title && data.title.trim()) updates.title = data.title.trim();
   if (data.description !== undefined) updates.description = data.description ? data.description.trim() : null;
-  if (data.category) updates.category = data.category;
+  if (data.category) {
+    if (!BEACON_CATEGORIES.includes(data.category)) return { success: false, error: "Please choose a valid category." };
+    updates.category = data.category;
+  }
   if (data.location_name !== undefined) updates.location_name = data.location_name ? data.location_name.trim() : null;
-  if (data.scheduled_at !== undefined) updates.scheduled_at = data.scheduled_at || null;
-  if (data.google_maps_url !== undefined) updates.google_maps_url = data.google_maps_url ? data.google_maps_url.trim() : null;
+  if (data.scheduled_at !== undefined) {
+    const timeError = isSameInstant(data.scheduled_at, beacon.scheduled_at)
+      ? null
+      : validateFutureTime(data.scheduled_at);
+    if (timeError) return { success: false, error: timeError };
+    updates.scheduled_at = data.scheduled_at || null;
+  }
+  if (data.google_maps_url !== undefined) updates.google_maps_url = cleanHttpUrl(data.google_maps_url);
   if (data.total_slots !== undefined) {
+    const slots = Math.round(Number(data.total_slots));
+    if (!(slots >= 1 && slots <= 10)) {
+      return { success: false, error: "Capacity must be between 1 and 10." };
+    }
+    data.total_slots = slots;
     if (data.total_slots < beacon.filled_slots) {
       return { success: false, error: `Capacity cannot be lower than current squad count (${beacon.filled_slots}).` };
     }
@@ -496,6 +565,7 @@ export async function completeBeaconAction(beaconId: string): Promise<BeaconActi
   if (fetchError || !beacon) return { success: false, error: "Beacon not found." };
   if (beacon.host_id !== userId) return { success: false, error: "Only the host can conclude this meetup." };
   if (beacon.status === "completed") return { success: true };
+  if (beacon.status === "cancelled") return { success: false, error: "This beacon was cancelled." };
 
   const { error: updateError } = await (supabaseAdmin
     .from("beacons") as any)

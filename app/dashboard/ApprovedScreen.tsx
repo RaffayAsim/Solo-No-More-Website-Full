@@ -7,7 +7,6 @@ import type { Beacon, OfficialEvent, Profile } from "@/lib/supabase/types";
 import dynamic from "next/dynamic";
 import BeaconCard from "./BeaconCard";
 import DashboardFooter from "@/components/DashboardFooter";
-import { buyTicketDevInstantAction } from "@/app/actions/events";
 import { parseEventDescription } from "@/lib/event-metadata";
 
 const CreateBeaconModal = dynamic(() => import("./CreateBeaconModal"), { ssr: false });
@@ -114,8 +113,8 @@ export default function ApprovedScreen({
 
   // Identify restricted role accounts (Partners, Admins, Artists) who can browse feed in View Only mode
   const isPartnerAccount = Boolean(isPartner || profile?.is_partner || (profile?.subscription_tier as string) === "partner");
-  const isAdminAccount = profile?.subscription_tier === "admin" || userEmail.toLowerCase() === "admin@solonomore.com" || userEmail.toLowerCase() === "raffay@solonomore.com";
-  const isArtistAccount = (profile?.subscription_tier as string) === "artist" || userEmail.toLowerCase().includes("artist") || userEmail.toLowerCase().includes("dj");
+  const isAdminAccount = profile?.subscription_tier === "admin";
+  const isArtistAccount = (profile?.subscription_tier as string) === "artist";
   const isRestrictedRole = isPartnerAccount || isAdminAccount || isArtistAccount;
   const roleLabel = isPartnerAccount ? "Partner" : isAdminAccount ? "Admin" : isArtistAccount ? "Artist" : "";
   const portalUrl = isPartnerAccount ? "/dashboard/partner" : isAdminAccount ? "/admin" : isArtistAccount ? "/dashboard/artist" : "";
@@ -139,13 +138,9 @@ export default function ApprovedScreen({
   const handleApply = (beaconId: string) => {
     setBeacons((prev) =>
       prev.map((b) => {
-        if (b.id === beaconId && b.filled_slots < b.total_slots) {
-          const updatedFilled = b.filled_slots + 1;
-          return {
-            ...b,
-            filled_slots: updatedFilled,
-            status: updatedFilled >= b.total_slots ? "completed" : "active",
-          };
+        if (b.id === beaconId) {
+          // Applying only sends a request — the slot is taken when the host approves.
+          return { ...b, application_status: "pending" as const };
         }
         return b;
       })
@@ -2030,17 +2025,17 @@ export default function ApprovedScreen({
         />
       )}
 
-      {/* 5. QHQ-style Event Booking Modal with Safepay Merchant */}
+      {/* 5. Event Booking Modal (bank transfer + payment proof) */}
       {bookingEventForModal && (
         <EventBookingModal
           isOpen={!!bookingEventForModal}
-          onClose={() => setBookingEventForModal(null)}
-          event={bookingEventForModal as any}
-          currentUserProfile={profile || null}
-          onSuccess={() => {
+          onClose={() => {
             setBookingEventForModal(null);
             router.refresh();
           }}
+          event={bookingEventForModal as any}
+          currentUserProfile={profile || null}
+          onSuccess={() => router.refresh()}
         />
       )}
     </div>

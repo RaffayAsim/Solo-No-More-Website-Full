@@ -41,6 +41,7 @@ const ibmPlexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
   title: "Solo-No-More — Find Your People IRL Nationwide",
   description:
     "Never go out alone again. Join squads for padel, chai runs, gigs and rooftop hangs across cities nationwide — or host your own in seconds.",

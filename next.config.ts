@@ -3,6 +3,10 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ["lucide-react"],
+    // Forms upload compressed images through Server Actions (default limit is 1 MB).
+    serverActions: {
+      bodySizeLimit: "4mb",
+    },
   },
   async headers() {
     return [

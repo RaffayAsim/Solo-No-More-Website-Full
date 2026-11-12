@@ -1,7 +1,7 @@
 "use server";
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { writeNotification } from "@/app/actions/notifications";
+import { writeNotification } from "@/lib/server/notify";
 import { getSessionUserSecurely } from "@/lib/supabase/session";
 import { checkProfileCompleteness } from "@/lib/profile-completeness";
 
@@ -68,6 +68,10 @@ export async function applyToBeacon(
     .eq("id", userId)
     .single();
 
+  if (!applicantProfile || applicantProfile.account_status !== "approved") {
+    return { success: false, error: "Your account must be approved before you can join hangouts." };
+  }
+
   if (applicantProfile?.is_partner || applicantProfile?.subscription_tier === "admin" || applicantProfile?.subscription_tier === "artist") {
     return {
       success: false,
@@ -97,7 +101,7 @@ export async function applyToBeacon(
     if (approvedCount !== null && approvedCount !== undefined && approvedCount >= 3) {
       return {
         success: false,
-        error: "You have used your 3 free Explorer hangout passes! Upgrade to Member (PKR 2,000/mo) in the Upgrade Hub to unlock 15 hangouts and unlimited hosting.",
+        error: "You have used your 3 free Explorer hangout passes! Upgrade to Solo Pass Pro (PKR 1,999/mo) in the Upgrade Hub to unlock 15 hangouts and unlimited hosting.",
       };
     }
   } else if (applicantTier === "member") {
@@ -117,29 +121,49 @@ export async function applyToBeacon(
     }
   }
 
-  // 2. Insert application row
-  const { error: insertError } = await (supabaseAdmin
+  // 2. Create the application — or re-open an earlier one that was declined/withdrawn
+  const { data: existingApp } = await (supabaseAdmin
     .from("beacon_applications") as any)
-    .insert({
-      beacon_id: beaconId,
-      applicant_id: userId,
-      status: "pending",
-    });
+    .select("id, status")
+    .eq("beacon_id", beaconId)
+    .eq("applicant_id", userId)
+    .maybeSingle();
 
-  if (insertError) {
-    if (insertError.message?.toLowerCase().includes("duplicate") || 
-        insertError.message?.toLowerCase().includes("unique")) {
+  if (existingApp) {
+    if (existingApp.status === "pending" || existingApp.status === "approved") {
       return { success: false, error: "You have already requested to join this Beacon." };
     }
-    return { success: false, error: "Failed to submit request. Please try again." };
+    const { error: reopenError } = await (supabaseAdmin
+      .from("beacon_applications") as any)
+      .update({ status: "pending", flagged_ghost: false })
+      .eq("id", existingApp.id);
+    if (reopenError) {
+      return { success: false, error: "Failed to submit request. Please try again." };
+    }
+  } else {
+    const { error: insertError } = await (supabaseAdmin
+      .from("beacon_applications") as any)
+      .insert({
+        beacon_id: beaconId,
+        applicant_id: userId,
+        status: "pending",
+      });
+
+    if (insertError) {
+      if (insertError.message?.toLowerCase().includes("duplicate") ||
+          insertError.message?.toLowerCase().includes("unique")) {
+        return { success: false, error: "You have already requested to join this Beacon." };
+      }
+      return { success: false, error: "Failed to submit request. Please try again." };
+    }
   }
 
   // Notify the host of a new join request with budget pact and icebreaker
   let notificationBody = "Someone requested to join your squad. Review their vibe in Squad Chats!";
   if (extra?.budgetAgreement || extra?.icebreakerAnswer) {
     const parts: string[] = [];
-    if (extra.budgetAgreement) parts.push(`Budget Pact: ${extra.budgetAgreement}`);
-    if (extra.icebreakerAnswer) parts.push(`Icebreaker: "${extra.icebreakerAnswer}"`);
+    if (extra.budgetAgreement) parts.push(`Budget Pact: ${String(extra.budgetAgreement).slice(0, 80)}`);
+    if (extra.icebreakerAnswer) parts.push(`Icebreaker: "${String(extra.icebreakerAnswer).slice(0, 240)}"`);
     notificationBody = parts.join(" • ");
   }
 
@@ -181,7 +205,7 @@ export async function approveApplicant(applicationId: string): Promise<Applicati
 
   const { data: beacon, error: beaconError } = await (supabaseAdmin
     .from("beacons") as any)
-    .select("host_id, filled_slots, total_slots")
+    .select("host_id, filled_slots, total_slots, status")
     .eq("id", appData.beacon_id)
     .single();
 
@@ -194,6 +218,14 @@ export async function approveApplicant(applicationId: string): Promise<Applicati
     return { success: false, error: "Unauthorized. You are not hosting this Beacon." };
   }
 
+  if (appData.status !== "pending") {
+    return { success: false, error: "Only pending requests can be approved." };
+  }
+
+  if (beacon.status !== "active") {
+    return { success: false, error: "This Beacon is no longer active." };
+  }
+
   if (beacon.filled_slots >= beacon.total_slots) {
     return { success: false, error: "Cannot approve. This Beacon is already full." };
   }
@@ -202,9 +234,14 @@ export async function approveApplicant(applicationId: string): Promise<Applicati
   const { error: updateError } = await (supabaseAdmin
     .from("beacon_applications") as any)
     .update({ status: "approved" })
-    .eq("id", applicationId);
+    .eq("id", applicationId)
+    .eq("status", "pending");
 
   if (updateError) {
+    // The database refuses the approval when the last slot was taken a moment ago.
+    if (/BEACON_FULL/i.test(updateError.message || "")) {
+      return { success: false, error: "Cannot approve. This Beacon is already full." };
+    }
     return { success: false, error: "Failed to approve applicant. Please try again." };
   }
 
@@ -340,7 +377,7 @@ export async function flagNoShow(applicationId: string): Promise<ApplicationActi
   // 2. Fetch beacon to check host
   const { data: beacon, error: beaconError } = await (supabaseAdmin
     .from("beacons") as any)
-    .select("host_id")
+    .select("host_id, scheduled_at")
     .eq("id", appData.beacon_id)
     .single();
 
@@ -350,6 +387,11 @@ export async function flagNoShow(applicationId: string): Promise<ApplicationActi
 
   if (beacon.host_id !== userId) {
     return { success: false, error: "Unauthorized. You are not hosting this Beacon." };
+  }
+
+  // A no-show can only be reported once the meetup time has actually arrived.
+  if (!beacon.scheduled_at || new Date(beacon.scheduled_at).getTime() > Date.now()) {
+    return { success: false, error: "You can only report a no-show after the meetup's start time." };
   }
 
   // 3. Mark application as flagged_ghost = true
@@ -432,13 +474,12 @@ export async function withdrawFromBeacon(beaconId: string): Promise<ApplicationA
     .update({ status: "withdrawn" })
     .eq("id", app.id);
 
-  if (updateError) return { success: false, error: "Failed to withdraw. Please try again." };
+  if (updateError) {
+    console.error("[withdrawFromBeacon] Update failed:", updateError);
+    return { success: false, error: "Failed to withdraw. Please try again." };
+  }
 
-  // 4. Decrement filled_slots on beacon (floor at 0)
-  const newFilled = Math.max(0, (beacon.filled_slots ?? 1) - 1);
-  await (supabaseAdmin.from("beacons") as any)
-    .update({ filled_slots: newFilled })
-    .eq("id", beaconId);
+  // 4. The database trigger releases the slot when an approval is revoked.
 
   // 5. Notify the host
   await writeNotification(
@@ -496,11 +537,11 @@ export async function removeSquadMember(
   // 2. Fetch application
   const { data: app, error: appError } = await (supabaseAdmin
     .from("beacon_applications") as any)
-    .select("applicant_id, status")
+    .select("applicant_id, status, beacon_id")
     .eq("id", applicationId)
     .single();
 
-  if (appError || !app) return { success: false, error: "Application not found." };
+  if (appError || !app || app.beacon_id !== beaconId) return { success: false, error: "Application not found." };
   if (app.status !== "approved") return { success: false, error: "Member is not currently approved." };
 
   // 3. Update application status to 'declined'
@@ -511,11 +552,7 @@ export async function removeSquadMember(
 
   if (updateError) return { success: false, error: "Failed to remove squad member." };
 
-  // 4. Decrement filled_slots (floor at 0)
-  const newFilled = Math.max(0, (beacon.filled_slots || 1) - 1);
-  await (supabaseAdmin.from("beacons") as any)
-    .update({ filled_slots: newFilled })
-    .eq("id", beaconId);
+  // 4. The database trigger releases the slot when an approval is revoked.
 
   // 5. Notify the removed member
   await writeNotification(

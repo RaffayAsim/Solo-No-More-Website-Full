@@ -2,6 +2,14 @@
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getSessionUserSecurely } from "@/lib/supabase/session";
+import {
+  MEMBER_UPLOADS_BUCKET,
+  PUBLIC_MEDIA_BUCKET,
+  isImageDataUrl,
+  isSignedStorageUrl,
+  storeImageDataUrl,
+  storePublicImageDataUrl,
+} from "@/lib/server/storage";
 import { revalidatePath } from "next/cache";
 import { checkProfileCompleteness } from "@/lib/profile-completeness";
 
@@ -66,9 +74,33 @@ export async function updateProfileAction(
   if (data.social_link !== undefined) updatePayload.social_link = data.social_link.trim();
   if (data.city !== undefined) updatePayload.city = data.city.trim();
   if (data.avatar_icon !== undefined) updatePayload.avatar_icon = data.avatar_icon;
-  const userPhoto = data.photo_url || data.avatar_url;
+  // An unchanged private image comes back from the form as its temporary view link:
+  // leave the stored value untouched in that case.
+  if (isSignedStorageUrl(data.cnic_picture_url)) data = { ...data, cnic_picture_url: undefined };
+  if (isSignedStorageUrl(data.instagram_screenshot_url)) data = { ...data, instagram_screenshot_url: undefined };
+
+  // Images are written to storage; the profile row keeps a URL / storage reference.
+  // (Profile photo is public; CNIC and Instagram proof are private, admin-only.)
+  let userPhoto = data.photo_url || data.avatar_url;
+  if (isImageDataUrl(userPhoto)) {
+    userPhoto = (await storePublicImageDataUrl(PUBLIC_MEDIA_BUCKET, `avatars/${auth.userId}`, userPhoto)) || undefined;
+  }
   if (userPhoto !== undefined) {
     updatePayload.photo_url = userPhoto;
+  }
+  if (isImageDataUrl(data.cnic_picture_url)) {
+    const stored = await storeImageDataUrl(MEMBER_UPLOADS_BUCKET, `cnic/${auth.userId}`, data.cnic_picture_url);
+    if (!stored) return { success: false, error: "Your CNIC photo could not be read. Please upload a JPG or PNG under 3 MB." };
+    data = { ...data, cnic_picture_url: stored };
+  }
+  if (isImageDataUrl(data.instagram_screenshot_url)) {
+    const stored = await storeImageDataUrl(MEMBER_UPLOADS_BUCKET, `instagram/${auth.userId}`, data.instagram_screenshot_url);
+    if (!stored) return { success: false, error: "Your Instagram screenshot could not be read. Please upload a JPG or PNG under 3 MB." };
+    data = { ...data, instagram_screenshot_url: stored };
+  }
+  if (isImageDataUrl(data.avatar_icon)) {
+    const stored = await storePublicImageDataUrl(PUBLIC_MEDIA_BUCKET, `avatars/${auth.userId}`, data.avatar_icon);
+    data = { ...data, avatar_icon: stored || undefined };
   }
   if (data.cnic !== undefined) updatePayload.cnic = data.cnic.trim();
   if (data.address !== undefined) updatePayload.address = data.address.trim();
@@ -94,10 +126,6 @@ export async function updateProfileAction(
   
   if (data.instagram_screenshot_url !== undefined) {
     updatePayload.instagram_screenshot_url = data.instagram_screenshot_url;
-    // Mirror into social_link to guarantee database persistence
-    if (!data.social_link) {
-      updatePayload.social_link = data.instagram_screenshot_url;
-    }
   }
   
   const vibes = data.vibe_tags || data.interests;
@@ -145,6 +173,11 @@ export async function updateProfileAction(
         currentPayload.avatar_url = userPhoto;
       }
       
+      // Until the column exists (migration not run yet), keep the proof reachable.
+      if (missingCol === "instagram_screenshot_url" && !currentPayload.social_link && data.instagram_screenshot_url) {
+        currentPayload.social_link = data.instagram_screenshot_url;
+      }
+
       delete currentPayload[missingCol];
       continue;
     }
@@ -157,27 +190,25 @@ export async function updateProfileAction(
     return { success: false, error: profileError.message };
   }
 
-  // Persist extended verification fields in auth user metadata
+  // Keep only small text fields in auth metadata. user_metadata is embedded in every
+  // session token, so images and identity numbers must never be stored there — and any
+  // that older versions saved are cleared here.
   try {
     await supabaseAdmin.auth.admin.updateUserById(auth.userId, {
       user_metadata: {
         first_name: fName,
         last_name: lName,
         full_name: computedFullName,
-        phone: data.phone,
-        cnic: data.cnic,
-        address: data.address,
-        gender: data.gender,
-        date_of_birth: data.date_of_birth,
-        emergency_contact_name: emergencyName,
-        emergency_contact_phone: emergencyPhone,
-        instagram_username: insta,
-        cnic_picture_url: data.cnic_picture_url,
-        instagram_screenshot_url: data.instagram_screenshot_url,
-        avatar_url: userPhoto,
-        photo_url: userPhoto,
-        bio: data.bio,
         is_profile_complete: completeness.isComplete,
+        cnic: null,
+        address: null,
+        cnic_picture_url: null,
+        instagram_screenshot_url: null,
+        avatar_url: null,
+        photo_url: null,
+        emergency_contact_name: null,
+        emergency_contact_phone: null,
+        bio: null,
       },
     });
   } catch (authMetaErr) {

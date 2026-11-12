@@ -1,6 +1,8 @@
 "use server";
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { isAdminEmail } from "@/lib/server/auth";
+import { isValidEmail } from "@/lib/server/auth-users";
 
 export type SignUpResult =
   | { success: true }
@@ -23,8 +25,29 @@ export async function signUpAction(formData: {
   isPartner?: boolean;
   businessName?: string;
 }): Promise<SignUpResult> {
-  const { email, password, fullName, socialLink, bio, city, isPartner, businessName } = formData;
+  const email = (formData.email || "").trim().toLowerCase();
+  const password = formData.password || "";
+  const fullName = (formData.fullName || "").trim().slice(0, 80);
+  const socialLink = (formData.socialLink || "").trim().slice(0, 255);
+  const bio = (formData.bio || "").trim().slice(0, 300);
+  const city = ["Karachi", "Lahore", "Islamabad"].includes(formData.city || "") ? formData.city : "Karachi";
 
+  if (!isValidEmail(email)) {
+    return { success: false, error: "Please enter a valid email address." };
+  }
+  if (password.length < 8) {
+    return { success: false, error: "Password must be at least 8 characters." };
+  }
+  if (!fullName) {
+    return { success: false, error: "Please enter your full name." };
+  }
+  // Staff addresses can never be self-registered.
+  if (isAdminEmail(email)) {
+    return { success: false, error: "This email address cannot be used to sign up." };
+  }
+
+  // Public sign-up always creates a regular, un-vetted Explorer account. Partner and
+  // artist access is only ever granted by an admin after review.
   const { error } = await supabaseAdmin.auth.admin.createUser({
     email,
     password,
@@ -33,9 +56,7 @@ export async function signUpAction(formData: {
       full_name: fullName,
       social_link: socialLink,
       bio,
-      city: city || "Karachi",
-      is_partner: isPartner || false,
-      business_name: isPartner ? businessName : undefined,
+      city,
     },
   });
 

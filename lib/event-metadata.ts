@@ -66,35 +66,24 @@ export function parseEventDescription(rawDescription: string | null | undefined)
   cleanDescription: string;
   metadata: EventRichMetadata;
 } {
+  // Neutral defaults only — nothing here is ever shown as if it were real event data.
   const defaultMeta: EventRichMetadata = {
     status: "published",
     full_address: "",
     start_time: "20:00",
     end_time: "23:30",
-    tier_packages: [
-      { id: "tier-1", name: "General Admission", price: 2500, spots: 100 }
-    ],
+    tier_packages: [],
     partner_id: "",
     partner_name: "No partner",
     feature_image: "",
     slider_images: [],
-    attending_label: "253 people attending",
+    attending_label: "",
     visibility: "members_only",
     audience: "all",
     publish_date: "",
-    organizer: {
-      name: "BnC Offline",
-      tagline: "Redefining music culture in social spaces 🎧",
-      avatarUrl: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300&q=80",
-    },
-    important_info: [
-      "Strictly 18+ only with physical CNIC required at check-in",
-      "No outside food, beverages or glassware permitted inside venue",
-      "Dress Code: Smart Casual & Chic — vibe check strictly observed",
-    ],
-    lineups: [
-      { name: "DJ Neon Vibe", role: "Deep House / Melodic Techno", time: "10:00 PM - 12:00 AM" }
-    ],
+    organizer: undefined,
+    important_info: [],
+    lineups: [],
     creator_type: "admin",
   };
 

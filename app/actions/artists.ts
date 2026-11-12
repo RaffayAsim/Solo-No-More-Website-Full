@@ -4,6 +4,11 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { verifyAdminStatus } from "@/app/actions/admin";
 import { getSessionUserSecurely } from "@/lib/supabase/session";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
+import { getEventAccess, isUuid } from "@/lib/server/auth";
+import { isValidEmail, listAllAuthUsers } from "@/lib/server/auth-users";
+import { parseEventDescription } from "@/lib/event-metadata";
+import { formatPkt } from "@/lib/time";
+import { PUBLIC_MEDIA_BUCKET, isImageDataUrl, storePublicImageDataUrl } from "@/lib/server/storage";
 
 export interface ArtistRecord {
   id: string;
@@ -44,7 +49,7 @@ export async function getAdminArtistsDataAction(): Promise<{
   };
 }> {
   try {
-    await verifyAdminStatus();
+    await verifyAdminStatus("artists.manage");
   } catch (err) {
     if (isRedirectError(err)) throw err;
     return {
@@ -66,65 +71,61 @@ export async function getAdminArtistsDataAction(): Promise<{
       .select("*")
       .order("created_at", { ascending: false }) as any);
 
-    // 2. Fetch auth users
-    let authUsers: any[] = [];
-    try {
-      const { data: authData } = await supabaseAdmin.auth.admin.listUsers();
-      if (authData && authData.users) {
-        authUsers = authData.users;
-      }
-    } catch (err) {
-      console.error("Error loading auth users:", err);
-    }
+    // 2. Fetch auth users (all pages)
+    const authUsers: any[] = await listAllAuthUsers().catch(() => []);
     const authMap = new Map(authUsers.map((u) => [u.id, u]));
 
-    // 3. Fetch artist events
-    const { data: events } = await (supabaseAdmin
-      .from("official_events")
-      .select("id, title, price, capacity, status, event_type, created_by")
-      .eq("event_type", "artist_split") as any);
+    // 3. Fetch events and their tickets to compute real figures
+    const [{ data: events }, { data: tickets }] = await Promise.all([
+      (supabaseAdmin.from("official_events") as any).select("id, title, price, description, scheduled_at"),
+      (supabaseAdmin.from("event_tickets") as any).select("event_id, ticket_status, payment_status, amount_paid_pkr"),
+    ]);
+
+    const eventsByCreator = new Map<string, any[]>();
+    for (const ev of events || []) {
+      const creatorId = parseEventDescription(ev.description || "").metadata?.creator_id;
+      if (!creatorId || !(ev.description || "").includes("SNM_EVENT_META")) continue;
+      eventsByCreator.set(creatorId, [...(eventsByCreator.get(creatorId) || []), ev]);
+    }
+    const paidByEvent = new Map<string, { count: number; gross: number }>();
+    for (const t of tickets || []) {
+      if (t.ticket_status === "cancelled" || t.ticket_status === "pending") continue;
+      if (t.payment_status && t.payment_status !== "paid") continue;
+      const cur = paidByEvent.get(t.event_id) || { count: 0, gross: 0 };
+      cur.count += 1;
+      cur.gross += Number(t.amount_paid_pkr) || 0;
+      paidByEvent.set(t.event_id, cur);
+    }
 
     // 4. Approved members for potential artist upgrades
     const approvedMembers: ApprovedMemberOption[] = (profiles || [])
-      .filter((p: any) => p.account_status === "approved" || p.subscription_tier === "member")
+      .filter(
+        (p: any) =>
+          p.account_status === "approved" &&
+          p.subscription_tier !== "artist" &&
+          p.subscription_tier !== "admin" &&
+          !p.is_partner
+      )
       .map((p: any) => {
         const u = authMap.get(p.id);
         return {
           id: p.id,
           name: p.full_name || "Member",
-          email: u?.email || p.email || "",
+          email: u?.email || "",
           phone: p.phone || "",
         };
       });
 
-    // 5. Identify REAL Artists from DB
-    const artistProfiles = (profiles || []).filter((p: any) => {
-      const u = authMap.get(p.id);
-      const email = (u?.email || p.email || "").toLowerCase();
-      const fullName = (p.full_name || "").toLowerCase();
-      const bizName = (p.business_name || "").toLowerCase();
-      const tags = Array.isArray(p.vibe_tags) ? p.vibe_tags.join(" ").toLowerCase() : "";
-
-      return (
-        email.includes("artist") ||
-        fullName.includes("dj") ||
-        fullName.includes("synapse") ||
-        bizName.includes("music") ||
-        bizName.includes("dj") ||
-        tags.includes("dj") ||
-        tags.includes("live sets") ||
-        p.role === "artist" ||
-        p.subscription_tier === "artist"
-      );
-    });
+    // 5. Artists are the accounts that hold the artist role — nothing is guessed from names
+    const artistProfiles = (profiles || []).filter(
+      (p: any) => p.subscription_tier === "artist" || p.role === "artist"
+    );
 
     const artists: ArtistRecord[] = artistProfiles.map((p: any) => {
       const u = authMap.get(p.id);
-      const email = u?.email || p.email || "artist@solonomore.com";
-      const artistEvents = (events || []).filter((ev: any) => ev.created_by === p.id);
-      const gigsCount = artistEvents.length || 2;
-      const estTickets = gigsCount * 24;
-      const estGross = artistEvents.reduce((s: number, ev: any) => s + (ev.price || 2500) * 24, gigsCount * 2500 * 24);
+      const artistEvents = eventsByCreator.get(p.id) || [];
+      const sold = artistEvents.reduce((n, ev) => n + (paidByEvent.get(ev.id)?.count || 0), 0);
+      const gross = artistEvents.reduce((n, ev) => n + (paidByEvent.get(ev.id)?.gross || 0), 0);
 
       const status =
         p.account_status === "approved"
@@ -135,19 +136,19 @@ export async function getAdminArtistsDataAction(): Promise<{
 
       return {
         id: p.id,
-        name: p.full_name || "Bilal K. (DJ Synapse)",
-        stage_name: p.social_link ? `@${p.social_link.split("/").pop()}` : "@djsynapse.live",
-        email,
-        phone: p.phone || u?.user_metadata?.phone || "0300-SOLO-DJ",
-        genre: p.bio || "Resident Touring DJ & Underground Techno",
+        name: p.full_name || "Artist",
+        stage_name: p.business_name || u?.user_metadata?.stage_name || p.full_name || "",
+        email: u?.email || "",
+        phone: p.phone || u?.user_metadata?.phone || "",
+        genre: p.bio || "",
         status: status as any,
-        registered: p.created_at ? new Date(p.created_at).toLocaleString("en-US") : "Recent",
-        total_gigs: gigsCount,
-        tickets_sold: estTickets,
-        gross_revenue_pkr: estGross,
+        registered: p.created_at ? formatPkt(p.created_at, { year: "numeric", month: "short", day: "numeric" }) : "",
+        total_gigs: artistEvents.length,
+        tickets_sold: sold,
+        gross_revenue_pkr: gross,
         payout_rate: 92,
         avatar_url: p.avatar_icon,
-        social_handle: p.social_link || "https://instagram.com/djsynapse.live",
+        social_handle: p.social_link || "",
         bio: p.bio,
       };
     });
@@ -192,7 +193,7 @@ export async function updateArtistStatusAction(
   newStatus: "approved" | "pending" | "suspended"
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    await verifyAdminStatus();
+    await verifyAdminStatus("artists.manage");
 
     const dbAccountStatus =
       newStatus === "approved"
@@ -202,10 +203,7 @@ export async function updateArtistStatusAction(
         : "pending_vetting";
 
     const { error } = await (supabaseAdmin.from("profiles") as any)
-      .update({
-        account_status: dbAccountStatus,
-        is_partner: newStatus === "approved" ? true : false,
-      })
+      .update({ account_status: dbAccountStatus })
       .eq("id", artistId);
 
     if (error) {
@@ -227,17 +225,18 @@ export async function grantArtistAccessAction(
   genre: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    await verifyAdminStatus();
+    await verifyAdminStatus("artists.manage");
 
     const { error } = await (supabaseAdmin.from("profiles") as any)
       .update({
-        role: "artist",
-        is_partner: true,
+        subscription_tier: "artist",
+        is_partner: false,
         account_status: "approved",
-        social_link: stageName,
-        bio: genre,
+        business_name: (stageName || "").trim().slice(0, 100) || null,
+        bio: (genre || "").trim().slice(0, 160) || null,
       })
-      .eq("id", userId);
+      .eq("id", userId)
+      .neq("subscription_tier", "admin");
 
     if (error) {
       return { success: false, error: error.message };
@@ -261,21 +260,26 @@ export async function createNewArtistAccountAction(formData: {
   password?: string;
 }): Promise<{ success: boolean; error?: string }> {
   try {
-    await verifyAdminStatus();
+    await verifyAdminStatus("artists.manage");
 
-    const defaultPassword = formData.password || "SoloArtist2026!";
+    if (!isValidEmail(formData.email)) {
+      return { success: false, error: "Please enter a valid email address." };
+    }
+    if (!formData.fullName?.trim()) {
+      return { success: false, error: "Full name is required." };
+    }
+    if (!formData.password || formData.password.length < 8) {
+      return { success: false, error: "Set a password of at least 8 characters for the artist's login." };
+    }
 
-    // Create user in Supabase Auth
     const { data: authData, error: authErr } = await supabaseAdmin.auth.admin.createUser({
       email: formData.email.trim(),
-      password: defaultPassword,
+      password: formData.password,
       email_confirm: true,
       user_metadata: {
         full_name: formData.fullName.trim(),
-        phone: formData.phone.trim(),
-        role: "artist",
-        stage_name: formData.stageName.trim(),
-        is_partner: true,
+        phone: (formData.phone || "").trim(),
+        stage_name: (formData.stageName || "").trim(),
       },
     });
 
@@ -287,18 +291,15 @@ export async function createNewArtistAccountAction(formData: {
       return { success: false, error: "Failed to create user auth record." };
     }
 
-    // Insert or update profile
     const { error: profileErr } = await (supabaseAdmin.from("profiles") as any).upsert({
       id: authData.user.id,
-      email: formData.email.trim(),
       full_name: formData.fullName.trim(),
-      phone: formData.phone.trim(),
-      role: "artist",
-      is_partner: true,
+      phone: (formData.phone || "").trim() || null,
+      subscription_tier: "artist",
+      is_partner: false,
       account_status: "approved",
-      social_link: formData.stageName.trim(),
-      bio: formData.genre.trim(),
-      created_at: new Date().toISOString(),
+      business_name: (formData.stageName || "").trim().slice(0, 100) || null,
+      bio: (formData.genre || "").trim().slice(0, 160) || null,
     });
 
     if (profileErr) {
@@ -326,19 +327,22 @@ export async function saveArtistPayoutSettingsAction(formData: {
     return { success: false, error: auth.error };
   }
 
+  const payout = {
+    raast_id: (formData.raastId || "").trim().slice(0, 60),
+    bank_iban: (formData.bankIban || "").trim().slice(0, 40),
+    bank_name: (formData.bankName || "").trim().slice(0, 80),
+    account_title: (formData.accountTitle || "").trim().slice(0, 120),
+    payout_updated_at: new Date().toISOString(),
+  };
+
   try {
+    // app_metadata is server-controlled: the account holder cannot edit it from the
+    // browser, unlike user_metadata.
     const { data: userRecord } = await supabaseAdmin.auth.admin.getUserById(auth.userId);
-    const existingMeta = userRecord?.user?.user_metadata || {};
+    const existingAppMeta = userRecord?.user?.app_metadata || {};
 
     const { error: updateErr } = await supabaseAdmin.auth.admin.updateUserById(auth.userId, {
-      user_metadata: {
-        ...existingMeta,
-        raast_id: formData.raastId.trim(),
-        bank_iban: formData.bankIban.trim(),
-        bank_name: formData.bankName.trim(),
-        account_title: formData.accountTitle.trim(),
-        payout_updated_at: new Date().toISOString(),
-      },
+      app_metadata: { ...existingAppMeta, payout },
     });
 
     if (updateErr) {
@@ -370,15 +374,20 @@ export async function saveArtistProfileAction(formData: {
   try {
     // 1. Update profiles table
     const profileUpdate: Record<string, any> = {
-      business_name: formData.stageName.trim(),
-      vibe_tags: formData.genres,
+      business_name: (formData.stageName || "").trim().slice(0, 100),
+      vibe_tags: (Array.isArray(formData.genres) ? formData.genres : []).slice(0, 10).map((g) => String(g).slice(0, 40)),
       bio: formData.bio?.trim() || null,
       social_link: formData.mixLink?.trim() || null,
       updated_at: new Date().toISOString(),
     };
 
-    if (formData.avatarUrl !== undefined) {
-      profileUpdate.avatar_icon = formData.avatarUrl;
+    // Photos go to storage; only a URL is kept on the profile (never inside the login token).
+    let avatarValue: string | undefined = formData.avatarUrl;
+    if (isImageDataUrl(avatarValue)) {
+      avatarValue = (await storePublicImageDataUrl(PUBLIC_MEDIA_BUCKET, `avatars/${auth.userId}`, avatarValue)) || undefined;
+    }
+    if (formData.avatarUrl !== undefined && avatarValue !== undefined) {
+      profileUpdate.avatar_icon = avatarValue;
     }
 
     const { error: profileErr } = await (supabaseAdmin.from("profiles") as any)
@@ -401,7 +410,8 @@ export async function saveArtistProfileAction(formData: {
         mix_link: formData.mixLink?.trim(),
         sound_rider: formData.soundRider?.trim(),
         artist_bio: formData.bio?.trim(),
-        avatar_url: formData.avatarUrl !== undefined ? formData.avatarUrl : existingMeta.avatar_url,
+        // Images are never stored in user_metadata: it is embedded in every session token.
+        avatar_url: null,
         epk_updated_at: new Date().toISOString(),
       },
     });
@@ -413,20 +423,40 @@ export async function saveArtistProfileAction(formData: {
 }
 
 /**
- * Toggle attendee check-in / gate admission status
+ * Toggle attendee check-in / gate admission status.
+ * Restricted to admins, the event creator and delegated gate managers.
  */
 export async function toggleAttendeeAdmissionAction(
   ticketId: string,
   newStatus: "admitted" | "active"
 ): Promise<{ success: boolean; error?: string }> {
-  const auth = await getSessionUserSecurely();
-  if ("error" in auth) {
-    return { success: false, error: auth.error };
+  if (!isUuid(ticketId)) {
+    return { success: false, error: "Ticket not found." };
   }
 
   try {
+    const { data: ticket } = await (supabaseAdmin.from("event_tickets") as any)
+      .select("id, event_id, ticket_status, payment_status")
+      .eq("id", ticketId)
+      .maybeSingle();
+    if (!ticket) return { success: false, error: "Ticket not found." };
+
+    const access = await getEventAccess(ticket.event_id, "events.door_scanner");
+    if (!access.ok) {
+      return { success: false, error: access.error || "Unauthorized." };
+    }
+
+    if (ticket.ticket_status === "pending" || ticket.ticket_status === "cancelled") {
+      return { success: false, error: "This pass is not confirmed (payment not verified or booking cancelled)." };
+    }
+    if (ticket.payment_status && ticket.payment_status !== "paid") {
+      return { success: false, error: "This pass is not confirmed yet (payment not verified)." };
+    }
+
+    // The database stores an admitted guest as "scanned".
+    const dbStatus = newStatus === "admitted" ? "scanned" : "active";
     const { error } = await (supabaseAdmin.from("event_tickets") as any)
-      .update({ ticket_status: newStatus })
+      .update({ ticket_status: dbStatus })
       .eq("id", ticketId);
 
     if (error) {

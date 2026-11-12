@@ -2,6 +2,10 @@
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getSessionUserSecurely } from "@/lib/supabase/session";
+import { getAdminAccess, getEventAccess, getProfileRole, isArtistProfile, isRootAdmin, isUuid } from "@/lib/server/auth";
+import { pktDateTimeToIso } from "@/lib/time";
+import { PUBLIC_MEDIA_BUCKET, isImageDataUrl, storePublicImageDataUrl } from "@/lib/server/storage";
+import { writeNotification } from "@/lib/server/notify";
 import {
   serializeEventDescription,
   parseEventDescription,
@@ -65,12 +69,17 @@ export async function claimTicket(eventId: string): Promise<EventClaimResult> {
   // 2. Fetch event to verify capacity and scheduled time
   const { data: event, error: eventError } = await (supabaseAdmin
     .from("official_events") as any)
-    .select("max_capacity, scheduled_at")
+    .select("max_capacity, scheduled_at, description")
     .eq("id", eventId)
     .single();
 
   if (eventError || !event) {
     return { success: false, error: "Official event not found." };
+  }
+
+  const claimMeta = parseEventDescription(event.description || "").metadata;
+  if (claimMeta?.status === "draft" || claimMeta?.status === "pending_review") {
+    return { success: false, error: "This event is not open for booking yet." };
   }
 
   // Prevent booking tickets for past events
@@ -86,7 +95,7 @@ export async function claimTicket(eventId: string): Promise<EventClaimResult> {
     .from("event_tickets") as any)
     .select("*", { count: "exact", head: true })
     .eq("event_id", eventId)
-    .eq("ticket_status", "active");
+    .neq("ticket_status", "cancelled");
 
   if (countError) {
     return { success: false, error: "Failed to verify event capacity." };
@@ -103,6 +112,10 @@ export async function claimTicket(eventId: string): Promise<EventClaimResult> {
       event_id: eventId,
       user_id: userId,
       ticket_status: "active",
+      payment_status: "paid",
+      payment_method: "family_pass",
+      amount_paid_pkr: 0,
+      tier_name: "Family VIP Pass",
     });
 
   if (insertError) {
@@ -116,210 +129,62 @@ export async function claimTicket(eventId: string): Promise<EventClaimResult> {
   return { success: true };
 }
 
-export interface SubmitEventTicketPaymentInput {
-  eventId: string;
-  amountPkr: number;
-  paymentMethod: "raast" | "sadapay" | "bank_transfer";
-  transactionRef: string;
-}
-
 /**
- * Server Action: Submit Raast / SadaPay / Bank Transfer payment proof for Event Ticket purchase.
- */
-export async function submitEventTicketPaymentAction(
-  input: SubmitEventTicketPaymentInput
-): Promise<EventClaimResult> {
-  const authCheck = await getUserIdSecurely();
-  if ("error" in authCheck) {
-    return { success: false, error: authCheck.error };
-  }
-  const userId = authCheck.userId;
-
-  if (!input.transactionRef || !input.transactionRef.trim()) {
-    return { success: false, error: "Transaction Reference / TID is required." };
-  }
-
-  // Check role restrictions: Partners, Admins, Artists cannot purchase attendee passes
-  const { data: userProfile } = await (supabaseAdmin
-    .from("profiles") as any)
-    .select("subscription_tier, is_partner")
-    .eq("id", userId)
-    .single();
-
-  if (userProfile?.is_partner || userProfile?.subscription_tier === "admin" || userProfile?.subscription_tier === "artist") {
-    return {
-      success: false,
-      error: "Partner, artist, and admin accounts cannot purchase event tickets as attendees.",
-    };
-  }
-
-  // 1. Fetch event to verify capacity, title and scheduled time
-  const { data: event, error: eventError } = await (supabaseAdmin
-    .from("official_events") as any)
-    .select("title, max_capacity, scheduled_at")
-    .eq("id", input.eventId)
-    .single();
-
-  if (eventError || !event) {
-    return { success: false, error: "Official event not found." };
-  }
-
-  // Prevent booking tickets for past events
-  if (new Date(event.scheduled_at).getTime() < Date.now()) {
-    return {
-      success: false,
-      error: "This event has already taken place. Ticket bookings are closed.",
-    };
-  }
-
-  // 2. Count active tickets
-  const { count } = await (supabaseAdmin
-    .from("event_tickets") as any)
-    .select("*", { count: "exact", head: true })
-    .eq("event_id", input.eventId)
-    .eq("ticket_status", "active");
-
-  if (count !== null && count >= event.max_capacity) {
-    return { success: false, error: "This event is already fully booked." };
-  }
-
-  // 3. Record payment submission
-  const { error: insertError } = await (supabaseAdmin
-    .from("payment_submissions") as any)
-    .insert({
-      user_id: userId,
-      amount_pkr: input.amountPkr,
-      tier_requested: `event_ticket:${input.eventId}`,
-      payment_method: input.paymentMethod,
-      transaction_ref: input.transactionRef.trim(),
-      status: "pending",
-    });
-
-  if (insertError) {
-    if (!insertError.message?.includes("schema cache") && !insertError.message?.includes("does not exist")) {
-      return { success: false, error: "Failed to record payment proof. Please try again." };
-    }
-  }
-
-  // 4. Notify user
-  try {
-    const { writeNotification } = await import("@/app/actions/notifications");
-    await writeNotification(
-      userId,
-      "spot_available" as any,
-      "🎟 TICKET PROOF RECEIVED",
-      `Your transaction TID (${input.transactionRef.trim()}) for "${event.title}" is queued for verification.`
-    );
-  } catch {}
-
-  return { success: true };
-}
-
-/**
- * Developer Testing Action: Simulate instant ticket booking.
- */
-export async function buyTicketDevInstantAction(eventId: string): Promise<EventClaimResult> {
-  const authCheck = await getUserIdSecurely();
-  if ("error" in authCheck) {
-    return { success: false, error: authCheck.error };
-  }
-  const userId = authCheck.userId;
-
-  // Check role restrictions: Partners, Admins, Artists cannot purchase attendee passes
-  const { data: userProfile } = await (supabaseAdmin
-    .from("profiles") as any)
-    .select("subscription_tier, is_partner")
-    .eq("id", userId)
-    .single();
-
-  if (userProfile?.is_partner || userProfile?.subscription_tier === "admin" || userProfile?.subscription_tier === "artist") {
-    return {
-      success: false,
-      error: "Partner, artist, and admin accounts cannot purchase event tickets as attendees.",
-    };
-  }
-
-  const { error } = await (supabaseAdmin
-    .from("event_tickets") as any)
-    .upsert({
-      event_id: eventId,
-      user_id: userId,
-      ticket_status: "active",
-    }, { onConflict: "event_id,user_id" });
-
-  if (error) {
-    return { success: false, error: error.message };
-  }
-
-  return { success: true };
-}
-
-export interface CreateArtistEventInput {
-  title: string;
-  description?: string;
-  venue_name: string;
-  price: number;
-  max_capacity: number;
-  scheduled_at: string;
-}
-
-/**
- * Server Action: Create an artist / promoter ticketed event (artist_split).
- */
-export async function createArtistEventAction(
-  input: CreateArtistEventInput
-): Promise<{ success: boolean; eventId?: string; error?: string }> {
-  const authCheck = await getUserIdSecurely();
-  if ("error" in authCheck) {
-    return { success: false, error: authCheck.error };
-  }
-
-  if (!input.title?.trim()) {
-    return { success: false, error: "Event title is required." };
-  }
-
-  const { data, error } = await (supabaseAdmin
-    .from("official_events") as any)
-    .insert({
-      title: input.title.trim(),
-      description: input.description?.trim() || null,
-      venue_name: input.venue_name?.trim() || "Karachi Venue",
-      event_type: "artist_split",
-      price: Number(input.price) || 0,
-      max_capacity: Number(input.max_capacity) || 100,
-      scheduled_at: input.scheduled_at,
-    })
-    .select("id")
-    .single();
-
-  if (error) {
-    return { success: false, error: error.message || "Failed to list artist event." };
-  }
-
-  return { success: true, eventId: data?.id };
-}
-
-/**
- * Server Action: Check in / admit a ticket holder at the event gate.
+ * Server Action: Check in / admit a ticket holder at the event gate (manual button).
+ * Only admins, the event's creator, or a delegated gate manager may do this, and only
+ * for passes whose payment has been verified.
  */
 export async function checkInAttendeeAction(
   ticketId: string
 ): Promise<{ success: boolean; error?: string }> {
-  const authCheck = await getUserIdSecurely();
-  if ("error" in authCheck) {
-    return { success: false, error: authCheck.error };
+  if (!isUuid(ticketId)) {
+    return { success: false, error: "Invalid ticket." };
   }
 
-  const { error } = await (supabaseAdmin
+  const { data: ticket } = await (supabaseAdmin.from("event_tickets") as any)
+    .select("id, event_id, ticket_status, payment_status")
+    .eq("id", ticketId)
+    .maybeSingle();
+
+  if (!ticket) {
+    return { success: false, error: "Ticket not found." };
+  }
+
+  const access = await getEventAccess(ticket.event_id, "events.door_scanner");
+  if (!access.ok) {
+    return { success: false, error: access.error || "Unauthorized." };
+  }
+
+  if (ticket.ticket_status === "scanned") {
+    return { success: false, error: "This pass was already checked in." };
+  }
+  if (ticket.ticket_status !== "active" || !isTicketPaid(ticket)) {
+    return { success: false, error: "This pass is not confirmed yet (payment not verified)." };
+  }
+
+  const { data: updated, error } = await (supabaseAdmin
     .from("event_tickets") as any)
     .update({ ticket_status: "scanned" })
-    .eq("id", ticketId);
+    .eq("id", ticketId)
+    .eq("ticket_status", "active")
+    .select("id");
 
   if (error) {
     return { success: false, error: "Failed to admit attendee." };
   }
+  if (!updated || updated.length === 0) {
+    return { success: false, error: "This pass was already checked in." };
+  }
 
   return { success: true };
+}
+
+/**
+ * A pass counts as paid when its payment was verified. Rows created before payment
+ * tracking existed have no payment_status and are treated as paid.
+ */
+function isTicketPaid(ticket: { payment_status?: string | null }): boolean {
+  return !ticket.payment_status || ticket.payment_status === "paid";
 }
 
 export interface SaveRichEventInput {
@@ -359,27 +224,20 @@ export async function saveRichEventAction(
     return { success: false, error: auth.error };
   }
   const userId = auth.userId;
-  const userEmail = auth.email?.toLowerCase() || "";
+  const sessionUser = { userId, email: auth.email };
 
-  // 1. Check user roles
-  const authorizedEmails = [
-    (process.env.ADMIN_EMAIL || "").toLowerCase(),
-    "raffay.asim6@gmail.com",
-    "admin@solonomore.com",
-    "vibe.tester@solonomore.com",
-  ].filter(Boolean);
-
-  const { data: userProfile } = await (supabaseAdmin.from("profiles") as any)
-    .select("full_name, subscription_tier, is_partner, business_name")
-    .eq("id", userId)
-    .single();
-
-  const isAdmin = authorizedEmails.includes(userEmail) || userProfile?.subscription_tier === "admin";
+  // 1. Who is saving?
+  const userProfile = await getProfileRole(userId);
+  const adminAccess = await getAdminAccess("events.manage");
+  const isAdmin = adminAccess.ok || (await isRootAdmin(sessionUser, userProfile));
   const isPartner = !!userProfile?.is_partner;
-  const isArtist = userProfile?.subscription_tier === "family" || !!userProfile?.business_name;
+  const isArtist = isArtistProfile(userProfile);
 
   if (!isAdmin && !isPartner && !isArtist) {
     return { success: false, error: "Only Admins, Partners, and Artists can create events." };
+  }
+  if (!isAdmin && userProfile?.account_status !== "approved") {
+    return { success: false, error: "Your account must be approved before you can list events." };
   }
 
   if (!input.title?.trim()) {
@@ -389,36 +247,104 @@ export async function saveRichEventAction(
     return { success: false, error: "Event date is required." };
   }
 
-  // Determine final status & creator type
-  let finalStatus: "published" | "draft" | "pending_review" = input.status || "published";
-  let creatorType: "admin" | "artist" | "partner" = "admin";
-
-  if (!isAdmin) {
-    // 3rd-party events created by artists or partners must go to admin verification queue
-    finalStatus = "pending_review";
-    creatorType = isPartner ? "partner" : "artist";
-  } else {
-    creatorType = input.creatorType || "admin";
+  // Date & time are entered in Pakistan time; the server runs in UTC.
+  const scheduledAt = pktDateTimeToIso(input.eventDate, input.startTime);
+  if (!scheduledAt) {
+    return { success: false, error: "Please enter a valid event date and start time." };
   }
 
-  // Construct scheduled_at timestamp
-  const timeStr = input.startTime ? input.startTime.padStart(5, "0") : "20:00";
-  const scheduledAt = new Date(`${input.eventDate}T${timeStr}:00`).toISOString();
+  // 2. When editing, load the existing event and make sure the caller may touch it.
+  let existingMeta: EventRichMetadata | null = null;
+  if (input.id) {
+    if (!isUuid(input.id)) {
+      return { success: false, error: "Event not found." };
+    }
+    const { data: existing } = await (supabaseAdmin.from("official_events") as any)
+      .select("id, description")
+      .eq("id", input.id)
+      .maybeSingle();
+    if (!existing) {
+      return { success: false, error: "Event not found." };
+    }
+    const hadRichMeta = (existing.description || "").includes("SNM_EVENT_META");
+    existingMeta = hadRichMeta ? parseEventDescription(existing.description).metadata : null;
 
-  // Construct metadata
+    if (!isAdmin && existingMeta?.creator_id !== userId) {
+      return { success: false, error: "Unauthorized: you can only edit events you created." };
+    }
+  }
+
+  // 3. Tiers — sanitise what the browser sent
+  const cleanTiers: EventTierPackage[] = (Array.isArray(input.tierPackages) ? input.tierPackages : [])
+    .filter((t) => t && String(t.name || "").trim())
+    .slice(0, 12)
+    .map((t, idx) => ({
+      id: String(t.id || `tier-${idx + 1}`).slice(0, 60),
+      name: String(t.name).trim().slice(0, 80),
+      price: Math.max(0, Math.round(Number(t.price) || 0)),
+      spots: Number(t.spots) > 0 ? Math.round(Number(t.spots)) : undefined,
+      perks: t.perks ? String(t.perks).slice(0, 300) : undefined,
+    }));
+  if (cleanTiers.length === 0) {
+    return { success: false, error: "Add at least one pass tier with a name and price." };
+  }
+
+  const capacity = Math.round(Number(input.capacityLimit) || 0);
+  if (capacity < 1 || capacity > 100000) {
+    return { success: false, error: "Capacity must be between 1 and 100,000." };
+  }
+
+  // 4. Status & ownership
+  //    - Admins choose the status and never take ownership away from the original creator.
+  //    - Artists/partners always go (back) to the admin review queue.
+  let finalStatus: "published" | "draft" | "pending_review";
+  let creatorType: "admin" | "artist" | "partner";
+  let creatorId: string;
+  let creatorName: string;
+
+  if (isAdmin) {
+    finalStatus = ["published", "draft", "pending_review"].includes(input.status) ? input.status : "published";
+    creatorType = existingMeta?.creator_type || input.creatorType || "admin";
+    creatorId = existingMeta?.creator_id || userId;
+    creatorName =
+      existingMeta?.creator_name || userProfile?.full_name || userProfile?.business_name || "Solo-No-More Admin";
+  } else {
+    finalStatus = "pending_review";
+    creatorType = isPartner ? "partner" : "artist";
+    creatorId = userId;
+    creatorName = userProfile?.business_name || userProfile?.full_name || "Artist / Partner";
+  }
+
+  // Artwork goes to storage. Keeping base64 images inside the description made every
+  // event row megabytes large and slowed down every page that lists events.
+  const publicize = async (value: string | undefined | null): Promise<string> => {
+    if (!value) return "";
+    if (!isImageDataUrl(value)) return value;
+    return (await storePublicImageDataUrl(PUBLIC_MEDIA_BUCKET, `events/${creatorId}`, value)) || "";
+  };
+  const featureImage = await publicize(input.featureImage);
+  const sliderImages = (
+    await Promise.all((Array.isArray(input.sliderImages) ? input.sliderImages : []).slice(0, 8).map(publicize))
+  ).filter(Boolean);
+  const organizerAvatar = await publicize(input.organizer?.avatarUrl);
+  const lineups = await Promise.all(
+    (Array.isArray(input.lineups) ? input.lineups : []).slice(0, 20).map(async (l) => ({
+      ...l,
+      imageUrl: l?.imageUrl ? await publicize(l.imageUrl) : l?.imageUrl,
+    }))
+  );
+
   const meta: EventRichMetadata = {
     status: finalStatus,
     full_address: input.fullAddress || "",
     start_time: input.startTime || "20:00",
     end_time: input.endTime || "23:30",
-    tier_packages: input.tierPackages && input.tierPackages.length > 0
-      ? input.tierPackages
-      : [{ id: "tier-1", name: "General Admission", price: 2500, spots: 100 }],
+    tier_packages: cleanTiers,
     partner_id: input.partnerCollaboration && input.partnerCollaboration !== "No partner" ? input.partnerCollaboration : "",
     partner_name: input.partnerCollaboration || "No partner",
-    feature_image: input.featureImage || "",
-    slider_images: input.sliderImages || [],
-    attending_label: input.attendingLabel || "253 people attending",
+    feature_image: featureImage,
+    slider_images: sliderImages,
+    attending_label: input.attendingLabel || "",
     visibility: input.visibility || "members_only",
     audience: input.audience || "all",
     publish_date: input.publishDate || "",
@@ -428,61 +354,51 @@ export async function saveRichEventAction(
         ? {
             name: input.organizer.name.trim(),
             tagline: input.organizer.tagline?.trim() || "",
-            avatarUrl: input.organizer.avatarUrl || "",
+            avatarUrl: organizerAvatar,
           }
-        : input.organizer === null
-        ? undefined
         : undefined,
     important_info: input.importantInfo && input.importantInfo.length > 0
       ? input.importantInfo
       : ["Strictly 18+ with physical CNIC required at check-in"],
-    lineups: input.lineups || [],
+    lineups,
     creator_type: creatorType,
-    creator_id: userId,
-    creator_name: userProfile?.full_name || userProfile?.business_name || (isAdmin ? "Solo-No-More Admin" : "Artist / Partner"),
+    creator_id: creatorId,
+    creator_name: creatorName,
+    verification_notes: existingMeta?.verification_notes,
   };
 
   const serializedDescription = serializeEventDescription(input.description || "", meta);
-  const primaryPrice = meta.tier_packages?.[0]?.price ?? 0;
-  const capacity = Number(input.capacityLimit) || 100;
+  // The headline price is the cheapest tier ("from PKR …").
+  const primaryPrice = Math.min(...cleanTiers.map((t) => t.price));
   const eventType = creatorType === "artist" || creatorType === "partner" ? "artist_split" : "platform_owned";
 
-  if (input.id) {
-    const { error } = await (supabaseAdmin.from("official_events") as any)
-      .update({
-        title: input.title.trim(),
-        description: serializedDescription,
-        venue_name: input.venueName?.trim() || "Karachi Venue",
-        price: primaryPrice,
-        max_capacity: capacity,
-        scheduled_at: scheduledAt,
-        event_type: eventType,
-      })
-      .eq("id", input.id);
+  const row = {
+    title: input.title.trim().slice(0, 200),
+    description: serializedDescription,
+    venue_name: input.venueName?.trim() || "Karachi Venue",
+    price: primaryPrice,
+    max_capacity: capacity,
+    scheduled_at: scheduledAt,
+    event_type: eventType,
+  };
 
+  if (input.id) {
+    const { error } = await (supabaseAdmin.from("official_events") as any).update(row).eq("id", input.id);
     if (error) {
       return { success: false, error: error.message };
     }
     return { success: true, eventId: input.id, isPendingVerification: finalStatus === "pending_review" };
-  } else {
-    const { data, error } = await (supabaseAdmin.from("official_events") as any)
-      .insert({
-        title: input.title.trim(),
-        description: serializedDescription,
-        venue_name: input.venueName?.trim() || "Karachi Venue",
-        price: primaryPrice,
-        max_capacity: capacity,
-        scheduled_at: scheduledAt,
-        event_type: eventType,
-      })
-      .select("id")
-      .single();
-
-    if (error) {
-      return { success: false, error: error.message };
-    }
-    return { success: true, eventId: data?.id, isPendingVerification: finalStatus === "pending_review" };
   }
+
+  const { data, error } = await (supabaseAdmin.from("official_events") as any)
+    .insert(row)
+    .select("id")
+    .single();
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+  return { success: true, eventId: data?.id, isPendingVerification: finalStatus === "pending_review" };
 }
 
 /**
@@ -491,26 +407,12 @@ export async function saveRichEventAction(
 export async function verifyAndPublishEventAction(
   eventId: string
 ): Promise<{ success: boolean; error?: string }> {
-  const auth = await getSessionUserSecurely();
-  if ("error" in auth) {
-    return { success: false, error: auth.error };
-  }
-  const userEmail = auth.email?.toLowerCase() || "";
-  const authorizedEmails = [
-    (process.env.ADMIN_EMAIL || "").toLowerCase(),
-    "raffay.asim6@gmail.com",
-    "admin@solonomore.com",
-    "vibe.tester@solonomore.com",
-  ].filter(Boolean);
-
-  const { data: userProfile } = await (supabaseAdmin.from("profiles") as any)
-    .select("subscription_tier")
-    .eq("id", auth.userId)
-    .single();
-
-  const isAdmin = authorizedEmails.includes(userEmail) || userProfile?.subscription_tier === "admin";
-  if (!isAdmin) {
+  const adminAccess = await getAdminAccess("events.manage");
+  if (!adminAccess.ok) {
     return { success: false, error: "Unauthorized. Admin privileges required." };
+  }
+  if (!isUuid(eventId)) {
+    return { success: false, error: "Event not found." };
   }
 
   const { data: event, error: fetchErr } = await (supabaseAdmin.from("official_events") as any)
@@ -545,26 +447,12 @@ export async function verifyAndPublishEventAction(
 export async function deleteRichEventAction(
   eventId: string
 ): Promise<{ success: boolean; error?: string }> {
-  const auth = await getSessionUserSecurely();
-  if ("error" in auth) {
-    return { success: false, error: auth.error };
-  }
-  const userEmail = auth.email?.toLowerCase() || "";
-  const authorizedEmails = [
-    (process.env.ADMIN_EMAIL || "").toLowerCase(),
-    "raffay.asim6@gmail.com",
-    "admin@solonomore.com",
-    "vibe.tester@solonomore.com",
-  ].filter(Boolean);
-
-  const { data: userProfile } = await (supabaseAdmin.from("profiles") as any)
-    .select("subscription_tier")
-    .eq("id", auth.userId)
-    .single();
-
-  const isAdmin = authorizedEmails.includes(userEmail) || userProfile?.subscription_tier === "admin";
-  if (!isAdmin) {
+  const adminAccess = await getAdminAccess("events.manage");
+  if (!adminAccess.ok) {
     return { success: false, error: "Unauthorized. Admin privileges required." };
+  }
+  if (!isUuid(eventId)) {
+    return { success: false, error: "Event not found." };
   }
 
   const { error } = await (supabaseAdmin.from("official_events") as any)
@@ -634,6 +522,7 @@ export async function getEventBookingsForOwnerAction(): Promise<{
         event_id,
         user_id,
         ticket_status,
+        payment_status,
         created_at,
         profiles:user_id (
           full_name,
@@ -666,63 +555,59 @@ export async function getEventBookingsForOwnerAction(): Promise<{
 }
 
 /**
- * Server Action: Approve a pending booking for an event owned by the current user.
- * Only the event creator (artist/partner) can approve their own event bookings.
+ * Server Action: Event owner confirms a booking on their own event.
+ *
+ * Money for paid passes is collected by the platform, so an owner can never turn an
+ * unpaid booking into a valid pass — that only happens when an admin verifies the
+ * payment proof. Owners can confirm bookings that are already paid (or free).
  */
 export async function approveTicketByOwnerAction(
   ticketId: string
 ): Promise<{ success: boolean; error?: string }> {
-  const auth = await getSessionUserSecurely();
-  if ("error" in auth) {
-    return { success: false, error: auth.error };
-  }
-  const userId = auth.userId;
+  if (!isUuid(ticketId)) return { success: false, error: "Ticket not found." };
 
   try {
-    // 1. Get the ticket to find the event
-    const { data: ticket, error: ticketErr } = await (supabaseAdmin.from("event_tickets") as any)
-      .select("id, event_id, ticket_status")
+    const { data: ticket } = await (supabaseAdmin.from("event_tickets") as any)
+      .select("id, event_id, user_id, ticket_status, payment_status, amount_paid_pkr")
       .eq("id", ticketId)
-      .single();
+      .maybeSingle();
 
-    if (ticketErr || !ticket) {
+    if (!ticket) {
       return { success: false, error: "Ticket not found." };
     }
 
-    // 2. Verify this event belongs to the current user
-    const { data: ev, error: evErr } = await (supabaseAdmin.from("official_events") as any)
-      .select("id, description")
-      .eq("id", ticket.event_id)
-      .single();
-
-    if (evErr || !ev) {
-      return { success: false, error: "Event not found." };
+    const access = await getEventAccess(ticket.event_id, "bookings.approve");
+    if (!access.ok) {
+      return { success: false, error: access.error || "Unauthorized." };
     }
 
-    const { metadata } = parseEventDescription(ev.description);
-    if (metadata.creator_id !== userId) {
-      return { success: false, error: "Unauthorized: You are not the creator of this event." };
+    if (ticket.ticket_status !== "pending") {
+      return { success: false, error: "This booking is not waiting for approval." };
+    }
+    if (ticket.payment_status !== "paid") {
+      return {
+        success: false,
+        error: "This booking is awaiting payment verification by Solo-No-More admin. It activates automatically once the payment is approved.",
+      };
     }
 
-    // 3. Approve ticket (pending → active)
     const { error: updateErr } = await (supabaseAdmin.from("event_tickets") as any)
       .update({ ticket_status: "active" })
-      .eq("id", ticketId);
+      .eq("id", ticketId)
+      .eq("ticket_status", "pending");
 
     if (updateErr) {
       return { success: false, error: updateErr.message };
     }
 
-    // 4. Notify member
-    try {
-      const { writeNotification } = await import("@/app/actions/notifications");
+    if (ticket.user_id) {
       await writeNotification(
         ticket.user_id,
         "spot_available" as any,
         "🎟 TICKET APPROVED",
-        `Your booking for this event has been approved by the host. See you at the door!`
+        `Your booking for "${access.event?.title || "this event"}" has been approved by the host. See you at the door!`
       );
-    } catch {}
+    }
 
     return { success: true };
   } catch (err: any) {
@@ -731,39 +616,30 @@ export async function approveTicketByOwnerAction(
 }
 
 /**
- * Server Action: Reject/cancel a booking for an event owned by the current user.
+ * Server Action: Reject/cancel a booking for an event the caller manages.
  */
 export async function rejectTicketByOwnerAction(
   ticketId: string
 ): Promise<{ success: boolean; error?: string }> {
-  const auth = await getSessionUserSecurely();
-  if ("error" in auth) {
-    return { success: false, error: auth.error };
-  }
-  const userId = auth.userId;
+  if (!isUuid(ticketId)) return { success: false, error: "Ticket not found." };
 
   try {
-    const { data: ticket, error: ticketErr } = await (supabaseAdmin.from("event_tickets") as any)
-      .select("id, event_id, user_id")
+    const { data: ticket } = await (supabaseAdmin.from("event_tickets") as any)
+      .select("id, event_id, user_id, ticket_status")
       .eq("id", ticketId)
-      .single();
+      .maybeSingle();
 
-    if (ticketErr || !ticket) {
+    if (!ticket) {
       return { success: false, error: "Ticket not found." };
     }
 
-    const { data: ev, error: evErr } = await (supabaseAdmin.from("official_events") as any)
-      .select("id, description")
-      .eq("id", ticket.event_id)
-      .single();
-
-    if (evErr || !ev) {
-      return { success: false, error: "Event not found." };
+    const access = await getEventAccess(ticket.event_id, "bookings.approve");
+    if (!access.ok) {
+      return { success: false, error: access.error || "Unauthorized." };
     }
 
-    const { metadata } = parseEventDescription(ev.description);
-    if (metadata.creator_id !== userId) {
-      return { success: false, error: "Unauthorized: You are not the creator of this event." };
+    if (ticket.ticket_status === "scanned") {
+      return { success: false, error: "This guest has already been admitted." };
     }
 
     const { error: updateErr } = await (supabaseAdmin.from("event_tickets") as any)
@@ -772,6 +648,15 @@ export async function rejectTicketByOwnerAction(
 
     if (updateErr) {
       return { success: false, error: updateErr.message };
+    }
+
+    if (ticket.user_id) {
+      await writeNotification(
+        ticket.user_id,
+        "spot_available" as any,
+        "✕ BOOKING CANCELLED",
+        `Your booking for "${access.event?.title || "this event"}" was cancelled by the host. Contact support if you already paid.`
+      );
     }
 
     return { success: true };
@@ -798,12 +683,84 @@ export interface VerifyTicketResult {
     attendeeName: string;
     attendeeCity?: string;
     targetEventTitle?: string;
+    /** True only when the payment was verified by Solo-No-More admin. */
+    paymentVerified?: boolean;
   };
 }
 
 /**
  * Server Action: Bullet-proof ticket verification and gate admission for Door Scanner.
  * Strictly verifies ticket against currentEventId, prevents duplicate entries, and validates approval status.
+ */
+const TICKET_SCAN_SELECT = `
+  id,
+  event_id,
+  ticket_status,
+  payment_status,
+  created_at,
+  user_name,
+  qr_id,
+  profiles:user_id (
+    full_name,
+    city
+  ),
+  official_events:event_id (
+    id,
+    title
+  )
+`;
+
+/**
+ * Finds a ticket from whatever was scanned or typed at the door:
+ *  - the ticket's UUID (member QR codes)
+ *  - its printed QR id (manual / guest passes, e.g. TKT-AB12C-9F8E7D6C5B or QHQ-123456)
+ *  - the first 8+ characters of the UUID (the short pass code shown on the pass)
+ *
+ * Each form is looked up with its own exact query. Mixing them in one filter fails,
+ * because comparing a non-UUID string against the UUID id column is a database error.
+ */
+async function findTicketByCode(code: string, currentEventId: string): Promise<any | null> {
+  const table = () => supabaseAdmin.from("event_tickets") as any;
+
+  if (isUuid(code)) {
+    const { data } = await table().select(TICKET_SCAN_SELECT).eq("id", code.toLowerCase()).maybeSingle();
+    if (data) return data;
+  }
+
+  // Printed QR ids — exact match, case-insensitive. Only safe characters ever reach the query.
+  if (/^[A-Za-z0-9_-]{4,64}$/.test(code)) {
+    const { data } = await table().select(TICKET_SCAN_SELECT).ilike("qr_id", code).limit(2);
+    if (data && data.length === 1) return data[0];
+    if (data && data.length > 1) {
+      // Same printed id on more than one pass: prefer the one for this event.
+      return data.find((t: any) => t.event_id === currentEventId) || data[0];
+    }
+  }
+
+  // Short pass code = leading characters of the ticket UUID. UUIDs sort as text ranges,
+  // so a prefix lookup becomes a range query on the id column (no text casting needed).
+  const hex = code.replace(/-/g, "").toLowerCase();
+  if (/^[0-9a-f]{8,31}$/.test(hex)) {
+    const pad = (fill: string) => {
+      const full = (hex + fill.repeat(32)).slice(0, 32);
+      return `${full.slice(0, 8)}-${full.slice(8, 12)}-${full.slice(12, 16)}-${full.slice(16, 20)}-${full.slice(20)}`;
+    };
+    const { data } = await table()
+      .select(TICKET_SCAN_SELECT)
+      .eq("event_id", currentEventId)
+      .gte("id", pad("0"))
+      .lte("id", pad("f"))
+      .limit(2);
+    if (data && data.length === 1) return data[0];
+  }
+
+  return null;
+}
+
+/**
+ * Server Action: Ticket verification and gate admission for the Door Scanner.
+ * Verifies the pass belongs to this event, that its payment was verified, and admits
+ * it exactly once (two scanners racing on the same pass cannot both succeed).
  */
 export async function verifyAndCheckInTicketAction({
   scannedCode,
@@ -812,150 +769,54 @@ export async function verifyAndCheckInTicketAction({
   scannedCode: string;
   currentEventId: string;
 }): Promise<VerifyTicketResult> {
-  const auth = await getSessionUserSecurely();
-  if ("error" in auth) {
-    return { success: false, verdict: "not_found", message: "Unauthorized scanner session." };
+  if (!isUuid(currentEventId)) {
+    return { success: false, verdict: "not_found", message: "No event selected for scanning." };
   }
 
-  // 1. Clean and parse scanned code
-  let ticketId = scannedCode.trim();
-  let candidateEventId: string | null = null;
+  // 1. Scanner authorization: admins, the event creator, or a delegated gate manager.
+  const access = await getEventAccess(currentEventId, "events.door_scanner");
+  if (!access.ok) {
+    return {
+      success: false,
+      verdict: "not_found",
+      message: access.user
+        ? "Unauthorized: You do not have door-scanner credentials for this event."
+        : "Unauthorized scanner session. Please sign in again.",
+    };
+  }
 
-  // Handle JSON encoded QR codes: { ticketId, eventId }
+  // 2. Clean and parse the scanned code
+  let ticketId = String(scannedCode || "").trim().slice(0, 600);
+
+  // JSON encoded QR codes: { ticketId, eventId }
   try {
     if (ticketId.startsWith("{") && ticketId.endsWith("}")) {
       const parsed = JSON.parse(ticketId);
       if (parsed.ticketId) ticketId = String(parsed.ticketId);
       else if (parsed.id) ticketId = String(parsed.id);
-      if (parsed.eventId) candidateEventId = String(parsed.eventId);
-      else if (parsed.event_id) candidateEventId = String(parsed.event_id);
+      else if (parsed.qr_id) ticketId = String(parsed.qr_id);
     }
   } catch {}
 
-  // Handle URL format: https://.../?id=...&event_id=...
+  // URL format: https://.../?id=...
   if (ticketId.includes("id=")) {
     try {
-      const url = new URL(ticketId.startsWith("http") ? ticketId : `https://x.com/${ticketId}`);
-      ticketId = url.searchParams.get("id") || ticketId;
-      if (!candidateEventId) candidateEventId = url.searchParams.get("event_id") || url.searchParams.get("eventId");
+      const url = new URL(ticketId.startsWith("http") ? ticketId : `https://x.invalid/${ticketId}`);
+      ticketId = url.searchParams.get("id") || url.searchParams.get("ticketId") || ticketId;
     } catch {}
   }
 
   // Strip prefixes like "TICKET #", "PASS #", etc.
   ticketId = ticketId.replace(/^(ticket|pass)\s*#?:?\s*/i, "").trim();
 
-  // 1. Scanner Authorization Check
-  const scannerEmail = auth.email?.toLowerCase() || "";
-  const authorizedAdminEmails = [
-    (process.env.ADMIN_EMAIL || "").toLowerCase(),
-    "raffay.asim6@gmail.com",
-    "admin@solonomore.com",
-    "subadmin@solonomore.com",
-    "vibe.tester@solonomore.com",
-  ].filter(Boolean);
-
-  const { data: scannerProfile } = await (supabaseAdmin.from("profiles") as any)
-    .select("subscription_tier, is_partner")
-    .eq("id", auth.userId)
-    .maybeSingle();
-
-  const isScannerAdmin = authorizedAdminEmails.includes(scannerEmail) || scannerProfile?.subscription_tier === "admin";
-
-  // Check event ownership if not global admin
-  if (!isScannerAdmin) {
-    const { data: targetEv } = await (supabaseAdmin.from("official_events") as any)
-      .select("description")
-      .eq("id", currentEventId)
-      .maybeSingle();
-
-    if (targetEv) {
-      const { metadata } = parseEventDescription(targetEv.description || "");
-      const isOwner = metadata?.creator_id === auth.userId;
-      // Also check delegated team managers
-      let isDelegated = false;
-      try {
-        const { getTeamDelegationsAction } = await import("@/app/actions/team-permissions");
-        const delegations = await getTeamDelegationsAction();
-        if (
-          delegations?.some(
-            (m: any) =>
-              m.manager_user_id === auth.userId &&
-              m.status === "active" &&
-              m.permissions?.includes("events.door_scanner") &&
-              (m.type === "sub_admin" || m.delegator_id === metadata?.creator_id)
-          )
-        ) {
-          isDelegated = true;
-        }
-      } catch {}
-
-      if (!isOwner && !isDelegated && scannerProfile?.subscription_tier !== "manager") {
-        return {
-          success: false,
-          verdict: "not_found",
-          message: "Unauthorized: You do not have door-scanner credentials for this event venue.",
-        };
-      }
-    }
-  }
-
-  // 2. Fetch ticket from Supabase (by exact ID, exact qr_id, or prefix match)
-  let ticketRecord: any = null;
-  const { data: exactMatch } = await (supabaseAdmin.from("event_tickets") as any)
-    .select(`
-      id,
-      event_id,
-      ticket_status,
-      created_at,
-      user_name,
-      qr_id,
-      profiles:user_id (
-        full_name,
-        city
-      ),
-      official_events:event_id (
-        id,
-        title,
-        description
-      )
-    `)
-    .or(`id.eq.${ticketId},qr_id.eq.${ticketId}`)
-    .maybeSingle();
-
-  if (exactMatch) {
-    ticketRecord = exactMatch;
-  } else if (ticketId.length >= 6) {
-    const { data: prefixMatches } = await (supabaseAdmin.from("event_tickets") as any)
-      .select(`
-        id,
-        event_id,
-        ticket_status,
-        created_at,
-        user_name,
-        qr_id,
-        profiles:user_id (
-          full_name,
-          city
-        ),
-        official_events:event_id (
-          id,
-          title,
-          description
-        )
-      `)
-      .or(`id.ilike.${ticketId}%,qr_id.ilike.${ticketId}%`)
-      .limit(1);
-
-    if (prefixMatches && prefixMatches.length > 0) {
-      ticketRecord = prefixMatches[0];
-    }
-  }
+  // 3. Look the ticket up
+  const ticketRecord = ticketId ? await findTicketByCode(ticketId, currentEventId) : null;
 
   if (!ticketRecord) {
     return {
       success: false,
       verdict: "not_found",
-      message: `Invalid Pass QR (${ticketId.slice(0, 10)}). No matching booking exists on the system.`,
+      message: `Invalid Pass (${ticketId.slice(0, 14)}). No matching booking exists on the system.`,
     };
   }
 
@@ -971,9 +832,10 @@ export async function verifyAndCheckInTicketAction({
     attendeeName,
     attendeeCity,
     targetEventTitle,
+    paymentVerified: isTicketPaid(ticketRecord),
   };
 
-  // 3. BULLET-PROOF EVENT MISMATCH CHECK
+  // 4. EVENT MISMATCH CHECK
   if (ticketRecord.event_id !== currentEventId) {
     return {
       success: false,
@@ -983,22 +845,12 @@ export async function verifyAndCheckInTicketAction({
     };
   }
 
-  // 4. DUPLICATE CHECK
-  if (ticketRecord.ticket_status === "admitted" || ticketRecord.ticket_status === "scanned") {
+  // 5. DUPLICATE CHECK
+  if (ticketRecord.ticket_status === "scanned") {
     return {
       success: false,
       verdict: "already_admitted",
       message: `DUPLICATE SCAN! Pass for ${attendeeName} was ALREADY checked in. Entry Denied.`,
-      ticket: ticketPayload,
-    };
-  }
-
-  // 5. PENDING APPROVAL CHECK
-  if (ticketRecord.ticket_status === "pending") {
-    return {
-      success: false,
-      verdict: "pending_approval",
-      message: `PENDING APPROVAL! Booking for ${attendeeName} is not yet approved by the host.`,
       ticket: ticketPayload,
     };
   }
@@ -1013,16 +865,37 @@ export async function verifyAndCheckInTicketAction({
     };
   }
 
-  // 7. VALID & CLEARED -> ADMIT ATTENDEE!
-  const { error: updateErr } = await (supabaseAdmin.from("event_tickets") as any)
+  // 7. PAYMENT / APPROVAL CHECK — an unverified payment never gets through the door
+  if (ticketRecord.ticket_status !== "active" || !isTicketPaid(ticketRecord)) {
+    return {
+      success: false,
+      verdict: "pending_approval",
+      message: `PAYMENT NOT VERIFIED! Booking for ${attendeeName} has not been confirmed by admin yet. Entry Denied.`,
+      ticket: ticketPayload,
+    };
+  }
+
+  // 8. VALID -> ADMIT, atomically (only an 'active' pass can flip to 'scanned')
+  const { data: admitted, error: updateErr } = await (supabaseAdmin.from("event_tickets") as any)
     .update({ ticket_status: "scanned" })
-    .eq("id", ticketRecord.id);
+    .eq("id", ticketRecord.id)
+    .eq("ticket_status", "active")
+    .select("id");
 
   if (updateErr) {
     return {
       success: false,
       verdict: "not_found",
       message: `Database error updating admission: ${updateErr.message}`,
+      ticket: ticketPayload,
+    };
+  }
+
+  if (!admitted || admitted.length === 0) {
+    return {
+      success: false,
+      verdict: "already_admitted",
+      message: `DUPLICATE SCAN! Pass for ${attendeeName} was just checked in on another scanner. Entry Denied.`,
       ticket: ticketPayload,
     };
   }
@@ -1037,5 +910,3 @@ export async function verifyAndCheckInTicketAction({
     },
   };
 }
-
-

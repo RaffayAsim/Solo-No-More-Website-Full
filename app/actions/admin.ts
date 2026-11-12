@@ -2,71 +2,48 @@
 
 import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { getSessionUserSecurely } from "@/lib/supabase/session";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
+import { getAdminAccess } from "@/lib/server/auth";
+import { sendEmail } from "@/lib/server/email";
+import {
+  MEMBER_UPLOADS_BUCKET,
+  PUBLIC_MEDIA_BUCKET,
+  isImageDataUrl,
+  isSignedStorageUrl,
+  storeImageDataUrl,
+  storePublicImageDataUrl,
+} from "@/lib/server/storage";
+import {
+  findAuthUserByEmail,
+  generateTempPassword,
+  isDuplicateUserError,
+  isValidEmail,
+} from "@/lib/server/auth-users";
 
 export type AdminActionResult =
-  | { success: true }
+  | { success: true; tempPassword?: string }
   | { success: false; error: string };
 
 /**
- * Helper to securely get current logged-in user and email via Server Session cookie.
+ * Server-side Authorization Guard.
+ *
+ * - Not signed in            → redirect to /login
+ * - Signed in, not an admin  → redirect to /dashboard
+ * - Sub-admin without the requested `permission` → throws (callers turn this into an
+ *   "Unauthorized" result). Root admins hold every permission. Pass "root" for
+ *   operations only the platform owner may perform.
  */
-async function getUserIdSecurelyWithEmail(): Promise<{ userId: string; email: string | undefined } | { error: string }> {
-  return getSessionUserSecurely();
-}
-
-/**
- * Server-side Authorization Guard to verify if the user is an authorized admin.
- * Throws or redirects if not authorized.
- */
-export async function verifyAdminStatus(): Promise<{ userId: string; email: string | undefined }> {
-  const authCheck = await getUserIdSecurelyWithEmail();
-  if ("error" in authCheck) {
-    redirect("/login");
+export async function verifyAdminStatus(
+  permission?: string
+): Promise<{ userId: string; email: string | undefined; isRoot: boolean }> {
+  const access = await getAdminAccess();
+  if (!access.ok) {
+    redirect(access.reason === "unauthenticated" ? "/login" : "/dashboard");
   }
-
-  const authorizedEmails = [
-    (process.env.ADMIN_EMAIL || "").toLowerCase(),
-    "raffay.asim6@gmail.com",
-    "admin@solonomore.com",
-    "vibe.tester@solonomore.com",
-  ].filter(Boolean);
-
-  const isEmailAdmin = authorizedEmails.includes(authCheck.email?.toLowerCase() || "");
-
-  if (isEmailAdmin) {
-    return { userId: authCheck.userId, email: authCheck.email };
+  if (permission && !access.isRoot && !access.permissions.includes(permission)) {
+    throw new Error("Your sub-admin role does not include this permission.");
   }
-
-  // Fallback to checking active DB profile subscription_tier
-  const { data: profile } = await (supabaseAdmin
-    .from("profiles") as any)
-    .select("subscription_tier")
-    .eq("id", authCheck.userId)
-    .single();
-
-  if (profile?.subscription_tier === "admin") {
-    return { userId: authCheck.userId, email: authCheck.email };
-  }
-
-  // Check if authorized active Sub-Admin
-  try {
-    const { getTeamDelegationsAction } = await import("@/app/actions/team-permissions");
-    const subAdmins = await getTeamDelegationsAction({ type: "sub_admin" });
-    const isSubAdmin = subAdmins.some(
-      (s) =>
-        s.status === "active" &&
-        (s.manager_user_id === authCheck.userId ||
-          (authCheck.email && s.manager_email.toLowerCase() === authCheck.email.toLowerCase()))
-    );
-    if (isSubAdmin) {
-      return { userId: authCheck.userId, email: authCheck.email };
-    }
-  } catch {}
-
-  // Unauthorized users get redirected to standard dashboard
-  redirect("/dashboard");
+  return { userId: access.user.userId, email: access.user.email, isRoot: access.isRoot };
 }
 
 /**
@@ -74,7 +51,7 @@ export async function verifyAdminStatus(): Promise<{ userId: string; email: stri
  */
 export async function approveUserAction(profileId: string): Promise<AdminActionResult> {
   try {
-    await verifyAdminStatus();
+    await verifyAdminStatus("members.manage");
   } catch (err) {
     if (isRedirectError(err)) throw err;
     return { success: false, error: "Unauthorized. Admin privileges required." };
@@ -91,7 +68,7 @@ export async function approveUserAction(profileId: string): Promise<AdminActionR
 
   // Notify the user in-app
   try {
-    const { writeNotification } = await import("@/app/actions/notifications");
+    const { writeNotification } = await import("@/lib/server/notify");
     await writeNotification(
       profileId,
       "application_approved" as any,
@@ -108,7 +85,7 @@ export async function approveUserAction(profileId: string): Promise<AdminActionR
  */
 export async function suspendUserAction(profileId: string): Promise<AdminActionResult> {
   try {
-    await verifyAdminStatus();
+    await verifyAdminStatus("members.manage");
   } catch (err) {
     if (isRedirectError(err)) throw err;
     return { success: false, error: "Unauthorized. Admin privileges required." };
@@ -131,7 +108,7 @@ export async function suspendUserAction(profileId: string): Promise<AdminActionR
  */
 export async function resetStrikesAction(profileId: string): Promise<AdminActionResult> {
   try {
-    await verifyAdminStatus();
+    await verifyAdminStatus("members.manage");
   } catch (err) {
     if (isRedirectError(err)) throw err;
     return { success: false, error: "Unauthorized. Admin privileges required." };
@@ -168,7 +145,7 @@ export interface OfficialEventPayload {
  */
 export async function createEventAction(payload: OfficialEventPayload): Promise<AdminActionResult> {
   try {
-    await verifyAdminStatus();
+    await verifyAdminStatus("events.manage");
   } catch (err) {
     if (isRedirectError(err)) throw err;
     return { success: false, error: "Unauthorized. Admin privileges required." };
@@ -205,7 +182,7 @@ export async function updateEventAction(
   payload: Partial<OfficialEventPayload>
 ): Promise<AdminActionResult> {
   try {
-    await verifyAdminStatus();
+    await verifyAdminStatus("events.manage");
   } catch (err) {
     if (isRedirectError(err)) throw err;
     return { success: false, error: "Unauthorized. Admin privileges required." };
@@ -237,7 +214,7 @@ export async function updateEventAction(
  */
 export async function deleteEventAction(eventId: string): Promise<AdminActionResult> {
   try {
-    await verifyAdminStatus();
+    await verifyAdminStatus("events.manage");
   } catch (err) {
     if (isRedirectError(err)) throw err;
     return { success: false, error: "Unauthorized. Admin privileges required." };
@@ -273,7 +250,7 @@ export async function upgradeToPartnerAction(
   businessName: string
 ): Promise<AdminActionResult> {
   try {
-    await verifyAdminStatus();
+    await verifyAdminStatus("partners.manage");
   } catch (err) {
     if (isRedirectError(err)) throw err;
     return { success: false, error: "Unauthorized. Admin privileges required." };
@@ -307,10 +284,28 @@ export async function changeUserTierAction(
   tier: "none" | "member" | "family" | "admin"
 ): Promise<AdminActionResult> {
   try {
-    await verifyAdminStatus();
+    await verifyAdminStatus(tier === "admin" ? "root" : "members.manage");
   } catch (err) {
     if (isRedirectError(err)) throw err;
     return { success: false, error: "Unauthorized. Admin privileges required." };
+  }
+
+  if (!["none", "member", "family", "admin"].includes(tier)) {
+    return { success: false, error: "Invalid tier." };
+  }
+
+  // Only the platform owner may change an existing admin's tier.
+  const { data: target } = await (supabaseAdmin.from("profiles") as any)
+    .select("subscription_tier")
+    .eq("id", profileId)
+    .maybeSingle();
+  if (target?.subscription_tier === "admin" && tier !== "admin") {
+    try {
+      await verifyAdminStatus("root");
+    } catch (err) {
+      if (isRedirectError(err)) throw err;
+      return { success: false, error: "Only the platform owner can change an admin account." };
+    }
   }
 
   const { error } = await (supabaseAdmin
@@ -375,7 +370,7 @@ export async function getAllBeaconsForAdminAction(): Promise<{ success: boolean;
  */
 export async function adminCancelBeaconAction(beaconId: string, reason?: string): Promise<AdminActionResult> {
   try {
-    await verifyAdminStatus();
+    await verifyAdminStatus("events.manage");
   } catch (err) {
     if (isRedirectError(err)) throw err;
     return { success: false, error: "Unauthorized. Admin privileges required." };
@@ -405,7 +400,7 @@ export async function adminCreateMemberAction(data: {
   tier: "none" | "member" | "family";
 }): Promise<AdminActionResult> {
   try {
-    await verifyAdminStatus();
+    await verifyAdminStatus("members.manage");
   } catch (err) {
     if (isRedirectError(err)) throw err;
     return { success: false, error: "Unauthorized. Admin privileges required." };
@@ -415,12 +410,25 @@ export async function adminCreateMemberAction(data: {
     return { success: false, error: "Full Name and Email are required." };
   }
 
-  const generatedPassword = data.password && data.password.length >= 6 ? data.password : "SoloNoMore2026!";
+  if (!isValidEmail(data.email)) {
+    return { success: false, error: "Please enter a valid email address." };
+  }
+  if (data.password && data.password.length < 8) {
+    return { success: false, error: "Password must be at least 8 characters." };
+  }
+  if (!["none", "member", "family"].includes(data.tier || "member")) {
+    return { success: false, error: "Invalid membership tier." };
+  }
+
+  // No shared default password: if the admin did not choose one, a unique one-off
+  // password is generated and returned so it can be passed on to the member.
+  const tempPassword = data.password ? undefined : generateTempPassword();
+  const password = data.password || tempPassword!;
 
   // 1. Create or lookup Supabase Auth user
   const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
     email: data.email.trim(),
-    password: generatedPassword,
+    password,
     email_confirm: true,
     user_metadata: {
       full_name: data.fullName.trim(),
@@ -430,18 +438,14 @@ export async function adminCreateMemberAction(data: {
   });
 
   let userId = authData?.user?.id;
+  let createdNew = !!userId;
 
   if (authError) {
-    if (
-      authError.message.toLowerCase().includes("already registered") ||
-      authError.message.toLowerCase().includes("duplicate")
-    ) {
-      const { data: userLookup } = await supabaseAdmin.auth.admin.listUsers();
-      const existingUser = userLookup.users.find(
-        (u) => u.email?.toLowerCase() === data.email.trim().toLowerCase()
-      );
+    if (isDuplicateUserError(authError.message)) {
+      const existingUser = await findAuthUserByEmail(data.email);
       if (existingUser) {
         userId = existingUser.id;
+        createdNew = false;
       } else {
         return { success: false, error: authError.message };
       }
@@ -451,18 +455,27 @@ export async function adminCreateMemberAction(data: {
   }
 
   if (userId) {
+    if (!createdNew) {
+      const { data: existingProfile } = await (supabaseAdmin.from("profiles") as any)
+        .select("subscription_tier")
+        .eq("id", userId)
+        .maybeSingle();
+      if (existingProfile?.subscription_tier === "admin") {
+        return { success: false, error: "This email belongs to an admin account and cannot be modified here." };
+      }
+    }
     await (supabaseAdmin.from("profiles") as any).upsert({
       id: userId,
       full_name: data.fullName.trim(),
       phone: data.phone?.trim() || null,
-      city: data.city?.trim() || "Karachi",
+      city: ["Karachi", "Lahore", "Islamabad"].includes(data.city?.trim() || "") ? data.city!.trim() : "Karachi",
       subscription_tier: data.tier || "member",
       account_status: "approved",
       bio: "Officially onboarded by Ops Admin",
     });
   }
 
-  return { success: true };
+  return createdNew && tempPassword ? { success: true, tempPassword } : { success: true };
 }
 
 /**
@@ -473,7 +486,7 @@ export async function adminUpdateUserStatusAction(
   newStatus: "approved" | "pending" | "payment_pending" | "suspended" | "rejected"
 ): Promise<AdminActionResult> {
   try {
-    await verifyAdminStatus();
+    await verifyAdminStatus("members.manage");
   } catch (err) {
     if (isRedirectError(err)) throw err;
     return { success: false, error: "Unauthorized. Admin privileges required." };
@@ -487,10 +500,16 @@ export async function adminUpdateUserStatusAction(
     rejected: "rejected",
   };
 
-  // 1. Update in profiles table if it exists
-  await (supabaseAdmin.from("profiles") as any)
-    .update({ account_status: profileStatusMap[newStatus] || newStatus })
-    .eq("id", userIdOrAppId);
+  if (!profileStatusMap[newStatus]) {
+    return { success: false, error: "Invalid status." };
+  }
+
+  // 1. Update in profiles table when the id is a real user id
+  if (isUuidLike(userIdOrAppId)) {
+    await (supabaseAdmin.from("profiles") as any)
+      .update({ account_status: profileStatusMap[newStatus] })
+      .eq("id", userIdOrAppId);
+  }
 
   // 2. Also update in membership_applications / local applications store
   try {
@@ -502,13 +521,37 @@ export async function adminUpdateUserStatusAction(
     } else if (newStatus === "approved") {
       await adminVerifyPaymentAndIssueInviteAction(userIdOrAppId);
     } else {
-      await (supabaseAdmin.from("membership_applications") as any)
-        .update({ status: newStatus })
-        .eq("id", userIdOrAppId);
+      // membership_applications only knows these statuses
+      const appStatus =
+        newStatus === "rejected" ? "rejected" : newStatus === "pending" ? "pending_admin_approval" : null;
+      if (appStatus) {
+        const { data: updatedApps } = await (supabaseAdmin.from("membership_applications") as any)
+          .update({ status: appStatus, updated_at: new Date().toISOString() })
+          .eq("id", userIdOrAppId)
+          .neq("status", appStatus)
+          .select("email, full_name");
+        const applicant = updatedApps?.[0];
+        if (appStatus === "rejected" && applicant?.email) {
+          await sendEmail({
+            to: applicant.email,
+            subject: "Update on your Solo-No-More application",
+            heading: "About your application",
+            paragraphs: [
+              `Hi ${(applicant.full_name || "").split(" ")[0] || "there"},`,
+              "Thank you for your interest in Solo-No-More. After reviewing your application we are not able to approve it at this time.",
+              "You are welcome to apply again in the future. If you think this was a mistake, just reply to this email.",
+            ],
+          });
+        }
+      }
     }
   } catch {}
 
   return { success: true };
+}
+
+function isUuidLike(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value || "");
 }
 
 export interface SaveUserDetailsInput {
@@ -554,7 +597,7 @@ export async function adminSaveUserDetailsAction(
   input: SaveUserDetailsInput
 ): Promise<AdminActionResult> {
   try {
-    await verifyAdminStatus();
+    await verifyAdminStatus("members.manage");
   } catch (err) {
     if (isRedirectError(err)) throw err;
     return { success: false, error: "Unauthorized. Admin privileges required." };
@@ -562,12 +605,28 @@ export async function adminSaveUserDetailsAction(
 
   const computedFirstLast = `${(input.firstName || "").trim()} ${(input.lastName || "").trim()}`.trim();
   const fullName = input.fullName?.trim() || computedFirstLast || input.displayName?.trim() || "Member User";
-  const isPartner = input.role.toLowerCase().includes("partner");
-  const subscriptionTier = input.role.toLowerCase().includes("admin")
-    ? "admin"
-    : isPartner
-    ? "family"
-    : "member";
+  const roleLower = (input.role || "").toLowerCase();
+  const isPartner = roleLower.includes("partner");
+  const wantsAdmin = roleLower.includes("admin");
+
+  // Keep the member's current paid tier. The role dropdown only decides partner/admin
+  // flags — it must never silently downgrade (or upgrade) a membership.
+  const { data: existingProfile } = await (supabaseAdmin.from("profiles") as any)
+    .select("subscription_tier")
+    .eq("id", input.id)
+    .maybeSingle();
+  const currentTier: string = existingProfile?.subscription_tier || "member";
+
+  if (wantsAdmin !== (currentTier === "admin")) {
+    // Granting or removing admin is reserved for the platform owner.
+    try {
+      await verifyAdminStatus("root");
+    } catch (err) {
+      if (isRedirectError(err)) throw err;
+      return { success: false, error: "Only the platform owner can grant or remove admin access." };
+    }
+  }
+  const subscriptionTier = wantsAdmin ? "admin" : currentTier === "admin" ? "member" : currentTier;
 
   const profileStatusMap: Record<string, string> = {
     approved: "approved",
@@ -577,9 +636,25 @@ export async function adminSaveUserDetailsAction(
     rejected: "rejected",
   };
 
-  const photo = input.photo_url || input.profilePictureUrl;
-  const cnicPic = input.cnic_picture_url || input.cnicPictureUrl;
-  const igScreenshot = input.instagram_screenshot_url || input.instagramScreenshotUrl || (input.instagramScreenshots && input.instagramScreenshots[0]);
+  // Newly uploaded images go to storage. A temporary view link echoed back by the form
+  // means "unchanged" and is ignored so the stored reference is kept.
+  const normalizeImage = async (value: string | undefined, kind: "public" | "private", folder: string) => {
+    if (!value || isSignedStorageUrl(value)) return undefined;
+    if (!isImageDataUrl(value)) return value;
+    const stored =
+      kind === "public"
+        ? await storePublicImageDataUrl(PUBLIC_MEDIA_BUCKET, folder, value)
+        : await storeImageDataUrl(MEMBER_UPLOADS_BUCKET, folder, value);
+    return stored || undefined;
+  };
+
+  const photo = await normalizeImage(input.photo_url || input.profilePictureUrl, "public", `avatars/${input.id}`);
+  const cnicPic = await normalizeImage(input.cnic_picture_url || input.cnicPictureUrl, "private", `cnic/${input.id}`);
+  const igScreenshot = await normalizeImage(
+    input.instagram_screenshot_url || input.instagramScreenshotUrl || (input.instagramScreenshots && input.instagramScreenshots[0]),
+    "private",
+    `instagram/${input.id}`
+  );
   const dob = input.date_of_birth || input.dateOfBirth;
   const emergName = input.emergency_contact_name || input.emergencyContactName;
   const emergPhone = input.emergency_contact_phone || input.emergencyContactPhone;
@@ -594,7 +669,7 @@ export async function adminSaveUserDetailsAction(
     bio: input.bio || null,
     is_partner: isPartner,
     subscription_tier: subscriptionTier,
-    account_status: profileStatusMap[input.status] || input.status,
+    account_status: profileStatusMap[input.status] || "pending_vetting",
   };
 
   if (input.firstName) updatePayload.first_name = input.firstName.trim();
@@ -609,7 +684,6 @@ export async function adminSaveUserDetailsAction(
   if (cnicPic) updatePayload.cnic_picture_url = cnicPic;
   if (igScreenshot) {
     updatePayload.instagram_screenshot_url = igScreenshot;
-    updatePayload.social_link = igScreenshot;
   }
   if (vibes && vibes.length > 0) updatePayload.vibe_tags = vibes;
 
@@ -643,7 +717,6 @@ export async function adminSaveUserDetailsAction(
         city: input.city,
         cnic: input.cnic,
         vibe: input.bio,
-        status: input.status === "pending" ? "pending_admin_approval" : input.status,
         photo_url: photo || undefined,
         updated_at: new Date().toISOString(),
       })
@@ -668,8 +741,8 @@ export async function adminCreateMemberFullAction(data: {
   role: "member" | "partner" | "admin";
   password?: string;
 }): Promise<AdminActionResult> {
-  const fullName = `${data.firstName.trim()} ${data.lastName.trim()}`.trim();
-  return adminCreateMemberAction({
+  const fullName = `${(data.firstName || "").trim()} ${(data.lastName || "").trim()}`.trim();
+  const result = await adminCreateMemberAction({
     fullName,
     email: data.email,
     password: data.password,
@@ -677,6 +750,28 @@ export async function adminCreateMemberFullAction(data: {
     city: data.city,
     tier: data.packageTier,
   });
+  if (!result.success) return result;
+
+  // Apply the extra fields the full form collects (role, CNIC, username).
+  try {
+    const user = await findAuthUserByEmail(data.email);
+    if (user) {
+      const extra: any = {};
+      if (data.cnic?.trim()) extra.cnic = data.cnic.trim();
+      if (data.username?.trim()) extra.instagram_username = data.username.trim().replace(/^@/, "");
+      if (data.role === "partner") extra.is_partner = true;
+      if (data.role === "admin") {
+        const admin = await verifyAdminStatus();
+        if (admin.isRoot) extra.subscription_tier = "admin";
+      }
+      if (Object.keys(extra).length > 0) {
+        await (supabaseAdmin.from("profiles") as any).update(extra).eq("id", user.id);
+      }
+    }
+  } catch (err) {
+    if (isRedirectError(err)) throw err;
+  }
+  return result;
 }
 
 
