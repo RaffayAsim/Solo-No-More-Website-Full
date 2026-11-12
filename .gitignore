@@ -45,3 +45,6 @@ pnpm-debug.log*
 design-system/
 Hero Image.jpg
 
+
+# e2e script output (logs, screenshots, test record ids)
+scripts/e2e/.output/
