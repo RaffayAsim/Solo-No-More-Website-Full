@@ -18,8 +18,14 @@ import {
   ShieldCheck,
   AlertCircle,
   UserPlus,
+  MessageCircle,
 } from "lucide-react";
-import { bookEventTicketAction } from "@/app/actions/event-booking";
+import {
+  bookEventTicketAction,
+  cancelPendingBookingAction,
+  submitTicketPaymentProofAction,
+} from "@/app/actions/event-booking";
+import BankTransferPanel from "@/components/payments/BankTransferPanel";
 
 interface TierPackage {
   id: string;
@@ -63,9 +69,8 @@ export default function EventBookingModal({
   const [isCoupleBooking, setIsCoupleBooking] = useState(false);
   const [partnerType, setPartnerType] = useState<"existing" | "new">("new");
   
-  // Existing Partner Search
+  // Existing member companion — identified by their registered email
   const [partnerSearch, setPartnerSearch] = useState("");
-  const [selectedPartner, setSelectedPartner] = useState<{ id: string; name: string; email: string } | null>(null);
 
   // New Partner Fields
   const [partnerName, setPartnerName] = useState("");
@@ -75,6 +80,14 @@ export default function EventBookingModal({
 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Checkout steps: pick passes → pay by bank transfer & upload proof → done
+  const [step, setStep] = useState<"details" | "payment" | "done">("details");
+  const [booking, setBooking] = useState<{ bookingRef: string; totalAmountPkr: number; tierName: string; ticketCount: number } | null>(null);
+  const [proofImage, setProofImage] = useState<string | null>(null);
+  const [transactionRef, setTransactionRef] = useState("");
+  const [whatsappUrl, setWhatsappUrl] = useState<string | null>(null);
+  const [doneIsFree, setDoneIsFree] = useState(false);
 
   // Prevent background scroll bleed while modal is open
   useEffect(() => {
@@ -132,8 +145,8 @@ export default function EventBookingModal({
           return;
         }
       } else {
-        if (!selectedPartner) {
-          setErrorMsg("Please select an existing member as your companion.");
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(partnerSearch.trim())) {
+          setErrorMsg("Enter your companion's registered member email address.");
           setIsLoading(false);
           return;
         }
@@ -148,11 +161,10 @@ export default function EventBookingModal({
         tierPrice: unitPrice,
         isCoupleBooking,
         partnerType,
-        partnerName: partnerType === "new" ? partnerName.trim() : selectedPartner?.name,
-        partnerEmail: partnerType === "new" ? partnerEmail.trim() : selectedPartner?.email,
+        partnerName: partnerType === "new" ? partnerName.trim() : undefined,
+        partnerEmail: partnerType === "new" ? partnerEmail.trim() : partnerSearch.trim(),
         partnerPhone: partnerType === "new" ? partnerPhone.trim() : undefined,
         partnerCnic: partnerType === "new" ? partnerCnic.trim() : undefined,
-        existingPartnerId: selectedPartner?.id,
       });
 
       if (!res.success) {
@@ -165,22 +177,73 @@ export default function EventBookingModal({
         return;
       }
 
-      // If Free RSVP, finish
+      // Free RSVP: confirmed straight away
       if (res.isFree) {
+        setDoneIsFree(true);
+        setStep("done");
         if (onSuccess) onSuccess();
-        onClose();
         return;
       }
 
-      // Redirect to Safepay Merchant Checkout
-      if (res.checkoutUrl) {
-        window.location.href = res.checkoutUrl;
-      }
+      // Paid: the passes are reserved — continue to bank transfer & proof upload
+      setBooking({
+        bookingRef: res.bookingRef,
+        totalAmountPkr: res.totalAmountPkr,
+        tierName: res.tierName,
+        ticketCount: res.ticketCount,
+      });
+      setProofImage(null);
+      setTransactionRef("");
+      setStep("payment");
     } catch (err: any) {
       setErrorMsg(err?.message || "An unexpected error occurred.");
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleProofSubmit = async () => {
+    if (!booking) return;
+    if (!proofImage) {
+      setErrorMsg("Please upload a screenshot of your payment before submitting.");
+      return;
+    }
+    setIsLoading(true);
+    setErrorMsg(null);
+    try {
+      const res = await submitTicketPaymentProofAction({
+        bookingRef: booking.bookingRef,
+        proofImage,
+        transactionRef: transactionRef.trim(),
+        paymentMethod: "bank_transfer",
+      });
+      if (!res.success) {
+        setErrorMsg(res.error || "Could not submit your payment proof.");
+        return;
+      }
+      setWhatsappUrl(res.whatsappUrl);
+      setDoneIsFree(false);
+      setStep("done");
+      if (onSuccess) onSuccess();
+    } catch (err: any) {
+      setErrorMsg(err?.message || "An unexpected error occurred.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Going back releases the reserved (still unpaid) passes
+  const handleBackToDetails = async () => {
+    if (booking) {
+      setIsLoading(true);
+      try {
+        await cancelPendingBookingAction(booking.bookingRef);
+      } catch {}
+      setIsLoading(false);
+    }
+    setBooking(null);
+    setErrorMsg(null);
+    setStep("details");
   };
 
   return (
@@ -226,6 +289,7 @@ export default function EventBookingModal({
             </div>
           </div>
 
+          {step === "details" ? (
           <form onSubmit={handleBookingSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-5 flex-1 overflow-y-auto">
             {errorMsg && (
               <div className="p-3.5 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-start gap-2.5 text-xs text-red-300">
@@ -428,65 +492,28 @@ export default function EventBookingModal({
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-zinc-400 block">
-                      Search Existing Member by Email or Name *
+                    <label className="block text-xs font-bold text-zinc-300 mb-1.5">
+                      Companion&apos;s Registered Member Email *
                     </label>
                     <div className="relative">
                       <Search className="w-4 h-4 text-zinc-500 absolute left-3 top-2.5" />
                       <input
-                        type="text"
+                        type="email"
                         value={partnerSearch}
                         onChange={(e) => setPartnerSearch(e.target.value)}
-                        placeholder="Search member..."
+                        placeholder="member@example.com"
                         className="w-full pl-9 pr-3.5 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs placeholder:text-zinc-600 focus:outline-none focus:border-[#FF6F26]"
                       />
                     </div>
-
-                    {/* Quick Demo Selector for Existing Member */}
-                    {!selectedPartner && (
-                      <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/10 space-y-1">
-                        <span className="text-[11px] text-zinc-500 block">Recent Verified Members:</span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedPartner({
-                              id: "member-partner-demo",
-                              name: "Fatima Noor",
-                              email: "fatima.noor@gmail.com",
-                            });
-                          }}
-                          className="w-full px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-left flex items-center justify-between text-xs"
-                        >
-                          <span className="text-white font-bold">Fatima Noor</span>
-                          <span className="text-zinc-400 text-[11px]">fatima.noor@gmail.com</span>
-                        </button>
-                      </div>
-                    )}
-
-                    {selectedPartner && (
-                      <div className="p-3 rounded-xl bg-[#FF6F26]/10 border border-[#FF6F26]/30 flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle className="w-4 h-4 text-[#FF6F26]" />
-                          <div>
-                            <span className="font-bold text-white block">{selectedPartner.name}</span>
-                            <span className="text-zinc-400 text-[11px]">{selectedPartner.email}</span>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedPartner(null)}
-                          className="p-1 rounded-full hover:bg-white/10 text-zinc-400 hover:text-white"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )}
+                    <p className="text-[11px] text-zinc-500">
+                      Their pass will also appear in their own Solo-No-More account.
+                    </p>
                   </div>
                 )}
               </div>
             )}
 
-            {/* Safepay Payment Summary Card */}
+            {/* Payment Summary Card */}
             <div className="p-3.5 sm:p-4 rounded-2xl bg-white/[0.02] border border-white/10 space-y-3">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-zinc-400">
@@ -509,7 +536,7 @@ export default function EventBookingModal({
 
                 <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-zinc-400">
                   <CreditCard className="w-3.5 h-3.5 text-[#FF6F26]" />
-                  <span>Safepay Checkout</span>
+                  <span>Bank transfer · proof upload</span>
                 </div>
               </div>
             </div>
@@ -532,20 +559,114 @@ export default function EventBookingModal({
                 {isLoading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Connecting Safepay...</span>
+                    <span>Reserving your pass...</span>
                   </>
                 ) : (
                   <>
                     <span className="truncate">
                       {totalAmountPkr === 0
                         ? "Confirm Free Pass"
-                        : `Pay PKR ${totalAmountPkr.toLocaleString()} via Safepay →`}
+                        : `Continue to Payment · PKR ${totalAmountPkr.toLocaleString()} →`}
                     </span>
                   </>
                 )}
               </button>
             </div>
           </form>
+          ) : step === "payment" && booking ? (
+            <div className="p-4 sm:p-6 space-y-4 flex-1 overflow-y-auto">
+              {errorMsg && (
+                <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{errorMsg}</span>
+                </div>
+              )}
+
+              <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/10 flex items-center justify-between gap-3 text-xs">
+                <div className="min-w-0">
+                  <div className="font-bold text-white truncate">
+                    {booking.tierName} × {booking.ticketCount}
+                  </div>
+                  <div className="text-zinc-400 mt-0.5">
+                    Booking ref <span className="font-mono font-bold text-[#FFA05C]">{booking.bookingRef}</span> · reserved for 24 hours
+                  </div>
+                </div>
+                <Lock className="w-4 h-4 text-[#FF6F26] shrink-0" />
+              </div>
+
+              <BankTransferPanel
+                amountPkr={booking.totalAmountPkr}
+                purpose={`Event pass — ${event.title}`}
+                reference={booking.bookingRef}
+                payerName={currentUserProfile?.full_name || undefined}
+                proofImage={proofImage}
+                onProofImageChange={setProofImage}
+                transactionRef={transactionRef}
+                onTransactionRefChange={setTransactionRef}
+                disabled={isLoading}
+              />
+
+              <div className="pt-1 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3">
+                <button
+                  type="button"
+                  onClick={handleBackToDetails}
+                  disabled={isLoading}
+                  className="px-5 py-3 rounded-2xl text-xs font-bold text-zinc-400 hover:text-white border border-white/10 hover:border-white/20 transition-colors text-center disabled:opacity-40"
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={handleProofSubmit}
+                  disabled={isLoading || !proofImage}
+                  className="w-full sm:flex-1 px-6 py-3.5 sm:py-3 rounded-2xl text-xs font-black uppercase tracking-wider bg-gradient-to-r from-[#FF6F26] to-[#FF5A1F] text-white hover:brightness-110 shadow-[0_4px_24px_rgba(255,111,38,0.5)] transition-all flex items-center justify-center gap-2 disabled:opacity-40 cursor-pointer"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Submitting proof...</span>
+                    </>
+                  ) : (
+                    <span>Submit Payment Proof</span>
+                  )}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="p-6 sm:p-8 space-y-4 text-center flex-1 overflow-y-auto">
+              <div className="w-14 h-14 mx-auto rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
+                <CheckCircle className="w-7 h-7" />
+              </div>
+              <h3 className="text-lg font-black text-white">
+                {doneIsFree ? "Your pass is confirmed" : "Payment proof received"}
+              </h3>
+              <p className="text-xs text-zinc-400 max-w-sm mx-auto leading-relaxed">
+                {doneIsFree
+                  ? "Your free pass is active. Open your dashboard to see the QR code for the door."
+                  : `Your booking ${booking?.bookingRef || ""} is awaiting verification. Your QR pass activates as soon as an admin confirms the payment — you will get a notification.`}
+              </p>
+              {!doneIsFree && whatsappUrl && (
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-[#128C4B] hover:bg-[#0f7a41] transition-colors"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>Share proof on WhatsApp</span>
+                </a>
+              )}
+              <div>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-6 py-2.5 rounded-2xl text-xs font-bold text-zinc-300 hover:text-white border border-white/10 hover:border-white/20 transition-colors"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </>

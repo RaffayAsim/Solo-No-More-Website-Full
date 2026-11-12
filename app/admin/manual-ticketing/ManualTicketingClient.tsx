@@ -354,7 +354,8 @@ export default function ManualTicketingClient({
       if (res.success) {
         setSuccessMsg(
           `✓ User "${createFullName}" created successfully!` +
-            (eventObj && res.qrId ? ` Ticket [${res.qrId}] assigned for "${eventObj.title}".` : "")
+            (eventObj && res.qrId ? ` Ticket [${res.qrId}] assigned for "${eventObj.title}".` : "") +
+            (res.tempPassword ? ` One-time password (share it now, it will not be shown again): ${res.tempPassword}` : "")
         );
 
         // Prepend new user to dropdown list

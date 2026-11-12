@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { submitPaymentProof, upgradeTier } from "@/app/actions/billing";
+import { submitPaymentProof } from "@/app/actions/billing";
+import BankTransferPanel from "@/components/payments/BankTransferPanel";
+import { MEMBERSHIP_PLANS, getMembershipAmountPkr, type BillingCycle } from "@/lib/payment-config";
 import {
   Sparkles,
   Zap,
@@ -19,17 +21,24 @@ import {
 
 interface UpgradeHubClientProps {
   currentTier: "none" | "member" | "family" | "admin" | "partner";
+  /** When the current paid period ends (ISO). Null = no end date recorded. */
+  expiresAt?: string | null;
 }
 
-export default function UpgradeHubClient({ currentTier: initialTier }: UpgradeHubClientProps) {
+export default function UpgradeHubClient({ currentTier: initialTier, expiresAt = null }: UpgradeHubClientProps) {
+  const expiryLabel = expiresAt
+    ? new Date(expiresAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Karachi" })
+    : null;
+  const daysLeft = expiresAt ? Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 86400000) : null;
   const [tier, setTier] = useState(initialTier);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   // Payment Modal State
   const [modalTier, setModalTier] = useState<"member" | "partner" | "family" | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<"raast" | "sadapay" | "bank_transfer">("raast");
   const [transactionRef, setTransactionRef] = useState("");
+  const [proofImage, setProofImage] = useState<string | null>(null);
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>("monthly");
   const [submitting, setSubmitting] = useState(false);
   const [modalSuccess, setModalSuccess] = useState(false);
 
@@ -39,31 +48,36 @@ export default function UpgradeHubClient({ currentTier: initialTier }: UpgradeHu
     setErrorMsg(null);
     setSuccessMsg(null);
     setTransactionRef("");
+    setProofImage(null);
+    setBillingCycle("monthly");
     setModalSuccess(false);
     setModalTier(selectedTier);
   };
 
   const handlePaymentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!modalTier || !transactionRef.trim()) return;
+    if (!modalTier) return;
+    if (!proofImage) {
+      setErrorMsg("Please upload a screenshot of your payment before submitting.");
+      return;
+    }
 
     setSubmitting(true);
     setErrorMsg(null);
 
-    const amount = modalTier === "member" ? 2000 : 3500;
-
     try {
       const res = await submitPaymentProof({
         tierRequested: modalTier,
-        amountPkr: amount,
-        paymentMethod,
+        paymentMethod: "bank_transfer",
         transactionRef: transactionRef.trim(),
+        proofImageUrl: proofImage,
+        billingCycle,
       });
 
       if (res.success) {
         setModalSuccess(true);
         setSuccessMsg(
-          `Payment proof received! TID: ${transactionRef.trim()} submitted for ${modalTier.toUpperCase()} verification.`
+          `Payment proof received! Your ${modalTier.toUpperCase()} upgrade is awaiting admin verification.`
         );
         setTimeout(() => {
           setModalTier(null);
@@ -74,22 +88,6 @@ export default function UpgradeHubClient({ currentTier: initialTier }: UpgradeHu
       }
     } catch {
       setErrorMsg("Failed to submit payment verification. Please check your connection.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  // Instant simulator for test accounts
-  const handleDevInstantUpgrade = async (selectedTier: "member" | "partner" | "family") => {
-    setSubmitting(true);
-    try {
-      const res = await upgradeTier(selectedTier);
-      if (res.success) {
-        setTier(selectedTier);
-        setSuccessMsg(`[DEV SIMULATOR] Instantly upgraded to ${selectedTier.toUpperCase()} tier!`);
-        setModalTier(null);
-        router.refresh();
-      }
     } finally {
       setSubmitting(false);
     }
@@ -113,6 +111,25 @@ export default function UpgradeHubClient({ currentTier: initialTier }: UpgradeHu
           </p>
         </div>
       </div>
+
+      {/* Current paid period */}
+      {expiryLabel && (tier === "member" || tier === "family" || tier === "partner") && (
+        <div
+          className={`flex items-center gap-3 p-4 rounded-xl border text-sm ${
+            daysLeft !== null && daysLeft <= 5
+              ? "bg-amber-500/10 border-amber-500/30 text-amber-300"
+              : "bg-emerald-500/10 border-emerald-500/20 text-emerald-300"
+          }`}
+        >
+          <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+          <span>
+            Your {MEMBERSHIP_PLANS[tier].name} membership is active until <strong>{expiryLabel}</strong>
+            {daysLeft !== null && daysLeft <= 5
+              ? ` — ${Math.max(daysLeft, 0)} day${daysLeft === 1 ? "" : "s"} left. Renew now and the new period is added on top.`
+              : ". Renewing early adds the new period on top of your remaining days."}
+          </span>
+        </div>
+      )}
 
       {/* Action alerts */}
       {errorMsg && (
@@ -207,16 +224,19 @@ export default function UpgradeHubClient({ currentTier: initialTier }: UpgradeHu
               )}
             </div>
 
-            <h3 className="text-2xl font-bold text-white">Member</h3>
+            <h3 className="text-2xl font-bold text-white">Solo Pass Pro</h3>
             <p className="text-xs text-neutral-300 leading-relaxed">
               Full access to squad lobby broadcasting, chat rooms, and event discounts.
             </p>
 
             <div className="pt-2 pb-4 border-b border-white/[0.08]">
               <span className="text-3xl font-extrabold bg-gradient-to-r from-[#FF6F26] to-[#FF5A1F] bg-clip-text text-transparent">
-                PKR 2,000
+                PKR {MEMBERSHIP_PLANS.member.monthly.toLocaleString("en-US")}
               </span>
               <span className="text-xs text-neutral-400 ml-1.5">/ month</span>
+              <div className="text-[11px] text-emerald-400 mt-1">
+                or PKR {(MEMBERSHIP_PLANS.member.annualTotal || 0).toLocaleString("en-US")} billed yearly (save 18%)
+              </div>
             </div>
 
             <ul className="space-y-3 pt-2">
@@ -242,10 +262,10 @@ export default function UpgradeHubClient({ currentTier: initialTier }: UpgradeHu
 
           <button
             onClick={() => openPaymentModal("member")}
-            disabled={tier === "member" || tier === "admin"}
+            disabled={tier === "admin"}
             className="w-full mt-6 py-3.5 px-4 rounded-xl text-xs font-bold bg-gradient-to-r from-[#FF6F26] to-[#FF5A1F] text-white shadow-lg shadow-[#FF6F26]/25 hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {tier === "member" ? "Subscribed · Active" : "Upgrade to Member"}
+            {tier === "member" ? "Renew / Extend Solo Pass Pro" : "Upgrade to Solo Pass Pro"}
           </button>
         </div>
 
@@ -296,10 +316,10 @@ export default function UpgradeHubClient({ currentTier: initialTier }: UpgradeHu
 
           <button
             onClick={() => openPaymentModal("partner")}
-            disabled={tier === "partner" || tier === "admin"}
+            disabled={tier === "admin"}
             className="w-full mt-6 py-3 px-4 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-neutral-950 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {tier === "partner" ? "Active Partner" : "Activate Partner Hub"}
+            {tier === "partner" ? "Renew / Extend Partner Hub" : "Activate Partner Hub"}
           </button>
         </div>
       </div>
@@ -329,7 +349,7 @@ export default function UpgradeHubClient({ currentTier: initialTier }: UpgradeHu
               </button>
             </div>
 
-            <div className="p-6">
+            <div className="p-6 max-h-[75vh] overflow-y-auto">
               {modalSuccess ? (
                 <div className="text-center py-8 space-y-4">
                   <div className="w-14 h-14 mx-auto rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
@@ -337,7 +357,7 @@ export default function UpgradeHubClient({ currentTier: initialTier }: UpgradeHu
                   </div>
                   <h3 className="text-lg font-bold text-white">Proof Received</h3>
                   <p className="text-xs text-neutral-400 max-w-sm mx-auto leading-relaxed">
-                    Your transaction ID has been recorded. Admin will verify and activate your tier shortly.
+                    Your payment screenshot has been recorded. An admin will verify it and activate your tier shortly.
                   </p>
                 </div>
               ) : (
@@ -346,120 +366,60 @@ export default function UpgradeHubClient({ currentTier: initialTier }: UpgradeHu
                   <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-between">
                     <div>
                       <div className="text-xs text-neutral-400 uppercase tracking-wider font-semibold">Tier Selected</div>
-                      <div className="text-lg font-bold text-white capitalize">{modalTier} Plan</div>
+                      <div className="text-lg font-bold text-white">{modalTier ? MEMBERSHIP_PLANS[modalTier].name : ""}</div>
                     </div>
                     <div className="text-2xl font-extrabold bg-gradient-to-r from-[#FF6F26] to-[#FF5A1F] bg-clip-text text-transparent">
-                      PKR {modalTier === "member" ? "2,000" : "3,500"}
+                      PKR {(modalTier ? getMembershipAmountPkr(modalTier, billingCycle) : 0).toLocaleString("en-US")}
                     </div>
                   </div>
 
-                  {/* Payment method selector */}
-                  <div>
-                    <label className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-2.5">
-                      Select Transfer Method
-                    </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {[
-                        { id: "raast", label: "Raast (Instant)" },
-                        { id: "sadapay", label: "SadaPay" },
-                        { id: "bank_transfer", label: "Bank IBFT" },
-                      ].map((m) => (
+                  {/* Billing cycle (only for plans that offer annual billing) */}
+                  {modalTier && MEMBERSHIP_PLANS[modalTier].annualTotal && (
+                    <div className="grid grid-cols-2 gap-2">
+                      {(["monthly", "annual"] as const).map((cycle) => (
                         <button
                           type="button"
-                          key={m.id}
-                          onClick={() => setPaymentMethod(m.id as any)}
+                          key={cycle}
+                          onClick={() => setBillingCycle(cycle)}
                           className={`py-2.5 px-2 rounded-xl text-xs font-semibold border transition-all text-center ${
-                            paymentMethod === m.id
+                            billingCycle === cycle
                               ? "bg-gradient-to-r from-[#FF6F26] to-[#FF5A1F] text-white border-transparent shadow-lg shadow-[#FF6F26]/20"
                               : "bg-white/[0.03] border-white/10 text-neutral-300 hover:bg-white/[0.06]"
                           }`}
                         >
-                          {m.label}
+                          {cycle === "monthly"
+                            ? `Monthly · PKR ${MEMBERSHIP_PLANS[modalTier].monthly.toLocaleString("en-US")}`
+                            : `Annual · PKR ${(MEMBERSHIP_PLANS[modalTier].annualTotal || 0).toLocaleString("en-US")} (save 18%)`}
                         </button>
                       ))}
                     </div>
-                  </div>
+                  )}
 
-                  {/* Account instructions box */}
-                  <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08] space-y-2">
-                    {paymentMethod === "raast" && (
-                      <div className="text-xs space-y-1">
-                        <div className="text-emerald-400 font-semibold flex items-center gap-1.5">
-                          <Zap className="w-3.5 h-3.5" />
-                          <span>RAAST ID (Instant / Zero Fee)</span>
-                        </div>
-                        <div className="text-lg font-mono font-bold text-white tracking-wider">
-                          0300-SOLONOMORE
-                        </div>
-                        <div className="text-neutral-400 text-[11px]">
-                          Linked Account: Meezan Bank / SadaPay (Abdul Raffay)
-                        </div>
-                      </div>
-                    )}
+                  {errorMsg && (
+                    <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
+                      <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                      <span>{errorMsg}</span>
+                    </div>
+                  )}
 
-                    {paymentMethod === "sadapay" && (
-                      <div className="text-xs space-y-1">
-                        <div className="text-[#FF6F26] font-semibold flex items-center gap-1.5">
-                          <CreditCard className="w-3.5 h-3.5" />
-                          <span>SadaPay / NayaPay Wallet</span>
-                        </div>
-                        <div className="text-lg font-mono font-bold text-white tracking-wider">
-                          0300-1234567
-                        </div>
-                        <div className="text-neutral-400 text-[11px]">
-                          Account Title: Solo-No-More / Abdul Raffay
-                        </div>
-                      </div>
-                    )}
-
-                    {paymentMethod === "bank_transfer" && (
-                      <div className="text-xs space-y-1">
-                        <div className="text-[#FF6F26] font-semibold flex items-center gap-1.5">
-                          <Building2 className="w-3.5 h-3.5" />
-                          <span>Meezan Bank IBFT</span>
-                        </div>
-                        <div className="text-white font-medium">Account Title: Abdul Raffay</div>
-                        <div className="font-mono text-neutral-300 text-[11px]">
-                          IBAN: PK42MEZN0001234567890123
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Transaction Ref input */}
-                  <div>
-                    <label className="block text-xs font-semibold text-neutral-300 mb-2">
-                      Transaction Reference / TID (From Bank App Receipt) *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. 9840210294 or STAN/RRN"
-                      value={transactionRef}
-                      onChange={(e) => setTransactionRef(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/10 text-white text-sm focus:outline-none focus:border-[#FF6F26] transition-colors font-mono"
-                    />
-                    <span className="block text-[11px] text-neutral-400 mt-1.5">
-                      Copy the 6 to 12 digit Transaction ID shown on your banking or SadaPay confirmation.
-                    </span>
-                  </div>
+                  <BankTransferPanel
+                    amountPkr={modalTier ? getMembershipAmountPkr(modalTier, billingCycle) : 0}
+                    purpose={`${modalTier ? MEMBERSHIP_PLANS[modalTier].name : ""} membership (${billingCycle})`}
+                    proofImage={proofImage}
+                    onProofImageChange={setProofImage}
+                    transactionRef={transactionRef}
+                    onTransactionRefChange={setTransactionRef}
+                    disabled={submitting}
+                  />
 
                   {/* Action buttons */}
                   <div className="space-y-2 pt-2">
                     <button
                       type="submit"
-                      disabled={submitting || !transactionRef.trim()}
+                      disabled={submitting || !proofImage}
                       className="w-full py-3.5 px-4 rounded-xl text-xs font-bold bg-gradient-to-r from-[#FF6F26] to-[#FF5A1F] text-white shadow-lg shadow-[#FF6F26]/20 hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50"
                     >
                       {submitting ? "Submitting Proof..." : "Submit Payment Proof"}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleDevInstantUpgrade(modalTier)}
-                      className="w-full py-2 px-3 rounded-xl text-[11px] text-neutral-400 hover:text-neutral-200 bg-white/[0.02] hover:bg-white/[0.05] transition-colors"
-                    >
-                      ⚡ [DEV TEST: Simulate Instant Approval]
                     </button>
                   </div>
                 </form>

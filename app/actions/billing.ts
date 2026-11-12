@@ -2,6 +2,20 @@
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getSessionUserSecurely } from "@/lib/supabase/session";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
+import { verifyAdminStatus } from "@/app/actions/admin";
+import { writeNotification } from "@/lib/server/notify";
+import { MEMBERSHIP_PLANS, getMembershipAmountPkr } from "@/lib/payment-config";
+import { notifyAdminByEmail, sendEmail } from "@/lib/server/email";
+import { getSiteUrl } from "@/lib/server/site-url";
+import { activateSubscription } from "@/lib/server/subscriptions";
+import { formatPkt } from "@/lib/time";
+import {
+  PAYMENT_PROOFS_BUCKET,
+  parseImageDataUrl,
+  resolveStoredImage,
+  storeImageDataUrl,
+} from "@/lib/server/storage";
 
 export type BillingActionResult =
   | { success: true }
@@ -18,88 +32,119 @@ async function getUserIdSecurely(): Promise<{ userId: string } | { error: string
   return { userId: result.userId };
 }
 
-/**
- * Server Action: Upgrade user's subscription tier.
- */
-export async function upgradeTier(tier: "member" | "family" | "partner"): Promise<BillingActionResult> {
-  const authCheck = await getUserIdSecurely();
-  if ("error" in authCheck) {
-    return { success: false, error: authCheck.error };
-  }
-  const userId = authCheck.userId;
-
-  const updatePayload: any = { subscription_tier: tier };
-  if (tier === "partner") {
-    updatePayload.is_partner = true;
-  }
-
-  // Update subscription_tier in profiles table
-  const { error: updateError } = await (supabaseAdmin
-    .from("profiles") as any)
-    .update(updatePayload)
-    .eq("id", userId);
-
-  if (updateError) {
-    return { success: false, error: "Failed to process billing upgrade. Please try again." };
-  }
-
-  return { success: true };
-}
-
 export interface SubmitPaymentInput {
   tierRequested: "member" | "family" | "partner";
-  amountPkr: number;
+  /** Ignored — the amount is always taken from the server-side price table. */
+  amountPkr?: number;
   paymentMethod: "raast" | "sadapay" | "bank_transfer" | "safepay";
-  transactionRef: string;
+  transactionRef?: string;
+  /** Compressed image data URL of the transfer receipt. */
   proofImageUrl?: string;
+  billingCycle?: "monthly" | "annual";
 }
 
 /**
- * Server Action: Submit payment verification details (Raast / SadaPay / Bank Transfer).
+ * Server Action: Submit bank-transfer proof for a membership upgrade.
+ * The tier is only activated after an admin approves it in Admin → Payments.
  */
 export async function submitPaymentProof(
   input: SubmitPaymentInput
 ): Promise<BillingActionResult> {
-  const authCheck = await getUserIdSecurely();
+  const authCheck = await getSessionUserSecurely();
   if ("error" in authCheck) {
     return { success: false, error: authCheck.error };
   }
   const userId = authCheck.userId;
 
-  if (!input.transactionRef || !input.transactionRef.trim()) {
-    return { success: false, error: "Transaction Reference ID / TID is required." };
+  const tier = input.tierRequested;
+  if (tier !== "member" && tier !== "family" && tier !== "partner") {
+    return { success: false, error: "Invalid membership tier." };
+  }
+  if (!parseImageDataUrl(input.proofImageUrl)) {
+    return { success: false, error: "Please upload a screenshot of your payment (JPG or PNG, under 3 MB)." };
+  }
+  const transactionRef = (input.transactionRef || "").trim().slice(0, 64);
+  const paymentMethod = ["raast", "sadapay", "bank_transfer"].includes(input.paymentMethod)
+    ? input.paymentMethod
+    : "bank_transfer";
+
+  const billingCycle: "monthly" | "annual" =
+    input.billingCycle === "annual" && MEMBERSHIP_PLANS[tier].annualTotal ? "annual" : "monthly";
+
+  const { data: profile } = await (supabaseAdmin.from("profiles") as any)
+    .select("full_name, phone, subscription_tier")
+    .eq("id", userId)
+    .maybeSingle();
+  if (!profile) {
+    return { success: false, error: "Profile not found." };
+  }
+  if (profile.subscription_tier === "admin") {
+    return { success: false, error: "Admin accounts do not need a membership upgrade." };
   }
 
-  // Insert payment submission into database
-  const { error: insertError } = await (supabaseAdmin
-    .from("payment_submissions") as any)
-    .insert({
-      user_id: userId,
-      amount_pkr: input.amountPkr,
-      tier_requested: input.tierRequested,
-      payment_method: input.paymentMethod,
-      transaction_ref: input.transactionRef.trim(),
-      proof_image_url: input.proofImageUrl || null,
-      status: "pending",
-    });
+  // One open request at a time keeps the admin queue clean.
+  const { data: open } = await (supabaseAdmin.from("payment_submissions") as any)
+    .select("id")
+    .eq("user_id", userId)
+    .eq("purpose", "membership_upgrade")
+    .eq("status", "pending")
+    .limit(1);
+  if (open && open.length > 0) {
+    return { success: false, error: "You already have a payment awaiting verification." };
+  }
+
+  const proofRef = await storeImageDataUrl(PAYMENT_PROOFS_BUCKET, `membership/${userId}`, input.proofImageUrl);
+  if (!proofRef) {
+    return { success: false, error: "The screenshot could not be read. Please upload it again." };
+  }
+
+  const { error: insertError } = await (supabaseAdmin.from("payment_submissions") as any).insert({
+    user_id: userId,
+    purpose: "membership_upgrade",
+    amount_pkr: getMembershipAmountPkr(tier, billingCycle),
+    tier_requested: tier,
+    payment_method: paymentMethod,
+    transaction_ref: transactionRef || "N/A",
+    proof_image_url: proofRef,
+    payer_name: profile.full_name,
+    payer_email: authCheck.email || null,
+    payer_phone: profile.phone,
+    item_label: `${MEMBERSHIP_PLANS[tier].name} membership — ${billingCycle === "annual" ? "annual" : "monthly"}`,
+    status: "pending",
+  });
 
   if (insertError) {
     console.error("[submitPaymentProof] DB insert error:", insertError);
-    if (!insertError.message?.includes("schema cache") && !insertError.message?.includes("does not exist")) {
-      return { success: false, error: "Failed to submit payment proof. Please try again." };
-    }
+    return {
+      success: false,
+      error: "Could not record your payment proof. Please try again in a moment or contact support on WhatsApp.",
+    };
   }
 
-  // Notify user in-app
-  try {
-    const { writeNotification } = await import("@/app/actions/notifications");
-    await writeNotification(
-      userId,
-      "spot_available" as any,
-      "💳 PAYMENT PROOF RECEIVED",
-      `Your transaction (${input.transactionRef.trim()}) for ${input.tierRequested.toUpperCase()} tier is queued for verification.`
-    );
-  } catch {}
+  await writeNotification(
+    userId,
+    "spot_available" as any,
+    "💳 PAYMENT PROOF RECEIVED",
+    `Your payment for ${MEMBERSHIP_PLANS[tier].name} is queued for verification.`
+  );
+
+  const siteUrl = await getSiteUrl();
+  if (authCheck.email) {
+    await sendEmail({
+      to: authCheck.email,
+      subject: "We received your payment proof",
+      heading: "Payment proof received",
+      paragraphs: [
+        `Hi ${(profile.full_name || "").split(" ")[0] || "there"},`,
+        `We have your payment screenshot for ${MEMBERSHIP_PLANS[tier].name} (${billingCycle}). You will get an email as soon as an admin has verified it.`,
+      ],
+    });
+  }
+  await notifyAdminByEmail(
+    "Membership payment proof to verify",
+    [`${profile.full_name || "A member"} uploaded proof for ${MEMBERSHIP_PLANS[tier].name} (${billingCycle}) — PKR ${getMembershipAmountPkr(tier, billingCycle).toLocaleString("en-US")}.`],
+    { label: "Open payments queue", url: `${siteUrl}/admin/payments` }
+  );
 
   return { success: true };
 }
@@ -113,9 +158,9 @@ export async function getPaymentSubmissionsAction(): Promise<{
   error?: string;
 }> {
   try {
-    const { verifyAdminStatus } = await import("@/app/actions/admin");
-    await verifyAdminStatus();
-  } catch {
+    await verifyAdminStatus("payments.view");
+  } catch (err) {
+    if (isRedirectError(err)) throw err;
     return { success: false, error: "Unauthorized. Admin privileges required." };
   }
 
@@ -126,10 +171,16 @@ export async function getPaymentSubmissionsAction(): Promise<{
       profiles:user_id (
         full_name,
         city,
-        avatar_icon
+        avatar_icon,
+        phone
+      ),
+      official_events:event_id (
+        title,
+        scheduled_at
       )
     `)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(500);
 
   if (error) {
     if (error.message?.includes("schema cache") || error.message?.includes("does not exist")) {
@@ -138,102 +189,183 @@ export async function getPaymentSubmissionsAction(): Promise<{
     return { success: false, error: error.message };
   }
 
-  return { success: true, data: data || [] };
+  // Proof screenshots live in a private bucket — hand the admin short-lived links.
+  const rows = await Promise.all(
+    (data || []).map(async (row: any) => ({
+      ...row,
+      proof_image_url: await resolveStoredImage(row.proof_image_url),
+    }))
+  );
+
+  return { success: true, data: rows };
 }
 
 /**
- * Server Action: Admin reviews and activates or rejects payment.
+ * Server Action: Admin approves or rejects a payment.
+ * Approval activates the membership tier or the event passes it paid for.
  */
 export async function reviewPaymentSubmissionAction(
   submissionId: string,
   decision: "approved" | "rejected",
   adminNotes?: string
 ): Promise<BillingActionResult> {
+  let admin: { userId: string };
   try {
-    const { verifyAdminStatus } = await import("@/app/actions/admin");
-    await verifyAdminStatus();
-  } catch {
-    return { success: false, error: "Unauthorized. Admin privileges required." };
+    admin = await verifyAdminStatus("payments.verify");
+  } catch (err) {
+    if (isRedirectError(err)) throw err;
+    return { success: false, error: "Unauthorized. Payment verification permission required." };
   }
 
-  // 1. Fetch submission details
-  const { data: submission, error: fetchErr } = await (supabaseAdmin
-    .from("payment_submissions") as any)
-    .select("*")
-    .eq("id", submissionId)
-    .single();
-
-  if (fetchErr || !submission) {
-    return { success: false, error: "Payment submission not found." };
+  if (decision !== "approved" && decision !== "rejected") {
+    return { success: false, error: "Invalid decision." };
   }
+  const notes = (adminNotes || "").trim().slice(0, 500) || null;
 
-  // 2. Update payment submission
-  const { error: updateErr } = await (supabaseAdmin
+  // Claim the submission atomically: only a still-pending row can be reviewed, so two
+  // admins (or a double click) can never process the same payment twice.
+  const { data: claimed, error: claimErr } = await (supabaseAdmin
     .from("payment_submissions") as any)
     .update({
       status: decision,
-      admin_notes: adminNotes || null,
+      admin_notes: notes,
+      reviewed_by: admin.userId,
       reviewed_at: new Date().toISOString(),
     })
-    .eq("id", submissionId);
+    .eq("id", submissionId)
+    .eq("status", "pending")
+    .select("*");
 
-  if (updateErr) {
+  if (claimErr) {
     return { success: false, error: "Failed to update payment submission." };
   }
+  const submission = claimed?.[0];
+  if (!submission) {
+    return { success: false, error: "This payment was already reviewed or no longer exists." };
+  }
 
-  // 3. If approved, upgrade profile tier or activate event ticket
-  const { writeNotification } = await import("@/app/actions/notifications");
-  if (decision === "approved") {
-    if (submission.tier_requested?.startsWith("event_ticket:")) {
-      const eventId = submission.tier_requested.replace("event_ticket:", "");
-      await (supabaseAdmin.from("event_tickets") as any).upsert({
-        event_id: eventId,
-        user_id: submission.user_id,
-        ticket_status: "active",
-      }, { onConflict: "event_id,user_id" });
+  const isTicketPayment =
+    submission.purpose === "event_ticket" || String(submission.tier_requested || "").startsWith("event_ticket:");
 
-      const { data: eventData } = await (supabaseAdmin.from("official_events") as any)
-        .select("title")
-        .eq("id", eventId)
-        .single();
+  if (isTicketPayment) {
+    const eventId = submission.event_id || String(submission.tier_requested || "").replace("event_ticket:", "");
+    const { data: eventData } = await (supabaseAdmin.from("official_events") as any)
+      .select("title")
+      .eq("id", eventId)
+      .maybeSingle();
+    const eventTitle = eventData?.title || "your event";
 
-      try {
-        await writeNotification(
-          submission.user_id,
-          "spot_available" as any,
-          "🎟 EVENT PASS CONFIRMED",
-          `Your ticket for "${eventData?.title || "Official Event"}" is active! Your digital pass is now confirmed.`
-        );
-      } catch {}
-    } else {
-      const updateData: any = { subscription_tier: submission.tier_requested };
-      if (submission.tier_requested === "partner") {
-        updateData.is_partner = true;
+    if (submission.booking_ref) {
+      const ticketUpdate =
+        decision === "approved"
+          ? { ticket_status: "active", payment_status: "paid" }
+          : { ticket_status: "cancelled", payment_status: "rejected" };
+      const { error: ticketErr } = await (supabaseAdmin.from("event_tickets") as any)
+        .update(ticketUpdate)
+        .eq("payment_reference", submission.booking_ref)
+        .eq("ticket_status", "pending");
+      if (ticketErr) {
+        console.error("[reviewPaymentSubmissionAction] Ticket update failed:", ticketErr);
+        // Put the submission back so the admin can retry instead of losing the payment.
+        await (supabaseAdmin.from("payment_submissions") as any)
+          .update({ status: "pending", reviewed_at: null, reviewed_by: null })
+          .eq("id", submissionId);
+        return { success: false, error: "Could not update the passes. Nothing was changed — please try again." };
       }
-
-      await (supabaseAdmin
-        .from("profiles") as any)
-        .update(updateData)
-        .eq("id", submission.user_id);
-
-      try {
-        await writeNotification(
-          submission.user_id,
-          "spot_available" as any,
-          "✓ PAYMENT VERIFIED & TIER ACTIVATED",
-          `Your payment has been verified! Welcome to the ${submission.tier_requested.toUpperCase()} circle.`
-        );
-      } catch {}
     }
-  } else {
-    try {
+
+    if (submission.payer_email) {
+      const siteUrl = await getSiteUrl();
+      await sendEmail({
+        to: submission.payer_email,
+        subject: decision === "approved" ? `Your pass for ${eventTitle} is confirmed` : `Payment not verified for ${eventTitle}`,
+        heading: decision === "approved" ? "Your pass is confirmed" : "We could not verify your payment",
+        paragraphs:
+          decision === "approved"
+            ? [
+                `Hi ${(submission.payer_name || "").split(" ")[0] || "there"},`,
+                `Your payment for "${eventTitle}" has been verified and your pass is active. Open your dashboard and show the QR code at the door.`,
+              ]
+            : [
+                `Hi ${(submission.payer_name || "").split(" ")[0] || "there"},`,
+                `We could not match your payment for "${eventTitle}" (booking ${submission.booking_ref || ""}).${notes ? " Reason: " + notes : ""}`,
+                "If you did pay, reply to this email or message us on WhatsApp with your bank receipt and we will sort it out.",
+              ],
+        button: decision === "approved" ? { label: "View my pass", url: `${siteUrl}/dashboard` } : undefined,
+      });
+    }
+
+    if (submission.user_id) {
       await writeNotification(
         submission.user_id,
         "spot_available" as any,
-        "✕ PAYMENT VERIFICATION FAILED",
-        `Payment could not be verified. ${adminNotes ? "Reason: " + adminNotes : "Please contact support."}`
+        decision === "approved" ? "🎟 EVENT PASS CONFIRMED" : "✕ PAYMENT NOT VERIFIED",
+        decision === "approved"
+          ? `Payment verified! Your pass for "${eventTitle}" is active. Show your QR code at the door.`
+          : `We could not verify your payment for "${eventTitle}". ${notes ? "Reason: " + notes : "Please contact support on WhatsApp."}`
       );
-    } catch {}
+    }
+    return { success: true };
+  }
+
+  // Membership upgrade
+  const tier = String(submission.tier_requested || "");
+  let activatedUntil: string | null = null;
+  if (decision === "approved") {
+    if (!["member", "family", "partner"].includes(tier)) {
+      await (supabaseAdmin.from("payment_submissions") as any)
+        .update({ status: "pending", reviewed_at: null, reviewed_by: null })
+        .eq("id", submissionId);
+      return { success: false, error: `Unknown tier "${tier}" on this submission.` };
+    }
+    const paidTier = tier as "member" | "family" | "partner";
+    // The amount recorded at submission tells us which billing cycle was bought.
+    const cycle =
+      MEMBERSHIP_PLANS[paidTier].annualTotal && Number(submission.amount_pkr) === MEMBERSHIP_PLANS[paidTier].annualTotal
+        ? "annual"
+        : "monthly";
+
+    const activated = await activateSubscription(submission.user_id, paidTier, cycle);
+    if (!activated.success) {
+      await (supabaseAdmin.from("payment_submissions") as any)
+        .update({ status: "pending", reviewed_at: null, reviewed_by: null })
+        .eq("id", submissionId);
+      return { success: false, error: `Could not activate the tier (${activated.error}). Nothing was changed — please try again.` };
+    }
+    activatedUntil = activated.expiresAt;
+  }
+
+  if (submission.user_id) {
+    await writeNotification(
+      submission.user_id,
+      "spot_available" as any,
+      decision === "approved" ? "✓ PAYMENT VERIFIED & TIER ACTIVATED" : "✕ PAYMENT VERIFICATION FAILED",
+      decision === "approved"
+        ? `Your payment has been verified! ${(MEMBERSHIP_PLANS as any)[tier]?.name || tier.toUpperCase()} is active${activatedUntil ? " until " + formatPkt(activatedUntil, { day: "numeric", month: "long", year: "numeric" }) : ""}.`
+        : `Payment could not be verified. ${notes ? "Reason: " + notes : "Please contact support on WhatsApp."}`
+    );
+  }
+
+  if (submission.payer_email) {
+    const siteUrl = await getSiteUrl();
+    const planLabel = (MEMBERSHIP_PLANS as any)[tier]?.name || `${tier.toUpperCase()} membership`;
+    await sendEmail({
+      to: submission.payer_email,
+      subject: decision === "approved" ? `${planLabel} is now active` : "We could not verify your membership payment",
+      heading: decision === "approved" ? "Your membership is active" : "We could not verify your payment",
+      paragraphs:
+        decision === "approved"
+          ? [
+              `Hi ${(submission.payer_name || "").split(" ")[0] || "there"},`,
+              `Your payment has been verified and ${planLabel} is active${activatedUntil ? " until " + formatPkt(activatedUntil, { day: "numeric", month: "long", year: "numeric" }) : ""}. We will remind you a few days before it is due for renewal.`,
+            ]
+          : [
+              `Hi ${(submission.payer_name || "").split(" ")[0] || "there"},`,
+              `We could not match your payment for ${planLabel}.${notes ? " Reason: " + notes : ""}`,
+              "If you did pay, reply to this email or message us on WhatsApp with your bank receipt and we will sort it out.",
+            ],
+      button: decision === "approved" ? { label: "Open my dashboard", url: `${siteUrl}/dashboard` } : undefined,
+    });
   }
 
   return { success: true };

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import BankTransferPanel from "@/components/payments/BankTransferPanel";
 import { getApplicationByIdAction, submitApplicationPaymentAction, MemberApplicationRecord } from "@/app/actions/member-applications";
 import {
   CreditCard,
@@ -49,20 +50,10 @@ export default function ApplicationPaymentPage() {
     setTimeout(() => setCopiedField(null), 2000);
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setProofImage(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-  };
-
   const handlePaymentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!transactionRef.trim()) {
-      setErrorMsg("Transaction Reference (TID / IBFT Ref) is required.");
+    if (!proofImage) {
+      setErrorMsg("Please upload a screenshot of your payment before submitting.");
       return;
     }
 
@@ -187,58 +178,6 @@ export default function ApplicationPaymentPage() {
             {/* STATUS 2: PAYMENT PENDING (Bank Details Display + Submission Form) */}
             {application.status === "payment_pending" && (
               <div>
-                <div style={{ background: "rgba(255,90,31,0.12)", border: "1px solid rgba(255,90,31,0.3)", borderRadius: "16px", padding: "18px", marginBottom: "24px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-                    <Building className="w-5 h-5 text-[#FF8A3D]" />
-                    <span style={{ fontSize: "14px", fontWeight: 800, color: "#fff" }}>Official Bank Account Transfer Details:</span>
-                  </div>
-
-                  <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "13.5px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ color: "rgba(255,255,255,0.6)" }}>Bank Name:</span>
-                      <span style={{ fontWeight: 800, color: "#fff" }}>Meezan Bank Limited</span>
-                    </div>
-
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ color: "rgba(255,255,255,0.6)" }}>Account Title:</span>
-                      <span style={{ fontWeight: 800, color: "#fff" }}>Solo-No-More Club</span>
-                    </div>
-
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ color: "rgba(255,255,255,0.6)" }}>IBAN:</span>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <span style={{ fontWeight: 900, fontFamily: "monospace", color: "#FFA05C" }}>PK36MEZN0001010203040506</span>
-                        <button
-                          type="button"
-                          onClick={() => copyToClipboard("PK36MEZN0001010203040506", "iban")}
-                          style={{ background: "none", border: "none", color: "rgba(255,255,255,0.7)", cursor: "pointer" }}
-                        >
-                          {copiedField === "iban" ? <Check className="w-4 h-4 text-[#27C93F]" /> : <Copy className="w-4 h-4" />}
-                        </button>
-                      </div>
-                    </div>
-
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ color: "rgba(255,255,255,0.6)" }}>Raast ID (Phone):</span>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <span style={{ fontWeight: 900, fontFamily: "monospace", color: "#FFA05C" }}>03001234567</span>
-                        <button
-                          type="button"
-                          onClick={() => copyToClipboard("03001234567", "raast")}
-                          style={{ background: "none", border: "none", color: "rgba(255,255,255,0.7)", cursor: "pointer" }}
-                        >
-                          {copiedField === "raast" ? <Check className="w-4 h-4 text-[#27C93F]" /> : <Copy className="w-4 h-4" />}
-                        </button>
-                      </div>
-                    </div>
-
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "8px", borderTop: "1px solid rgba(255,255,255,0.1)" }}>
-                      <span style={{ color: "rgba(255,255,255,0.8)", fontWeight: 700 }}>Total Amount:</span>
-                      <span style={{ fontSize: "18px", fontWeight: 900, color: "#27C93F" }}>PKR {application.packagePricePkr.toLocaleString()}</span>
-                    </div>
-                  </div>
-                </div>
-
                 {/* Proof Submission Form */}
                 <form onSubmit={handlePaymentSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                   <h3 style={{ fontSize: "16px", fontWeight: 800, margin: 0 }}>Submit Payment Screenshot &amp; Reference</h3>
@@ -249,51 +188,17 @@ export default function ApplicationPaymentPage() {
                     </div>
                   )}
 
-                  <div>
-                    <label style={{ display: "block", fontSize: "12px", fontWeight: 800, color: "rgba(255,255,255,0.6)", textTransform: "uppercase", marginBottom: "6px" }}>
-                      Transaction Reference (TID / IBFT Ref ID) *
-                    </label>
-                    <input
-                      required
-                      value={transactionRef}
-                      onChange={(e) => setTransactionRef(e.target.value)}
-                      placeholder="e.g. MEZN123456789 or Raast ID"
-                      style={{
-                        width: "100%",
-                        background: "rgba(0,0,0,0.5)",
-                        border: "1px solid rgba(255,255,255,0.15)",
-                        borderRadius: "12px",
-                        padding: "12px 14px",
-                        color: "#fff",
-                        fontSize: "14px",
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", fontSize: "12px", fontWeight: 800, color: "rgba(255,255,255,0.6)", textTransform: "uppercase", marginBottom: "6px" }}>
-                      Upload Payment Screenshot Proof
-                    </label>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      style={{
-                        width: "100%",
-                        background: "rgba(0,0,0,0.5)",
-                        border: "1px solid rgba(255,255,255,0.15)",
-                        borderRadius: "12px",
-                        padding: "10px 14px",
-                        color: "#fff",
-                        fontSize: "13px",
-                      }}
-                    />
-                    {proofImage && (
-                      <div style={{ marginTop: "10px", width: "120px", height: "120px", borderRadius: "10px", overflow: "hidden", border: "1px solid rgba(255,255,255,0.3)" }}>
-                        <img src={proofImage} alt="Payment Proof" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                      </div>
-                    )}
-                  </div>
+                  <BankTransferPanel
+                    amountPkr={application.packagePricePkr}
+                    purpose={`Membership — ${application.packageSelected}`}
+                    reference={id}
+                    payerName={application.fullName}
+                    proofImage={proofImage || null}
+                    onProofImageChange={(value) => setProofImage(value || "")}
+                    transactionRef={transactionRef}
+                    onTransactionRefChange={setTransactionRef}
+                    disabled={submitting}
+                  />
 
                   <button
                     type="submit"
@@ -323,7 +228,7 @@ export default function ApplicationPaymentPage() {
                 <CheckCircle2 className="w-14 h-14 text-[#27C93F] mx-auto mb-3" />
                 <h3 style={{ fontSize: "22px", fontWeight: 900, margin: "0 0 8px" }}>Payment Proof Received!</h3>
                 <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.75)", lineHeight: 1.6, maxWidth: "460px", margin: "0 auto 20px" }}>
-                  Your transaction TID (<strong>{application.transactionRef}</strong>) is queued with admin verification. Once verified, your credential setup link will unlock right here.
+                  Your payment proof is queued for admin verification. Once verified, your credential setup link will unlock right here.
                 </p>
                 <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)" }}>
                   Verified automatically during business hours (typically &lt; 2 hours).

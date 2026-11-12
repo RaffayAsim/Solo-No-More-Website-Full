@@ -20,6 +20,7 @@ ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_guest BOOLEAN DEFAULT fa
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_profile_complete BOOLEAN DEFAULT false;
 
 -- ── 2. Extend public.event_tickets with QHQ Linked Pairing & Merchant Fields ──
+ALTER TABLE public.event_tickets ALTER COLUMN user_id DROP NOT NULL;
 ALTER TABLE public.event_tickets ADD COLUMN IF NOT EXISTS pair_code TEXT;
 ALTER TABLE public.event_tickets ADD COLUMN IF NOT EXISTS is_couple_booking BOOLEAN DEFAULT false;
 ALTER TABLE public.event_tickets ADD COLUMN IF NOT EXISTS is_guest_entry BOOLEAN DEFAULT false;

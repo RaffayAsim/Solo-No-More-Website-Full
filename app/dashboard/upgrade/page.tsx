@@ -11,14 +11,19 @@ export default async function UpgradePage() {
     redirect("/login");
   }
 
-  // Fetch subscription tier
+  // Fetch subscription tier and expiry ("*" so this works before the expiry columns exist)
   const { data: profile } = await (supabaseAdmin
     .from("profiles") as any)
-    .select("subscription_tier")
+    .select("*")
     .eq("id", auth.userId)
     .maybeSingle();
 
   const currentTier = profile?.subscription_tier || "none";
 
-  return <UpgradeHubClient currentTier={currentTier} />;
+  return (
+    <UpgradeHubClient
+      currentTier={currentTier}
+      expiresAt={profile?.subscription_expires_at || null}
+    />
+  );
 }

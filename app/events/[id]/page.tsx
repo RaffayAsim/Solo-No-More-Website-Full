@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 import PublicEventShareButton from "./PublicEventShareButton";
 import PublicEventBookButton from "./PublicEventBookButton";
+import { isAdminEmail } from "@/lib/server/auth";
+import { PKT_TIME_ZONE } from "@/lib/time";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -38,7 +40,20 @@ export default async function PublicEventPage({ params }: PageProps) {
     notFound();
   }
 
-  const { cleanDescription, metadata } = parseEventDescription(event.description || "");
+  const parsedEvent = parseEventDescription(event.description || "");
+  const cleanDescription = parsedEvent.cleanDescription;
+  // Events created without the rich editor have no tiers of their own: show one
+  // "General Admission" tier at the event's real price (never placeholder defaults).
+  const hasRichMeta = (event.description || "").includes("SNM_EVENT_META");
+  const metadata = hasRichMeta
+    ? parsedEvent.metadata
+    : {
+        ...parsedEvent.metadata,
+        tier_packages: [{ id: "general", name: "General Admission", price: Number(event.price) || 0 }],
+        lineups: [],
+        organizer: undefined,
+        attending_label: "",
+      };
   const tiers = metadata?.tier_packages || [];
 
   // Fetch current user profile to pass to booking modal
@@ -53,6 +68,16 @@ export default async function PublicEventPage({ params }: PageProps) {
     userProfile = prof;
   }
 
+  // Drafts and events still awaiting admin review are only visible to staff and their creator.
+  if (metadata?.status === "draft" || metadata?.status === "pending_review") {
+    const canPreview =
+      !!userId &&
+      (metadata.creator_id === userId ||
+        userProfile?.subscription_tier === "admin" ||
+        isAdminEmail("error" in auth ? undefined : auth.email));
+    if (!canPreview) notFound();
+  }
+
   const formattedDate = event.scheduled_at
     ? new Date(event.scheduled_at).toLocaleDateString("en-US", {
         weekday: "long",
@@ -60,6 +85,7 @@ export default async function PublicEventPage({ params }: PageProps) {
         day: "numeric",
         hour: "numeric",
         minute: "2-digit",
+        timeZone: PKT_TIME_ZONE,
       })
     : "Time TBD";
 

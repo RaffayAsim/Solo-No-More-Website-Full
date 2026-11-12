@@ -4,7 +4,7 @@
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS public.membership_applications (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
   type TEXT NOT NULL DEFAULT 'member' CHECK (type IN ('member', 'partner')),
   username TEXT,
   email TEXT NOT NULL,
@@ -36,6 +36,17 @@ CREATE TABLE IF NOT EXISTS public.membership_applications (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- In case table already exists with UUID id column, safely alter to TEXT
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'membership_applications' AND column_name = 'id' AND data_type = 'uuid'
+  ) THEN
+    ALTER TABLE public.membership_applications ALTER COLUMN id TYPE TEXT;
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS membership_applications_status_idx ON public.membership_applications(status);
 CREATE INDEX IF NOT EXISTS membership_applications_email_idx ON public.membership_applications(email);

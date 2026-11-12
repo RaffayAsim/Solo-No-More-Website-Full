@@ -1,12 +1,19 @@
 "use server";
 
-import fs from "fs";
-import path from "path";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { verifyAdminStatus } from "@/app/actions/admin";
 import { getAllApplicationsAction } from "@/app/actions/member-applications";
-import { getAllAdminBookingsAction, MemberBookingRecord } from "@/app/actions/admin-bookings";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
+import crypto from "crypto";
+import { isUuid } from "@/lib/server/auth";
+import {
+  findAuthUserByEmail,
+  generateTempPassword,
+  isDuplicateUserError,
+  isValidEmail,
+  listAllAuthUsers,
+} from "@/lib/server/auth-users";
+import { parseEventDescription } from "@/lib/event-metadata";
 
 export interface ManualUserOption {
   id: string;
@@ -26,129 +33,165 @@ export interface ManualEventOption {
   city?: string;
 }
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const BOOKINGS_FILE = path.join(DATA_DIR, "admin_bookings.json");
+function makeManualQrId(): string {
+  // 10 random hex chars: unguessable and effectively collision-free
+  return `QHQ-${crypto.randomBytes(5).toString("hex").toUpperCase()}`;
+}
+
+/** Price of a pass type for an event, taken from the event's own tiers. */
+function resolvePassPrice(event: any, passType: string): number {
+  const base = Number(event?.price) || 0;
+  const hasRichMeta = (event?.description || "").includes("SNM_EVENT_META");
+  const tiers = hasRichMeta ? parseEventDescription(event.description).metadata.tier_packages || [] : [];
+  const match = tiers.find((t: any) => String(t.name || "").toLowerCase() === (passType || "").toLowerCase());
+  const single = match ? Number(match.price) || 0 : base;
+  return (passType || "").toLowerCase().includes("couple") && !match ? single * 2 : single;
+}
+
+async function insertManualTicket(params: {
+  eventId: string;
+  userId: string | null;
+  userName: string;
+  userEmail: string;
+  userPhone?: string;
+  passType: string;
+  confirmed: boolean;
+}): Promise<{ success: boolean; error?: string; qrId?: string }> {
+  if (!isUuid(params.eventId)) {
+    return { success: false, error: "Please select a valid event." };
+  }
+
+  const { data: event } = await (supabaseAdmin.from("official_events") as any)
+    .select("id, title, price, description, max_capacity")
+    .eq("id", params.eventId)
+    .maybeSingle();
+  if (!event) return { success: false, error: "Event not found." };
+
+  if (params.userId) {
+    const { data: existing } = await (supabaseAdmin.from("event_tickets") as any)
+      .select("id")
+      .eq("event_id", params.eventId)
+      .eq("user_id", params.userId)
+      .neq("ticket_status", "cancelled")
+      .limit(1);
+    if (existing && existing.length > 0) {
+      return { success: false, error: "This user already has a pass for this event." };
+    }
+  }
+
+  const { count } = await (supabaseAdmin.from("event_tickets") as any)
+    .select("id", { count: "exact", head: true })
+    .eq("event_id", params.eventId)
+    .neq("ticket_status", "cancelled");
+  if (count !== null && count >= Number(event.max_capacity || 0)) {
+    return { success: false, error: "This event is at full capacity." };
+  }
+
+  const qrId = makeManualQrId();
+  const { error } = await (supabaseAdmin.from("event_tickets") as any).insert({
+    event_id: params.eventId,
+    user_id: params.userId,
+    ticket_status: params.confirmed ? "active" : "pending",
+    // An admin issuing a confirmed pass by hand vouches for the payment.
+    payment_status: params.confirmed ? "paid" : "pending",
+    payment_method: "manual_admin",
+    is_guest_entry: !params.userId,
+    qr_id: qrId,
+    user_name: params.userName,
+    user_email: params.userEmail || null,
+    user_phone: params.userPhone || null,
+    tier_name: params.passType || "Single Pass",
+    is_couple_booking: (params.passType || "").toLowerCase().includes("couple"),
+    amount_paid_pkr: resolvePassPrice(event, params.passType),
+  });
+
+  if (error) {
+    console.error("[manual-ticketing] Ticket insert failed:", error);
+    return {
+      success: false,
+      error: /duplicate|unique/i.test(error.message || "")
+        ? "This user already has a pass for this event."
+        : "Could not create the pass. If this keeps happening, run the latest Supabase migration (phase18).",
+    };
+  }
+
+  return { success: true, qrId };
+}
 
 /**
- * Fetch all available users (profiles + auth users + applications + bookings)
+ * Fetch events and selectable users for the manual ticketing desk.
  */
 export async function getManualTicketingDataAction(): Promise<{
   users: ManualUserOption[];
   events: ManualEventOption[];
 }> {
   try {
-    await verifyAdminStatus();
+    await verifyAdminStatus("bookings.approve");
   } catch (err) {
     if (isRedirectError(err)) throw err;
     return { users: [], events: [] };
   }
 
-  // 1. Fetch Events
+  // 1. Events
   const { data: dbEvents } = await (supabaseAdmin
     .from("official_events") as any)
-    .select("id, title, scheduled_at, ticket_price, venue_name, city")
+    .select("id, title, scheduled_at, price, venue_name")
     .order("scheduled_at", { ascending: false });
 
-  const events: ManualEventOption[] = (dbEvents || []).map((e: any) => {
-    let formattedDate = "";
-    if (e.scheduled_at) {
-      try {
-        const d = new Date(e.scheduled_at);
-        formattedDate = d.toISOString().split("T")[0]; // YYYY-MM-DD format as in Image 2
-      } catch {
-        formattedDate = e.scheduled_at;
-      }
-    }
-    return {
-      id: String(e.id),
-      title: e.title || "Untitled Event",
-      scheduled_at: e.scheduled_at,
-      formatted_date: formattedDate,
-      ticket_price: Number(e.ticket_price || 0),
-      venue_name: e.venue_name || "",
-      city: e.city || "Karachi",
-    };
-  });
+  const events: ManualEventOption[] = (dbEvents || []).map((e: any) => ({
+    id: String(e.id),
+    title: e.title || "Untitled Event",
+    scheduled_at: e.scheduled_at,
+    // Calendar date in Pakistan time, YYYY-MM-DD
+    formatted_date: e.scheduled_at
+      ? new Date(e.scheduled_at).toLocaleDateString("en-CA", { timeZone: "Asia/Karachi" })
+      : "",
+    ticket_price: Number(e.price || 0),
+    venue_name: e.venue_name || "",
+    city: "Karachi",
+  }));
 
-  // 2. Fetch Users from profiles, auth, and bookings
+  // 2. Users: every auth account, enriched with profile details
   const userMap = new Map<string, ManualUserOption>();
 
-  // A. Profiles
-  const { data: profiles } = await (supabaseAdmin
-    .from("profiles") as any)
-    .select("id, full_name, phone, city");
+  const [{ data: profiles }, authUsers] = await Promise.all([
+    (supabaseAdmin.from("profiles") as any).select("id, full_name, phone"),
+    listAllAuthUsers().catch(() => [] as any[]),
+  ]);
+  const profileMap = new Map<string, any>((profiles || []).map((p: any) => [p.id, p]));
 
-  // B. Auth Users
+  for (const u of authUsers) {
+    const email = u.email || "";
+    const profile = profileMap.get(u.id);
+    userMap.set(u.id, {
+      id: u.id,
+      name: profile?.full_name || u.user_metadata?.full_name || email.split("@")[0] || "User",
+      email,
+      phone: profile?.phone || u.user_metadata?.phone || "",
+    });
+  }
+
+  // 3. Applicants who do not have an account yet (issued as guest passes)
   try {
-    const { data: authData } = await supabaseAdmin.auth.admin.listUsers();
-    if (authData && authData.users) {
-      for (const u of authData.users) {
-        const email = u.email || "";
-        const profile = (profiles || []).find((p: any) => p.id === u.id);
-        const name = profile?.full_name || u.user_metadata?.full_name || email.split("@")[0] || "User";
-        userMap.set(u.id, {
-          id: u.id,
-          name,
-          email,
-          phone: profile?.phone || u.user_metadata?.phone || "",
+    const apps = await getAllApplicationsAction();
+    const knownEmails = new Set(Array.from(userMap.values()).map((u) => u.email.toLowerCase()));
+    for (const a of apps) {
+      if (a.email && !knownEmails.has(a.email.toLowerCase())) {
+        knownEmails.add(a.email.toLowerCase());
+        userMap.set("app-" + a.id, {
+          id: "app-" + a.id,
+          name: a.fullName || a.username || "Applicant",
+          email: a.email,
+          phone: a.phone || "",
+          username: a.username,
         });
       }
     }
   } catch (err) {
-    console.error("Error listing auth users:", err);
+    if (isRedirectError(err)) throw err;
   }
 
-  // C. Fallback/Seed from admin bookings to make sure known sample users exist
-  try {
-    const bookings = await getAllAdminBookingsAction();
-    for (const b of bookings) {
-      if (b.email) {
-        const existingKey = Array.from(userMap.values()).find(
-          (u) => u.email.toLowerCase() === b.email.toLowerCase()
-        );
-        if (!existingKey) {
-          const fakeId = "user-" + b.id;
-          userMap.set(fakeId, {
-            id: fakeId,
-            name: b.name || "Member User",
-            email: b.email,
-            phone: b.phone || "",
-          });
-        }
-      }
-    }
-  } catch (err) {
-    console.error("Error loading bookings for users:", err);
-  }
-
-  // D. Applications
-  try {
-    const apps = await getAllApplicationsAction();
-    for (const a of apps) {
-      if (a.email) {
-        const existing = Array.from(userMap.values()).find(
-          (u) => u.email.toLowerCase() === a.email.toLowerCase()
-        );
-        if (!existing) {
-          const fakeId = "app-" + a.id;
-          userMap.set(fakeId, {
-            id: fakeId,
-            name: a.fullName || a.username || "Applicant",
-            email: a.email,
-            phone: a.phone || "",
-            username: a.username,
-          });
-        }
-      }
-    }
-  } catch (err) {
-    console.error("Error loading apps for users:", err);
-  }
-
-  const users = Array.from(userMap.values()).sort((a, b) =>
-    a.name.localeCompare(b.name)
-  );
-
+  const users = Array.from(userMap.values()).sort((a, b) => a.name.localeCompare(b.name));
   return { users, events };
 }
 
@@ -167,10 +210,10 @@ export async function adminAssignExistingUserTicketAction(params: {
   ticketStatus: "Confirm" | "Pending";
 }): Promise<{ success: boolean; error?: string; ticketId?: string }> {
   try {
-    await verifyAdminStatus();
+    await verifyAdminStatus("bookings.approve");
   } catch (err) {
     if (isRedirectError(err)) throw err;
-    return { success: false, error: "Unauthorized. Admin privileges required." };
+    return { success: false, error: "Unauthorized. Booking approval permission required." };
   }
 
   if (!params.eventId) {
@@ -180,61 +223,18 @@ export async function adminAssignExistingUserTicketAction(params: {
     return { success: false, error: "Please select a user." };
   }
 
-  const qrId = `QHQ-${Math.floor(100000 + Math.random() * 900000)}`;
-  const bookingId = String(Date.now().toString().slice(-4));
+  const result = await insertManualTicket({
+    eventId: params.eventId,
+    userId: isUuid(params.userId) ? params.userId : null,
+    userName: (params.userName || "").trim().slice(0, 120) || "Attendee",
+    userEmail: (params.userEmail || "").trim().toLowerCase(),
+    userPhone: params.userPhone?.trim(),
+    passType: params.passType || "Single Pass",
+    confirmed: params.ticketStatus === "Confirm",
+  });
 
-  // 1. If valid UUID user_id and UUID event_id, insert into event_tickets
-  const isValidUuid = (s: string) =>
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
-
-  if (isValidUuid(params.userId) && isValidUuid(params.eventId)) {
-    try {
-      await (supabaseAdmin.from("event_tickets") as any).upsert({
-        event_id: params.eventId,
-        user_id: params.userId,
-        ticket_status: params.ticketStatus === "Confirm" ? "active" : "pending",
-      });
-    } catch (e) {
-      console.error("Warning: event_tickets upsert error:", e);
-    }
-  }
-
-  // 2. Add to admin_bookings.json so it reflects in Member Bookings table & statistics
-  try {
-    let records: MemberBookingRecord[] = [];
-    if (fs.existsSync(BOOKINGS_FILE)) {
-      const raw = fs.readFileSync(BOOKINGS_FILE, "utf-8");
-      records = JSON.parse(raw);
-    }
-
-    const newRecord: MemberBookingRecord = {
-      id: bookingId,
-      qr_id: qrId,
-      event_id: params.eventId,
-      event_name: params.eventTitle,
-      event_date: params.eventDate || new Date().toLocaleDateString("en-US"),
-      booking_type: params.passType.toLowerCase().includes("couple") ? "Couple" : "Single",
-      tier: params.passType,
-      name: params.userName,
-      email: params.userEmail,
-      phone: params.userPhone || "03000000000",
-      status: params.ticketStatus,
-      user_status: "Confirm",
-      invite_progress: "N/A",
-      cnic: "42101-0000000-0",
-      car_number: "N/A",
-      price: params.passType.toLowerCase().includes("couple") ? 5000 : 2500,
-      venue: "Official Venue",
-      created_at: new Date().toLocaleString("en-US"),
-    };
-
-    records.unshift(newRecord);
-    fs.writeFileSync(BOOKINGS_FILE, JSON.stringify(records, null, 2), "utf-8");
-  } catch (err) {
-    console.error("Error saving manual booking record:", err);
-  }
-
-  return { success: true, ticketId: qrId };
+  if (!result.success) return { success: false, error: result.error };
+  return { success: true, ticketId: result.qrId };
 }
 
 /**
@@ -253,137 +253,108 @@ export async function adminCreateUserAndAssignTicketAction(params: {
   eventTitle: string;
   eventDate?: string;
   passType?: string;
-}): Promise<{ success: boolean; error?: string; userId?: string; qrId?: string }> {
+}): Promise<{ success: boolean; error?: string; userId?: string; qrId?: string; tempPassword?: string }> {
+  let admin: { isRoot: boolean };
   try {
-    await verifyAdminStatus();
+    admin = await verifyAdminStatus("bookings.approve");
   } catch (err) {
     if (isRedirectError(err)) throw err;
-    return { success: false, error: "Unauthorized. Admin privileges required." };
+    return { success: false, error: "Unauthorized. Booking approval permission required." };
   }
 
   if (!params.fullName?.trim() || !params.email?.trim()) {
     return { success: false, error: "Full Name and Email are required." };
   }
+  if (!isValidEmail(params.email)) {
+    return { success: false, error: "Please enter a valid email address." };
+  }
+  if (params.password && params.password.length < 8) {
+    return { success: false, error: "Password must be at least 8 characters." };
+  }
 
-  const generatedPassword = params.password && params.password.length >= 6
-    ? params.password
-    : "SoloNoMore2026!";
+  const roleLower = (params.role || "").toLowerCase();
+  if (roleLower.includes("admin") && !admin.isRoot) {
+    return { success: false, error: "Only the platform owner can create admin accounts." };
+  }
+
+  // No shared default password — generate a unique one-off when none was chosen.
+  const tempPassword = params.password ? undefined : generateTempPassword();
 
   // 1. Create or retrieve Auth User
   let userId: string | null = null;
+  let createdNew = false;
   const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
     email: params.email.trim(),
-    password: generatedPassword,
+    password: params.password || tempPassword!,
     email_confirm: true,
     user_metadata: {
       full_name: params.fullName.trim(),
       username: params.username?.trim() || params.email.split("@")[0],
       phone: params.phone?.trim() || "",
       city: params.city?.trim() || "Karachi",
-      gender: params.gender || "male",
     },
   });
 
   if (authError) {
-    if (
-      authError.message.toLowerCase().includes("already registered") ||
-      authError.message.toLowerCase().includes("duplicate")
-    ) {
-      const { data: userLookup } = await supabaseAdmin.auth.admin.listUsers();
-      const existingUser = userLookup.users.find(
-        (u) => u.email?.toLowerCase() === params.email.trim().toLowerCase()
-      );
-      if (existingUser) {
-        userId = existingUser.id;
-      } else {
-        return { success: false, error: authError.message };
-      }
+    if (isDuplicateUserError(authError.message)) {
+      const existingUser = await findAuthUserByEmail(params.email);
+      if (!existingUser) return { success: false, error: authError.message };
+      userId = existingUser.id;
     } else {
       return { success: false, error: authError.message };
     }
   } else {
     userId = authData?.user?.id || null;
+    createdNew = !!userId;
   }
 
-  // Map role to subscription_tier
-  let tier = "member";
-  if (params.role.toLowerCase().includes("guest")) tier = "guest";
-  else if (params.role.toLowerCase().includes("partner")) tier = "partner";
-  else if (params.role.toLowerCase().includes("admin")) tier = "admin";
-
-  // 2. Upsert Profile
-  if (userId) {
-    try {
-      await (supabaseAdmin.from("profiles") as any).upsert({
-        id: userId,
-        full_name: params.fullName.trim(),
-        phone: params.phone?.trim() || null,
-        city: params.city?.trim() || "Karachi",
-        subscription_tier: tier,
-        account_status: "approved",
-      });
-    } catch (e) {
-      console.error("Profile upsert notice:", e);
-    }
+  // 2. Profile — only set role/tier on accounts created right now. An existing
+  //    member's tier and status are never overwritten from the ticketing desk.
+  if (userId && createdNew) {
+    const isGuest = roleLower.includes("guest");
+    const isPartner = roleLower.includes("partner");
+    const tier = roleLower.includes("admin") ? "admin" : isGuest ? "none" : isPartner ? "partner" : "member";
+    const { error: profileErr } = await (supabaseAdmin.from("profiles") as any).upsert({
+      id: userId,
+      full_name: params.fullName.trim(),
+      phone: params.phone?.trim() || null,
+      city: ["Karachi", "Lahore", "Islamabad"].includes(params.city?.trim() || "") ? params.city!.trim() : "Karachi",
+      gender: params.gender || null,
+      subscription_tier: tier,
+      is_partner: isPartner,
+      is_guest: isGuest,
+      account_status: "approved",
+    });
+    if (profileErr) console.error("[manual-ticketing] Profile upsert failed:", profileErr);
   }
 
   // 3. Assign Ticket if event provided
-  let qrId = "";
+  let qrId: string | undefined;
   if (params.eventId) {
-    qrId = `QHQ-${Math.floor(100000 + Math.random() * 900000)}`;
-    const bookingId = String(Date.now().toString().slice(-4));
-
-    const isValidUuid = (s: string) =>
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
-
-    if (userId && isValidUuid(userId) && isValidUuid(params.eventId)) {
-      try {
-        await (supabaseAdmin.from("event_tickets") as any).upsert({
-          event_id: params.eventId,
-          user_id: userId,
-          ticket_status: "active",
-        });
-      } catch (e) {
-        console.error("Warning: event_tickets upsert error:", e);
-      }
-    }
-
-    // Save to bookings json
-    try {
-      let records: MemberBookingRecord[] = [];
-      if (fs.existsSync(BOOKINGS_FILE)) {
-        const raw = fs.readFileSync(BOOKINGS_FILE, "utf-8");
-        records = JSON.parse(raw);
-      }
-
-      const passType = params.passType || "Single Pass";
-      const newRecord: MemberBookingRecord = {
-        id: bookingId,
-        qr_id: qrId,
-        event_id: params.eventId,
-        event_name: params.eventTitle || "Official Event",
-        event_date: params.eventDate || new Date().toLocaleDateString("en-US"),
-        booking_type: passType.toLowerCase().includes("couple") ? "Couple" : "Single",
-        tier: passType,
-        name: params.fullName.trim(),
-        email: params.email.trim(),
-        phone: params.phone?.trim() || "03000000000",
-        status: "Confirm",
-        user_status: "Confirm",
-        invite_progress: "N/A",
-        cnic: "42101-0000000-0",
-        car_number: "N/A",
-        price: 2500,
-        venue: "Official Venue",
-        created_at: new Date().toLocaleString("en-US"),
+    const result = await insertManualTicket({
+      eventId: params.eventId,
+      userId,
+      userName: params.fullName.trim().slice(0, 120),
+      userEmail: params.email.trim().toLowerCase(),
+      userPhone: params.phone?.trim(),
+      passType: params.passType || "Single Pass",
+      confirmed: true,
+    });
+    if (!result.success) {
+      return {
+        success: false,
+        error: `${createdNew ? "The account was created, but the pass was not: " : ""}${result.error}`,
+        userId: userId || undefined,
+        tempPassword: createdNew ? tempPassword : undefined,
       };
-
-      records.unshift(newRecord);
-      fs.writeFileSync(BOOKINGS_FILE, JSON.stringify(records, null, 2), "utf-8");
-    } catch (err) {
-      console.error("Error appending manual booking:", err);
     }
+    qrId = result.qrId;
   }
 
-  return { success: true, userId: userId || undefined, qrId: qrId || undefined };
+  return {
+    success: true,
+    userId: userId || undefined,
+    qrId,
+    tempPassword: createdNew ? tempPassword : undefined,
+  };
 }

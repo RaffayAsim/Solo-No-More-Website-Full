@@ -5,6 +5,7 @@ import Link from "next/link";
 import SubpageNavbar from "@/components/SubpageNavbar";
 import SubpageFooter from "@/components/SubpageFooter";
 import { Ticket, QrCode, Smartphone, Zap, ShieldCheck, Check, DollarSign, Users, Sparkles, Send, ArrowRight, BarChart3 } from "lucide-react";
+import { submitPartnerApplicationAction } from "@/app/actions/member-applications";
 
 export default function SellYourTicketPage() {
   const [ticketPrice, setTicketPrice] = useState(1500);
@@ -21,19 +22,46 @@ export default function SellYourTicketPage() {
   const [phone, setPhone] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
   // Calculations
   const grossRevenue = ticketPrice * attendees;
   const platformFee = Math.round(grossRevenue * 0.05); // 5% flat fee
   const hostPayout = grossRevenue - platformFee;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
+    setErrorMsg("");
+    try {
+      const emailDerived = phone.includes("@")
+        ? phone.trim()
+        : `${phone.replace(/\D/g, "") || "host"}@events.solonomore.pk`;
+
+      const res = await submitPartnerApplicationAction({
+        fullName: hostName.trim(),
+        email: emailDerived,
+        phone: phone.trim(),
+        city: venue.toLowerCase().includes("lahore")
+          ? "Lahore"
+          : venue.toLowerCase().includes("islamabad")
+          ? "Islamabad"
+          : "Karachi",
+        partnerBusinessName: eventTitle.trim(),
+        partnerCategory: `Event Host: ${eventType.toUpperCase()}`,
+        partnerPerks: `Venue: ${venue.trim()} • Date: ${date} • Cap: ${capacity} • Ticket Price: PKR ${priceInput}`,
+      });
+
+      if (res.success) {
+        setSubmitted(true);
+      } else {
+        setErrorMsg(res.error || "Failed to submit request.");
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to submit request.");
+    } finally {
       setLoading(false);
-      setSubmitted(true);
-    }, 700);
+    }
   };
 
   const perks = [
@@ -547,6 +575,22 @@ export default function SellYourTicketPage() {
                     />
                   </div>
                 </div>
+
+                {errorMsg && (
+                  <div
+                    style={{
+                      background: "rgba(239, 68, 68, 0.15)",
+                      border: "1px solid rgba(239, 68, 68, 0.4)",
+                      color: "#FCA5A5",
+                      padding: "10px 14px",
+                      borderRadius: "10px",
+                      fontSize: "13px",
+                      fontWeight: 600,
+                    }}
+                  >
+                    ⚠️ {errorMsg}
+                  </div>
+                )}
 
                 <button
                   type="submit"

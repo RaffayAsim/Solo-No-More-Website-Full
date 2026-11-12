@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
+import { getPublicEventsAction } from "@/app/actions/public-events";
 import SubpageNavbar from "@/components/SubpageNavbar";
 import SubpageFooter from "@/components/SubpageFooter";
 import EventQuickPreviewModal, { EventPreviewData } from "@/components/events/EventQuickPreviewModal";
@@ -43,137 +44,6 @@ interface EventItem {
   isOfficial?: boolean;
 }
 
-const EVENTS_DATA: EventItem[] = [
-  {
-    id: "e1",
-    title: "Late Night Chai & FIFA Rivals",
-    category: "casual",
-    city: "Karachi",
-    location: "Chai Shai, Phase 6",
-    neighborhood: "DHA Karachi",
-    date: "Tonight",
-    time: "10:30 PM",
-    joined: 5,
-    capacity: 6,
-    price: "Free RSVP · Split Chai",
-    hostName: "Zainab R.",
-    hostRole: "Verified Member",
-    tag: "1 SPOT LEFT",
-  },
-  {
-    id: "e2",
-    title: "Sunset Beach Volleyball & Bonfire",
-    category: "sports",
-    city: "Karachi",
-    location: "Clifton Beach Arena",
-    neighborhood: "Clifton, Karachi",
-    date: "Tomorrow",
-    time: "5:30 PM",
-    joined: 8,
-    capacity: 12,
-    price: "PKR 800",
-    hostName: "Hamza K.",
-    hostRole: "Sports Curator",
-    tag: "FILLING FAST",
-  },
-  {
-    id: "e3",
-    title: "Walled City Food Walk & Chai",
-    category: "dining",
-    city: "Lahore",
-    location: "Delhi Gate",
-    neighborhood: "Old City, Lahore",
-    date: "Saturday",
-    time: "7:00 PM",
-    joined: 9,
-    capacity: 14,
-    price: "PKR 1,500",
-    hostName: "Bilal S.",
-    hostRole: "Heritage Host",
-    tag: "FEATURED",
-  },
-  {
-    id: "e4",
-    title: "Acoustic Rooftop Sessions & Indie Jams",
-    category: "nightlife",
-    city: "Karachi",
-    location: "Cafe Flo Rooftop",
-    neighborhood: "Old Clifton, Karachi",
-    date: "Friday",
-    time: "9:00 PM",
-    joined: 16,
-    capacity: 25,
-    price: "PKR 2,000",
-    hostName: "Ayesha N.",
-    hostRole: "Indie Musician",
-    tag: "SELLING FAST",
-  },
-  {
-    id: "e5",
-    title: "Gulberg Padel Doubles Clash",
-    category: "sports",
-    city: "Lahore",
-    location: "Smash Arena",
-    neighborhood: "Gulberg III, Lahore",
-    date: "Tonight",
-    time: "9:00 PM",
-    joined: 3,
-    capacity: 4,
-    price: "PKR 1,200",
-    hostName: "Mustafa Q.",
-    hostRole: "Padel Club Leader",
-    tag: "MATCH POINT",
-  },
-  {
-    id: "e6",
-    title: "Margalla Sunrise Trail 3 Hike",
-    category: "sports",
-    city: "Islamabad",
-    location: "Trail 3 Parking",
-    neighborhood: "Sector F-6, Islamabad",
-    date: "Sunday",
-    time: "6:00 AM",
-    joined: 6,
-    capacity: 10,
-    price: "Free RSVP",
-    hostName: "Danial M.",
-    hostRole: "Outdoors Host",
-    tag: "FREE RSVP",
-  },
-  {
-    id: "e7",
-    title: "Boardgames, Catan & Specialty Coffee",
-    category: "casual",
-    city: "Karachi",
-    location: "Dali Cafe, Zamzama",
-    neighborhood: "Defence Phase V, Karachi",
-    date: "Saturday",
-    time: "4:00 PM",
-    joined: 7,
-    capacity: 8,
-    price: "Free RSVP",
-    hostName: "Sara T.",
-    hostRole: "Boardgame Enthusiast",
-    tag: "1 SPOT LEFT",
-  },
-  {
-    id: "e8",
-    title: "Tech Founders & Builders Mixer",
-    category: "arts",
-    city: "Karachi",
-    location: "District 19, Korangi",
-    neighborhood: "Karachi Creative Hub",
-    date: "Thursday",
-    time: "6:30 PM",
-    joined: 22,
-    capacity: 30,
-    price: "PKR 1,000",
-    hostName: "Raffay A.",
-    hostRole: "Founder @ SNM",
-    tag: "POPULAR",
-  },
-];
-
 export default function BrowseEventsPage() {
   const router = useRouter();
   const [selectedCity, setSelectedCity] = useState<string>("All");
@@ -199,23 +69,20 @@ export default function BrowseEventsPage() {
   useEffect(() => {
     const fetchOfficialEvents = async () => {
       try {
-        const { data } = await (supabase.from("official_events") as any)
-          .select("*")
-          .order("scheduled_at", { ascending: true })
-          .limit(20);
+        const data = await getPublicEventsAction();
         if (data && data.length > 0) {
           const mapped: EventItem[] = data.map((d: any) => {
             const dt = d.scheduled_at ? new Date(d.scheduled_at) : null;
             return {
               id: d.id,
               title: d.title,
-              category: (d.category?.toLowerCase() || "casual") as any,
-              city: (d.city || "Karachi") as any,
+              category: "casual" as any,
+              city: "Karachi" as any,
               location: d.venue_name || "Curated Venue",
               neighborhood: d.address || "Karachi",
-              date: dt ? dt.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) : "Upcoming",
-              time: dt ? dt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "Time TBA",
-              joined: d.joined_count || Math.floor(Math.random() * 8) + 4,
+              date: dt ? dt.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "Asia/Karachi" }) : "Upcoming",
+              time: dt ? dt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Karachi" }) : "Time TBA",
+              joined: d.joined_count,
               capacity: d.max_capacity || 50,
               price: d.price > 0 ? `PKR ${d.price.toLocaleString()}` : "Free RSVP",
               hostName: "Solo-No-More Official",
@@ -243,7 +110,8 @@ export default function BrowseEventsPage() {
     { id: "arts", label: "Mixers & Creatives 🎨" },
   ];
 
-  const allEvents = [...dbEvents, ...EVENTS_DATA];
+  // Only real, published events from the database are listed.
+  const allEvents = dbEvents;
 
   const filteredEvents = allEvents.filter((e) => {
     const matchCity = selectedCity === "All" || e.city === selectedCity;

@@ -21,6 +21,7 @@ export default function PublicEventBookButton({
   const shouldAutoBook = searchParams.get("book") === "true";
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [booked, setBooked] = useState(false);
 
   useEffect(() => {
     if (shouldAutoBook && isLoggedIn) {
@@ -51,12 +52,14 @@ export default function PublicEventBookButton({
       {isModalOpen && (
         <EventBookingModal
           isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
+          onClose={() => {
+            setIsModalOpen(false);
+            // After a completed booking, land on the dashboard where the pass lives.
+            if (booked) router.push("/dashboard?booking_confirmed=true");
+          }}
           event={event}
           currentUserProfile={userProfile}
-          onSuccess={() => {
-            router.push("/dashboard?booking_confirmed=true");
-          }}
+          onSuccess={() => setBooked(true)}
         />
       )}
     </>
