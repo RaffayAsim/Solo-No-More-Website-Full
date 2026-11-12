@@ -1,0 +1,202 @@
+import "server-only";
+
+/**
+ * Server-only notification writers.
+ *
+ * Kept out of the "use server" action files on purpose: anything exported from an
+ * action file is callable from the browser, and these functions let the caller
+ * choose the recipient.
+ */
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import type { NotificationType } from "@/lib/supabase/types";
+
+// ── Internal helper: write a single notification ──────────────────────────────
+export async function writeNotification(
+  userId: string,
+  type: NotificationType,
+  title: string,
+  body: string,
+  relatedBeaconId?: string | null
+): Promise<void> {
+  try {
+    await (supabaseAdmin.from("notifications") as any).insert({
+      user_id: userId,
+      type,
+      title,
+      body,
+      related_beacon_id: relatedBeaconId ?? null,
+      is_read: false,
+    });
+    // Ignore duplicate key errors (unique index on dedup types) — that's expected behaviour
+  } catch {
+    // Silently swallow — notifications are best-effort
+  }
+}
+
+// ── LAZY TIME ALERTS — Called server-side on dashboard load ──────────────────
+const lastAlertCheckByUser = new Map<string, number>();
+const ALERT_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes cooldown per user
+
+/**
+ * Generates all time-based and engagement-based notifications lazily.
+ * Idempotent — the unique DB index prevents duplicate alerts per (user, type, beacon).
+ * Also auto-completes stale expired beacons.
+ */
+export async function writeLazyTimeAlerts(userId: string): Promise<void> {
+  const lastCheck = lastAlertCheckByUser.get(userId) || 0;
+  if (Date.now() - lastCheck < ALERT_COOLDOWN_MS) {
+    return;
+  }
+  lastAlertCheckByUser.set(userId, Date.now());
+
+  const now = new Date();
+  const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+  const twentyFourHoursFromNow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  const threeHoursAgo = new Date(now.getTime() - 3 * 60 * 60 * 1000);
+  const fortyEightHoursAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
+  const oneHourAgo = new Date(now.getTime() - 1 * 60 * 60 * 1000);
+
+  try {
+    // ─── Fetch all active beacons hosted by this user ──────────────────────
+    const { data: myBeacons } = await (supabaseAdmin
+      .from("beacons") as any)
+      .select("id, title, filled_slots, total_slots, scheduled_at, created_at, status")
+      .eq("host_id", userId)
+      .in("status", ["active", "completed"]);
+
+    if (!myBeacons || myBeacons.length === 0) return;
+
+    for (const beacon of myBeacons) {
+      const scheduledAt = beacon.scheduled_at ? new Date(beacon.scheduled_at) : null;
+      const createdAt = new Date(beacon.created_at);
+
+      // 1. Auto-complete stale beacons (scheduled_at passed > 3h ago and still active)
+      if (beacon.status === "active" && scheduledAt && scheduledAt < threeHoursAgo) {
+        await (supabaseAdmin.from("beacons") as any)
+          .update({ status: "completed" })
+          .eq("id", beacon.id);
+        continue; // skip further alerts for this beacon
+      }
+
+      if (beacon.status !== "active") continue;
+
+      // 2. Beacon near start (≤ 2h away)
+      if (scheduledAt && scheduledAt > now && scheduledAt <= twoHoursFromNow) {
+        // 2a. No attendees at all → can cancel
+        if (beacon.filled_slots === 0) {
+          await writeNotification(
+            userId,
+            "beacon_no_attendees",
+            "⚠ ZERO SQUAD — EVENT NEAR",
+            `Your beacon "${beacon.title}" starts soon and has no attendees. You can cancel it now.`,
+            beacon.id
+          );
+        }
+        // 2b. Partially filled
+        else if (beacon.filled_slots < beacon.total_slots) {
+          await writeNotification(
+            userId,
+            "beacon_not_full",
+            "◉ SQUAD INCOMPLETE",
+            `"${beacon.title}" starts soon. ${beacon.filled_slots}/${beacon.total_slots} slots filled.`,
+            beacon.id
+          );
+        }
+        // 2c. General near-start reminder (always)
+        await writeNotification(
+          userId,
+          "beacon_near_start",
+          "📶 BEACON STARTING SOON",
+          `Your beacon "${beacon.title}" is starting in under 2 hours. Open squad chat to coordinate.`,
+          beacon.id
+        );
+      }
+
+      // 3. 24h before event — attendance reminder for approved guests
+      if (scheduledAt && scheduledAt > twoHoursFromNow && scheduledAt <= twentyFourHoursFromNow) {
+        // Fetch approved guests and notify them
+        const { data: approvedApps } = await (supabaseAdmin
+          .from("beacon_applications") as any)
+          .select("applicant_id")
+          .eq("beacon_id", beacon.id)
+          .eq("status", "approved");
+
+        if (approvedApps && approvedApps.length > 0) {
+          for (const app of approvedApps) {
+            await writeNotification(
+              app.applicant_id,
+              "attendance_reminder",
+              "📅 SQUAD MEETS TOMORROW",
+              `Your squad for "${beacon.title}" meets in less than 24 hours. See you there!`,
+              beacon.id
+            );
+          }
+        }
+      }
+
+      // 4. Post-event vibe check (1h after event ended)
+      if (scheduledAt && scheduledAt < oneHourAgo && scheduledAt > threeHoursAgo) {
+        // Notify host
+        await writeNotification(
+          userId,
+          "post_event_vibe_check",
+          "⭐ HOW WAS THE VIBE?",
+          `"${beacon.title}" has ended. Rate how the squad vibe went!`,
+          beacon.id
+        );
+        // Notify approved guests
+        const { data: approvedApps } = await (supabaseAdmin
+          .from("beacon_applications") as any)
+          .select("applicant_id")
+          .eq("beacon_id", beacon.id)
+          .eq("status", "approved");
+
+        if (approvedApps) {
+          for (const app of approvedApps) {
+            await writeNotification(
+              app.applicant_id,
+              "post_event_vibe_check",
+              "⭐ HOW WAS THE VIBE?",
+              `Rate the squad vibe for "${beacon.title}"!`,
+              beacon.id
+            );
+          }
+        }
+      }
+
+      // 5. Empty beacon for 48h with 0 interest
+      if (createdAt < fortyEightHoursAgo && beacon.filled_slots === 0) {
+        await writeNotification(
+          userId,
+          "beacon_no_interest",
+          "😶 NO INTEREST YET",
+          `"${beacon.title}" has been live for 2+ days with no applicants. Try editing the time or location.`,
+          beacon.id
+        );
+      }
+
+      // 6. Pending request reminder (applications > 4h old with no response)
+      const fourHoursAgo = new Date(now.getTime() - 4 * 60 * 60 * 1000);
+      const { data: stalePending } = await (supabaseAdmin
+        .from("beacon_applications") as any)
+        .select("id")
+        .eq("beacon_id", beacon.id)
+        .eq("status", "pending")
+        .lt("created_at", fourHoursAgo.toISOString())
+        .limit(1);
+
+      if (stalePending && stalePending.length > 0) {
+        await writeNotification(
+          userId,
+          "pending_request_reminder",
+          "⏱ PENDING REQUESTS WAITING",
+          `You have unanswered join requests for "${beacon.title}" waiting over 4 hours. Review them now!`,
+          beacon.id
+        );
+      }
+    }
+  } catch (err) {
+    // Best-effort — never crash the page load
+    console.error("[writeLazyTimeAlerts] Error:", err);
+  }
+}

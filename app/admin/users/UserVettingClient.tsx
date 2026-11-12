@@ -369,7 +369,12 @@ export default function UserVettingClient({ initialUsers }: UserVettingClientPro
         setNewEmail("");
         setNewPhone("");
         setNewCnic("");
-        setFeedbackMsg({ type: "success", text: `✓ New member officially onboarded as Auto-Approved!` });
+        setFeedbackMsg({
+          type: "success",
+          text: res.tempPassword
+            ? `✓ New member onboarded. One-time password (share it with them now, it will not be shown again): ${res.tempPassword}`
+            : `✓ New member officially onboarded as Auto-Approved!`,
+        });
         router.refresh();
       } else {
         setFeedbackMsg({ type: "error", text: res.error || "Failed to create member." });

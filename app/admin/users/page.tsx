@@ -1,6 +1,8 @@
 import React from "react";
+import { verifyAdminStatus } from "@/app/actions/admin";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getAllApplicationsAction } from "@/app/actions/member-applications";
+import { resolveStoredImage } from "@/lib/server/storage";
 import UserVettingClient, { UnifiedUserRecord } from "./UserVettingClient";
 
 export const revalidate = 0; // Disable static caching so modifications are live
@@ -23,6 +25,9 @@ function getValidImageUrl(url: any): string {
 }
 
 export default async function UserVettingPage() {
+  // Each admin page checks access itself — the layout guard is not re-run on every navigation.
+  await verifyAdminStatus();
+
   // 1. Fetch user profiles from database
   const { data: profiles } = await (supabaseAdmin
     .from("profiles") as any)
@@ -212,5 +217,14 @@ export default async function UserVettingPage() {
     return new Date(b.createdAtIso).getTime() - new Date(a.createdAtIso).getTime();
   });
 
-  return <UserVettingClient initialUsers={memberOnlyList} />;
+  // Identity documents live in private storage — hand the admin short-lived view links.
+  const withImages = await Promise.all(
+    memberOnlyList.map(async (u) => ({
+      ...u,
+      cnicPictureUrl: (await resolveStoredImage(u.cnicPictureUrl)) || "",
+      instagramScreenshotUrl: (await resolveStoredImage(u.instagramScreenshotUrl)) || "",
+    }))
+  );
+
+  return <UserVettingClient initialUsers={withImages} />;
 }

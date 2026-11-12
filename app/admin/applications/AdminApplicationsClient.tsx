@@ -38,6 +38,8 @@ interface AdminApplicationsClientProps {
 export default function AdminApplicationsClient({ initialApplications }: AdminApplicationsClientProps) {
   const router = useRouter();
   const [applications, setApplications] = useState<MemberApplicationRecord[]>(initialApplications);
+  // Applications whose create-password email failed to send (admin must share the link manually).
+  const [inviteEmailFailedIds, setInviteEmailFailedIds] = useState<string[]>([]);
   const [filter, setFilter] = useState<"all" | "pending_admin_approval" | "payment_pending" | "payment_submitted" | "approved" | "credentials_created">("all");
   const [typeFilter, setTypeFilter] = useState<"all" | "member" | "partner">("all");
   const [search, setSearch] = useState("");
@@ -83,6 +85,7 @@ export default function AdminApplicationsClient({ initialApplications }: AdminAp
     setActionLoadingId(null);
 
     if (res.success && res.inviteToken) {
+      if (res.emailSent === false) setInviteEmailFailedIds((prev) => [...prev, id]);
       setFeedbackMsg({
         type: "success",
         text: "Payment verified! Credential setup link generated.",
@@ -504,6 +507,11 @@ export default function AdminApplicationsClient({ initialApplications }: AdminAp
               {selectedApp.inviteToken && (
                 <div className="space-y-1.5">
                   <div className="text-[11px] text-emerald-400 font-bold">Credential Setup Link:</div>
+                  {inviteEmailFailedIds.includes(selectedApp.id) && (
+                    <div className="text-[11px] font-bold text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-lg px-2.5 py-1.5">
+                      Email could not be sent. Copy this link and send it to the applicant.
+                    </div>
+                  )}
                   <div className="flex gap-2">
                     <input
                       readOnly

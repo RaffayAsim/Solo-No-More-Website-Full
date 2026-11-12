@@ -14,9 +14,11 @@
     "html5-qrcode": "^2.3.8",
     "lucide-react": "^1.17.0",
     "next": "16.2.6",
+    "nodemailer": "^6.9.16",
     "pg": "^8.21.0",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -25,6 +27,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
+    "playwright-core": "^1.56.1",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vercel": "^54.9.1"

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { signUpAction } from "@/app/actions/auth";
+import { compressImageFile } from "@/lib/image-compress";
 import { submitMemberApplicationAction, submitPartnerApplicationAction } from "@/app/actions/member-applications";
 import {
   Sparkles,
@@ -48,25 +49,28 @@ const INTERESTS_OPTIONS = [
 const PACKAGES_OPTIONS = [
   {
     id: "explorer",
-    name: "Chai Scout / Explorer",
-    price: "Free",
+    name: "Community Explorer",
+    price: "PKR 0",
     pricePkr: 0,
-    desc: "Pay-as-you-go access to open community meetups.",
+    annualPkr: null as number | null,
+    desc: "For newcomers exploring real-world squads and occasional weekend meetups.",
   },
   {
     id: "pro",
     name: "Solo Pass Pro",
-    price: "PKR 3,500/mo",
-    pricePkr: 3500,
+    price: "PKR 1,999/mo",
+    pricePkr: 1999,
+    annualPkr: 19800 as number | null,
     popular: true,
-    desc: "15 monthly squad hangouts, padel courts, priority radar broadcast.",
+    desc: "The full Solo-No-More experience. Create your own squads, broadcast anytime, and unlock secret events.",
   },
   {
     id: "vip",
-    name: "VIP Inner Circle",
-    price: "PKR 8,500/mo",
-    pricePkr: 8500,
-    desc: "Unlimited meetups, private supper clubs, concierge hosting.",
+    name: "Founder Circle VIP",
+    price: "PKR 4,999/mo",
+    pricePkr: 4999,
+    annualPkr: 49200 as number | null,
+    desc: "For active hosts, cultural curators, and tastemakers who want concierge access and guest perks.",
   },
 ];
 
@@ -115,7 +119,8 @@ function ApplyPageContent() {
   const [memberInterests, setMemberInterests] = useState<string[]>([]);
   const [memberPhotoUrl, setMemberPhotoUrl] = useState<string>("");
   const [memberPackage, setMemberPackage] = useState<string>("Solo Pass Pro");
-  const [memberPackagePrice, setMemberPackagePrice] = useState<number>(3500);
+  const [memberPackagePrice, setMemberPackagePrice] = useState<number>(1999);
+  const [memberBilling, setMemberBilling] = useState<"monthly" | "annual">("monthly");
 
   const [memberLoading, setMemberLoading] = useState(false);
   const [memberError, setMemberError] = useState<string | null>(null);
@@ -141,15 +146,15 @@ function ApplyPageContent() {
     );
   };
 
-  // Image Upload handler (Base64 preview)
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Image Upload handler — compressed in the browser so large phone photos upload reliably
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setMemberPhotoUrl(reader.result as string);
-    };
-    reader.readAsDataURL(file);
+    try {
+      setMemberPhotoUrl(await compressImageFile(file, { maxDimension: 1000, maxBytes: 350 * 1024 }));
+    } catch (err: any) {
+      setMemberError(err?.message || "Could not process that photo. Please try another image.");
+    }
   };
 
   // ── GUEST SIGNUP HANDLER ──
@@ -228,6 +233,7 @@ function ApplyPageContent() {
       photoUrl: memberPhotoUrl,
       packageSelected: memberPackage,
       packagePricePkr: memberPackagePrice,
+      billingCycle: memberBilling,
     });
 
     setMemberLoading(false);
@@ -1482,15 +1488,47 @@ function ApplyPageContent() {
                       <label style={{ display: "block", fontSize: "12.5px", fontWeight: 800, color: "#FFFFFF", marginBottom: "12px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                         Select Membership Package:
                       </label>
+                      <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
+                        {(["monthly", "annual"] as const).map((cycle) => (
+                          <button
+                            key={cycle}
+                            type="button"
+                            onClick={() => {
+                              setMemberBilling(cycle);
+                              const current = PACKAGES_OPTIONS.find((o) => o.name === memberPackage);
+                              if (current) {
+                                setMemberPackagePrice(cycle === "annual" && current.annualPkr ? current.annualPkr : current.pricePkr);
+                              }
+                            }}
+                            style={{
+                              flex: 1,
+                              padding: "9px 10px",
+                              borderRadius: "999px",
+                              fontSize: "12px",
+                              fontWeight: 800,
+                              cursor: "pointer",
+                              border: memberBilling === cycle ? "1px solid #FF5A1F" : "1px solid rgba(255,255,255,0.15)",
+                              background: memberBilling === cycle ? "linear-gradient(135deg, #FF6F26 0%, #FF5A1F 100%)" : "transparent",
+                              color: memberBilling === cycle ? "#fff" : "rgba(255,255,255,0.7)",
+                            }}
+                          >
+                            {cycle === "monthly" ? "Monthly Billing" : "Annual Billing (Save 18%)"}
+                          </button>
+                        ))}
+                      </div>
                       <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                         {PACKAGES_OPTIONS.map((pkg) => {
                           const isSel = memberPackage === pkg.name;
+                          const showAnnual = memberBilling === "annual" && !!pkg.annualPkr;
+                          const priceLabel = showAnnual
+                            ? `PKR ${(pkg.annualPkr || 0).toLocaleString("en-US")}/yr`
+                            : pkg.price;
                           return (
                             <div
                               key={pkg.id}
                               onClick={() => {
                                 setMemberPackage(pkg.name);
-                                setMemberPackagePrice(pkg.pricePkr);
+                                setMemberPackagePrice(showAnnual && pkg.annualPkr ? pkg.annualPkr : pkg.pricePkr);
                               }}
                               style={{
                                 background: isSel ? "linear-gradient(135deg, rgba(255,90,31,0.2) 0%, rgba(255,90,31,0.06) 100%)" : "rgba(255,255,255,0.04)",
@@ -1528,7 +1566,7 @@ function ApplyPageContent() {
                                 </div>
                               </div>
                               <div style={{ textAlign: "right" }}>
-                                <span style={{ fontSize: "15px", fontWeight: 900, color: "#FFA05C" }}>{pkg.price}</span>
+                                <span style={{ fontSize: "15px", fontWeight: 900, color: "#FFA05C" }}>{priceLabel}</span>
                               </div>
                             </div>
                           );

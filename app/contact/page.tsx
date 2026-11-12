@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import SubpageNavbar from "@/components/SubpageNavbar";
 import SubpageFooter from "@/components/SubpageFooter";
+import { submitContactMessageAction } from "@/app/actions/contact";
 import { Mail, Smartphone, MapPin, Send, MessageCircle, Clock, CheckCircle2, Sparkles, ArrowRight, HelpCircle } from "lucide-react";
 
 export default function ContactPage() {
@@ -14,14 +15,25 @@ export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [sendError, setSendError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !email || !message) return;
     setLoading(true);
-    setTimeout(() => {
+    setSendError(null);
+    try {
+      const res = await submitContactMessageAction({ topic, name, email, message });
+      if (res.success) {
+        setSubmitted(true);
+      } else {
+        setSendError(res.error || "Your message could not be sent. Please try again.");
+      }
+    } catch {
+      setSendError("Your message could not be sent. Please try again or email us directly.");
+    } finally {
       setLoading(false);
-      setSubmitted(true);
-    }, 700);
+    }
   };
 
   return (
@@ -167,6 +179,14 @@ export default function ContactPage() {
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
+                  {sendError && (
+                    <div
+                      role="alert"
+                      style={{ padding: "12px 14px", borderRadius: "12px", background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.35)", color: "#FCA5A5", fontSize: "13px", lineHeight: 1.5 }}
+                    >
+                      {sendError}
+                    </div>
+                  )}
                   {/* Topic Select */}
                   <div>
                     <label style={{ display: "block", fontSize: "12px", fontWeight: 800, color: "rgba(255,255,255,0.6)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "8px" }}>
