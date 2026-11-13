@@ -149,15 +149,6 @@ const PRODUCT_FEATURES: { title: string; text: string; icon: React.ComponentType
   { title: "Host & sell tickets", text: "Partners and artists get a dashboard to publish events, approve guests and track sales.", icon: Users },
 ];
 
-// Example scenarios for the "How people use Solo-No-More" section (illustrative — no names or ratings).
-const HOW_PEOPLE_USE: { title: string; where: string; story: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { title: "Doubles padel, short one player", where: "DHA, Karachi", story: "Post a beacon for one open spot, approve someone with a matching vibe, and play the same evening.", icon: Zap },
-  { title: "Late-night chai run", where: "Clifton, Karachi", story: "New to the city and want company for chai? Join an open hangout instead of going alone.", icon: Utensils },
-  { title: "A gig you didn't want to miss", where: "Gulberg, Lahore", story: "Book a pass, pay by bank transfer, and meet a vetted squad at the door.", icon: Music },
-  { title: "Weekend hike crew", where: "Margalla Hills, Islamabad", story: "Hosts set the plan, the budget split and how many people can join.", icon: Compass },
-  { title: "Board games after work", where: "Any city", story: "Small, approved groups — no awkward group chats, no randoms showing up.", icon: Smile },
-  { title: "Hosting your own event", where: "Partners & artists", story: "Sell tickets, approve guests and check passes at the door from one dashboard.", icon: Ticket },
-];
 
 // Trust strip: only facts the product actually enforces (no press quotes or invented reviews).
 const TRUST_POINTS: { text: string; label: string }[] = [
@@ -2253,63 +2244,7 @@ export default function LandingPageClient({
         />
       </div>
 
-      {/* ── 9. "HOW PEOPLE USE SOLO-NO-MORE" — example scenarios (no names, ratings or invented reviews) ─── */}
-      <section id="how-people-use-section" className="relative px-6 py-20 sm:py-24" style={{ background: "#060408" }}>
-        <div className="mx-auto max-w-[1180px]">
-          <div className="max-w-2xl">
-            <span className="inline-flex items-center gap-2 rounded-full border border-[#FF5A1F]/35 bg-[#FF5A1F]/10 px-3 py-1 text-[11px] font-bold tracking-wider text-[#FFA05C]">
-              <Sparkles className="w-3.5 h-3.5" /> HOW IT WORKS IN REAL LIFE
-            </span>
-            <h2 className="mt-4 text-3xl sm:text-4xl font-black tracking-tight text-white">How people use Solo-No-More</h2>
-            <p className="mt-3 text-base text-white/65">
-              A few of the plans members can make. Real stories from our Early Birds will appear here as the community grows.
-            </p>
-          </div>
 
-          <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {HOW_PEOPLE_USE.map((item) => {
-              const Icon = item.icon;
-              return (
-                <div key={item.title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 transition hover:border-[#FF5A1F]/40">
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FF5A1F]/15 text-[#FF8A3D]">
-                      <Icon className="w-5 h-5" />
-                    </span>
-                    <div>
-                      <div className="text-[15px] font-bold text-white">{item.title}</div>
-                      <div className="text-xs text-white/50">{item.where}</div>
-                    </div>
-                  </div>
-                  <p className="mt-4 text-sm leading-relaxed text-white/70">{item.story}</p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-
-      {/* ── SECTION FINISHED DIVIDER LINE ── */}
-      <div
-        style={{
-          width: "100%",
-          display: "flex",
-          justifyContent: "center",
-          padding: "16px 24px",
-          position: "relative",
-          zIndex: 10,
-        }}
-        aria-hidden="true"
-      >
-        <div
-          style={{
-            width: "100%",
-            maxWidth: "1180px",
-            height: "1px",
-            background: "linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.15) 20%, rgba(255, 90, 31, 0.35) 50%, rgba(255, 255, 255, 0.15) 80%, transparent 100%)",
-          }}
-        />
-      </div>
 
       {/* ── 11. "STORIES FROM THE SQUAD" (PURE PHOTO & VIDEO COLLAGE - STANDARD SIZE) ── */}
       <section
