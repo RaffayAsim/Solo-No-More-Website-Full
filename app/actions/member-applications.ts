@@ -1,6 +1,7 @@
 "use server";
 
 import crypto from "crypto";
+import { after } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { verifyAdminStatus } from "@/app/actions/admin";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
@@ -296,26 +297,29 @@ export async function submitMemberApplicationAction(formData: {
     }
 
     const siteUrl = await getSiteUrl();
-    await sendEmail({
-      to: email,
-      subject: "We received your Solo-No-More application",
-      heading: "Application received",
-      paragraphs: [
-        `Hi ${firstNameOf(fullName)},`,
-        `Thanks for applying for ${packageSelected}. Our team reviews every application personally — this usually takes 24 to 48 hours.`,
-        "You will get another email as soon as there is a decision. You can also check your status any time with the button below.",
-      ],
-      details: [
-        { label: "Package", value: packageSelected },
-        { label: "Application ID", value: id },
-      ],
-      button: { label: "Check application status", url: `${siteUrl}/pay/${id}` },
+    // Emails go out after the response so a slow mail server never delays the applicant.
+    after(async () => {
+      await sendEmail({
+        to: email,
+        subject: "We received your Solo-No-More application",
+        heading: "Application received",
+        paragraphs: [
+          `Hi ${firstNameOf(fullName)},`,
+          `Thanks for applying for ${packageSelected}. Our team reviews every application personally — this usually takes 24 to 48 hours.`,
+          "You will get another email as soon as there is a decision. You can also check your status any time with the button below.",
+        ],
+        details: [
+          { label: "Package", value: packageSelected },
+          { label: "Application ID", value: id },
+        ],
+        button: { label: "Check application status", url: `${siteUrl}/pay/${id}` },
+      });
+      await notifyAdminByEmail(
+        "New membership application",
+        [`${fullName} (${email}) applied for ${packageSelected}.`],
+        { label: "Review applications", url: `${siteUrl}/admin/users` }
+      );
     });
-    await notifyAdminByEmail(
-      "New membership application",
-      [`${fullName} (${email}) applied for ${packageSelected}.`],
-      { label: "Review applications", url: `${siteUrl}/admin/users` }
-    );
 
     return { success: true, applicationId: id };
   } catch (err: any) {
@@ -384,22 +388,25 @@ export async function submitPartnerApplicationAction(formData: {
     }
 
     const siteUrl = await getSiteUrl();
-    await sendEmail({
-      to: email,
-      subject: "We received your Solo-No-More partner application",
-      heading: "Partner application received",
-      paragraphs: [
-        `Hi ${firstNameOf(clean(formData.fullName, 120))},`,
-        `Thanks for applying to list ${clean(formData.partnerBusinessName, 120)} on Solo-No-More. Our partnerships team will review it and email you with the next step.`,
-      ],
-      details: [{ label: "Application ID", value: id }],
-      button: { label: "Check application status", url: `${siteUrl}/pay/${id}` },
+    // Emails go out after the response so a slow mail server never delays the applicant.
+    after(async () => {
+      await sendEmail({
+        to: email,
+        subject: "We received your Solo-No-More partner application",
+        heading: "Partner application received",
+        paragraphs: [
+          `Hi ${firstNameOf(clean(formData.fullName, 120))},`,
+          `Thanks for applying to list ${clean(formData.partnerBusinessName, 120)} on Solo-No-More. Our partnerships team will review it and email you with the next step.`,
+        ],
+        details: [{ label: "Application ID", value: id }],
+        button: { label: "Check application status", url: `${siteUrl}/pay/${id}` },
+      });
+      await notifyAdminByEmail(
+        "New partner application",
+        [`${clean(formData.partnerBusinessName, 120)} — ${clean(formData.fullName, 120)} (${email}).`],
+        { label: "Review applications", url: `${siteUrl}/admin/users` }
+      );
     });
-    await notifyAdminByEmail(
-      "New partner application",
-      [`${clean(formData.partnerBusinessName, 120)} — ${clean(formData.fullName, 120)} (${email}).`],
-      { label: "Review applications", url: `${siteUrl}/admin/users` }
-    );
 
     return { success: true, applicationId: id };
   } catch (err: any) {

@@ -74,6 +74,32 @@ const PACKAGES_OPTIONS = [
   },
 ];
 
+/**
+ * Runs a submit server action but never leaves the button spinning: a network error, a server
+ * timeout or a stale page (opened before a new deploy) comes back as a normal error message.
+ */
+async function withSubmitTimeout<T extends { success: boolean; error?: string }>(
+  run: () => Promise<T>,
+  ms = 60_000
+): Promise<T | { success: false; error: string }> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      run(),
+      new Promise<{ success: false; error: string }>((resolve) => {
+        timer = setTimeout(
+          () => resolve({ success: false, error: "This is taking too long. Please check your connection, refresh the page and try again." }),
+          ms
+        );
+      }),
+    ]);
+  } catch {
+    return { success: false, error: "Could not reach the server. Please refresh the page and try again." };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function ApplyPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -216,7 +242,7 @@ function ApplyPageContent() {
       return;
     }
 
-    const res = await submitMemberApplicationAction({
+    const res = await withSubmitTimeout(() => submitMemberApplicationAction({
       username: memberUsername,
       email: memberEmail,
       fullName: memberFullName,
@@ -234,7 +260,7 @@ function ApplyPageContent() {
       packageSelected: memberPackage,
       packagePricePkr: memberPackagePrice,
       billingCycle: memberBilling,
-    });
+    }));
 
     setMemberLoading(false);
 
@@ -258,7 +284,7 @@ function ApplyPageContent() {
       return;
     }
 
-    const res = await submitPartnerApplicationAction({
+    const res = await withSubmitTimeout(() => submitPartnerApplicationAction({
       partnerBusinessName,
       fullName: partnerContactName,
       email: partnerEmail,
@@ -268,7 +294,7 @@ function ApplyPageContent() {
       partnerPerks,
       packageSelected: "Partner Residency",
       packagePricePkr: 0,
-    });
+    }));
 
     setPartnerLoading(false);
 
