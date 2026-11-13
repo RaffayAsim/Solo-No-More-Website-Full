@@ -73,22 +73,22 @@ function renderHtml(c: EmailContent): string {
     .join("");
   const details = c.details?.length
     ? `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:6px 0 18px;border:1px solid #eeeeee;border-radius:10px;background:#fafafa;">${c.details
-        .map(
-          (d) =>
-            `<tr><td style="padding:10px 14px;font-size:12px;color:#888888;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;border-bottom:1px solid #f0f0f0;">${escapeHtml(
-              d.label
-            )}</td><td style="padding:10px 14px;font-size:14px;font-weight:bold;color:#111111;border-bottom:1px solid #f0f0f0;font-family:Menlo,Consolas,monospace;">${escapeHtml(
-              d.value
-            )}</td></tr>`
-        )
-        .join("")}</table>`
+      .map(
+        (d) =>
+          `<tr><td style="padding:10px 14px;font-size:12px;color:#888888;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;border-bottom:1px solid #f0f0f0;">${escapeHtml(
+            d.label
+          )}</td><td style="padding:10px 14px;font-size:14px;font-weight:bold;color:#111111;border-bottom:1px solid #f0f0f0;font-family:Menlo,Consolas,monospace;">${escapeHtml(
+            d.value
+          )}</td></tr>`
+      )
+      .join("")}</table>`
     : "";
   const button = c.button
     ? `<p style="margin:8px 0 18px;"><a href="${escapeHtml(c.button.url)}" style="display:inline-block;background:#FF5A1F;color:#ffffff;text-decoration:none;font-weight:bold;font-size:15px;padding:13px 26px;border-radius:10px;">${escapeHtml(
-        c.button.label
-      )}</a></p><p style="margin:0 0 14px;font-size:12px;line-height:1.5;color:#888888;word-break:break-all;">If the button does not work, copy this link into your browser:<br>${escapeHtml(
-        c.button.url
-      )}</p>`
+      c.button.label
+    )}</a></p><p style="margin:0 0 14px;font-size:12px;line-height:1.5;color:#888888;word-break:break-all;">If the button does not work, copy this link into your browser:<br>${escapeHtml(
+      c.button.url
+    )}</p>`
     : "";
   const footnote = c.footnote
     ? `<p style="margin:0 0 14px;font-size:13px;line-height:1.6;color:#666666;">${escapeHtml(c.footnote)}</p>`
