@@ -138,8 +138,9 @@ export async function sendEmail(content: EmailContent): Promise<boolean> {
       return false;
     }
     const fromName = (process.env.EMAIL_FROM_NAME || "Solo-No-More").replace(/["<>\r\n]/g, "");
+    const fromAddress = (process.env.EMAIL_FROM || process.env.SMTP_USER || "").trim();
     const message = {
-      from: `"${fromName}" <${process.env.SMTP_USER}>`,
+      from: `"${fromName}" <${fromAddress}>`,
       to,
       replyTo: process.env.EMAIL_REPLY_TO || undefined,
       subject: content.subject.replace(/[\r\n]/g, " ").slice(0, 200),
