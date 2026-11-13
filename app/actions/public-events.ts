@@ -2,6 +2,7 @@
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { parseEventDescription } from "@/lib/event-metadata";
+import { parseBeaconMeta } from "@/lib/beaconBudget";
 
 export interface PublicEventSummary {
   id: string;
@@ -68,6 +69,59 @@ export async function getPublicEventsAction(): Promise<PublicEventSummary[]> {
     });
   } catch (err) {
     console.error("[getPublicEventsAction] Failed:", err);
+    return [];
+  }
+}
+
+export interface PublicBeaconSummary {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  city: string;
+  location_name: string | null;
+  scheduled_at: string | null;
+  total_slots: number;
+  filled_slots: number;
+  image_url: string | null;
+  host_first_name: string;
+}
+
+/**
+ * Server Action: live, open ("stranger" mode) beacons for the public website.
+ *
+ * Beacons are local, so they are always returned for ONE city (Karachi, Lahore or Islamabad).
+ * Friends-only beacons, cancelled/completed ones and ones whose time has passed are left out.
+ * Only a host's first name is shared — no contact details or ids.
+ */
+export async function getPublicBeaconsAction(city: string = "Karachi"): Promise<PublicBeaconSummary[]> {
+  const safeCity = ["Karachi", "Lahore", "Islamabad"].includes(city) ? city : "Karachi";
+  try {
+    const nowIso = new Date().toISOString();
+    const { data: beacons } = await (supabaseAdmin.from("beacons") as any)
+      .select("id, title, description, category, city, location_name, scheduled_at, total_slots, filled_slots, image_url, visibility_mode, profiles:host_id ( full_name )")
+      .eq("status", "active")
+      .eq("city", safeCity)
+      .neq("visibility_mode", "friend")
+      .gte("scheduled_at", nowIso)
+      .order("scheduled_at", { ascending: true })
+      .limit(12);
+    return (beacons || []).map((b: any) => ({
+      id: b.id,
+      title: b.title,
+      description: parseBeaconMeta(b.description).description.slice(0, 280),
+      category: b.category,
+      city: b.city,
+      location_name: b.location_name || null,
+      scheduled_at: b.scheduled_at,
+      total_slots: Number(b.total_slots) || 0,
+      filled_slots: Number(b.filled_slots) || 0,
+      // Never ship inline base64 artwork to the public listing
+      image_url: b.image_url && !String(b.image_url).startsWith("data:") ? b.image_url : null,
+      host_first_name: String(b.profiles?.full_name || "A member").split(" ")[0],
+    }));
+  } catch (err) {
+    console.error("[getPublicBeaconsAction] Failed:", err);
     return [];
   }
 }

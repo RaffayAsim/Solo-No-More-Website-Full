@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { ReviewWallData, ReviewWallSlot, saveReviewWallDataAction } from "@/app/actions/review-wall";
+import { compressImageFile } from "@/lib/image-compress";
 import {
   Save,
   Upload,
@@ -47,27 +48,37 @@ export default function ReviewWallClient({ initialData }: ReviewWallClientProps)
   const handleUrlChange = (index: number, newUrl: string) => {
     setSlots((prev) => {
       const copy = [...prev];
-      copy[index] = { ...copy[index], url: newUrl };
+      // A /reel/ link is shown with a play badge on the website.
+      copy[index] = { ...copy[index], url: newUrl, type: /instagram\.com\/reels?\//i.test(newUrl) ? "reel" : "post" };
+      return copy;
+    });
+  };
+
+  const handleSlotFieldChange = (index: number, field: "author" | "venue", value: string) => {
+    setSlots((prev) => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], [field]: value };
       return copy;
     });
   };
 
   // Image Upload handler for a slot
-  const handleImageUpload = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
+    try {
+      // Resize/compress in the browser so nine photos stay well under the upload limit.
+      const result = await compressImageFile(file, { maxDimension: 1400, maxBytes: 400 * 1024 });
       setSlots((prev) => {
         const copy = [...prev];
         copy[index] = { ...copy[index], image_url: result };
         return copy;
       });
       setFeedback({ type: "success", text: `✓ Image updated for Slot ${index + 1}. Click "Save Changes" to apply.` });
-    };
-    reader.readAsDataURL(file);
+    } catch (err: any) {
+      setFeedback({ type: "error", text: err?.message || "Could not use that image. Please choose a JPG or PNG." });
+    }
   };
 
   // Save Changes
@@ -231,7 +242,7 @@ export default function ReviewWallClient({ initialData }: ReviewWallClientProps)
             type="text"
             value={tagline}
             onChange={(e) => setTagline(e.target.value)}
-            placeholder="Tag @qhq on Instagram to get featured on the Review Wall"
+            placeholder="Tag @solonomore on Instagram to get featured on the Review Wall"
             style={{
               width: "100%",
               padding: "12px 16px",
@@ -382,6 +393,30 @@ export default function ReviewWallClient({ initialData }: ReviewWallClientProps)
                     outline: "none",
                   }}
                   className="focus:border-[#FF6F26] transition-colors"
+                />
+              </div>
+
+              {/* Handle + caption shown on the website tile */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginTop: "8px" }}>
+                <input
+                  type="text"
+                  value={slot.author || ""}
+                  onChange={(e) => handleSlotFieldChange(index, "author", e.target.value)}
+                  placeholder="@solonomore"
+                  maxLength={40}
+                  aria-label={`Slot ${index + 1} Instagram handle`}
+                  className="focus:border-[#FF6F26] transition-colors"
+                  style={{ width: "100%", padding: "9px 12px", background: "rgba(0, 0, 0, 0.5)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "10px", color: "#FFFFFF", fontSize: "12px", outline: "none" }}
+                />
+                <input
+                  type="text"
+                  value={slot.venue || ""}
+                  onChange={(e) => handleSlotFieldChange(index, "venue", e.target.value)}
+                  placeholder="Caption / place (optional)"
+                  maxLength={60}
+                  aria-label={`Slot ${index + 1} caption`}
+                  className="focus:border-[#FF6F26] transition-colors"
+                  style={{ width: "100%", padding: "9px 12px", background: "rgba(0, 0, 0, 0.5)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "10px", color: "#FFFFFF", fontSize: "12px", outline: "none" }}
                 />
               </div>
             </div>

@@ -13,7 +13,6 @@ svg[class*="lucide"] {
   stroke: currentColor;
   fill: none;
   flex-shrink: 0;
-  max-width: 100%;
 }
 
 /* Explicit fallback dimension utilities for Lucide & SVG icons */

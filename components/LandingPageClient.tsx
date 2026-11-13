@@ -2,13 +2,12 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import ThemeToggle from "./ThemeToggle";
 import OverlapFeatureCards from "./OverlapFeatureCards";
 import BeaconSimulator from "./BeaconSimulator";
-import ScrollToTopButton from "./ScrollToTopButton";
 import SignUpDropdown from "./SignUpDropdown";
 import { supabase } from "@/lib/supabase/client";
 import EventQuickPreviewModal, { EventPreviewData } from "./events/EventQuickPreviewModal";
+import type { PublicBeaconSummary, PublicEventSummary } from "@/app/actions/public-events";
 import BeaconQuickPreviewModal, { BeaconPreviewData } from "./beacons/BeaconQuickPreviewModal";
 import {
   Sparkles,
@@ -18,11 +17,8 @@ import {
   CheckCircle2,
   ArrowRight,
   ShieldCheck,
-  CreditCard,
   Camera,
   MessageSquare,
-  Eye,
-  Send,
   Zap,
   Flame,
   Ticket,
@@ -30,25 +26,15 @@ import {
   Compass,
   Crown,
   Smartphone,
-  Laptop,
   Radio,
-  Search,
-  Share2,
-  Check,
   ChevronLeft,
   ChevronRight,
-  Star,
-  Quote,
-  Mic,
   Mail,
-  DollarSign,
-  Heart,
   Smile,
   Music,
   Utensils,
   QrCode,
   Play,
-  Video,
 } from "lucide-react";
 
 function InstagramIcon({ className, style }: { className?: string; style?: React.CSSProperties }) {
@@ -89,199 +75,102 @@ export interface TrendingTemplateItem {
   posterBadge: string;
 }
 
-const TEMPLATES: TrendingTemplateItem[] = [
-  {
-    id: "chai-run",
-    name: "Midnight Chai & Paratha",
-    category: "Chai Run",
-    badge: "LATE NIGHT",
-    headline: "CHAI & PARATHA",
-    subtext: "Quetta Alamgir · Clifton",
-    location: "Block 4, Clifton",
-    time: "Tonight · 11:30 PM",
-    posterImg: "/images/beacon-chai.jpg",
-    cardCanvasBg: "radial-gradient(ellipse at 50% 50%, rgba(255, 120, 40, 0.35) 0%, rgba(28, 14, 6, 0.95) 75%), linear-gradient(135deg, #241107 0%, #150904 100%)",
-    accent: "#FF8A3D",
-    posterBadge: "☕ CHAI RUN",
-  },
-  {
-    id: "long-drive",
-    name: "Long Drive to French Beach",
-    category: "Long Drive",
-    badge: "MIDNIGHT CRUISE",
-    headline: "LONG DRIVE PLAN",
-    subtext: "Do Darya to French Beach",
-    location: "Do Darya Coastal Highway",
-    time: "Saturday · 1:00 AM",
-    posterImg: "/images/hero-image.jpg",
-    cardCanvasBg: "radial-gradient(ellipse at 50% 50%, rgba(255, 90, 31, 0.3) 0%, rgba(15, 8, 26, 0.95) 75%), linear-gradient(135deg, #1C0F2B 0%, #0D0616 100%)",
-    accent: "#FF5A1F",
-    posterBadge: "🚗 MIDNIGHT DRIVE",
-  },
-  {
-    id: "night-padel",
-    name: "2v2 Night Padel Showdown",
-    category: "Padel",
-    badge: "COURT LIGHTS",
-    headline: "NIGHT PADEL MATCH",
-    subtext: "Smash Club DHA Phase 8",
-    location: "DHA Phase 8, Karachi",
-    time: "Tonight · 9:30 PM",
+// Visual style per beacon category (cards are built from REAL beacons — no sample data).
+const BEACON_CARD_STYLE: Record<string, { label: string; posterImg: string; cardCanvasBg: string; accent: string; posterBadge: string }> = {
+  sports: {
+    label: "Sports & Padel",
     posterImg: "/images/beacon-padel.jpg",
     cardCanvasBg: "radial-gradient(ellipse at 50% 50%, rgba(255, 90, 31, 0.28) 0%, rgba(7, 26, 18, 0.95) 75%), linear-gradient(135deg, #072218 0%, #03110C 100%)",
     accent: "#FF5A1F",
-    posterBadge: "🎾 2v2 VETTED",
+    posterBadge: "SPORTS",
   },
-  {
-    id: "indoor-cricket",
-    name: "Indoor Turf Cricket Night",
-    category: "Indoor Cricket",
-    badge: "TURF FLOODLIGHTS",
-    headline: "TAPE-BALL SIXES",
-    subtext: "Gulshan Arena Under Lights",
-    location: "Gulshan-e-Iqbal Turf",
-    time: "Sunday · 10:00 PM",
-    posterImg: "/images/padel-squad.jpg",
-    cardCanvasBg: "radial-gradient(ellipse at 50% 50%, rgba(255, 120, 30, 0.32) 0%, rgba(26, 14, 6, 0.95) 75%), linear-gradient(135deg, #241307 0%, #120803 100%)",
-    accent: "#FFA05C",
-    posterBadge: "🏏 TAPE-BALL SIXES",
+  casual: {
+    label: "Chai & Casual",
+    posterImg: "/images/beacon-chai.jpg",
+    cardCanvasBg: "radial-gradient(ellipse at 50% 50%, rgba(255, 120, 40, 0.35) 0%, rgba(28, 14, 6, 0.95) 75%), linear-gradient(135deg, #241107 0%, #150904 100%)",
+    accent: "#FF8A3D",
+    posterBadge: "CHAI & CASUAL",
   },
-  {
-    id: "rooftop-baithak",
-    name: "Acoustic Rooftop Baithak",
-    category: "Rooftop Baithak",
-    badge: "FAIRY LIGHTS",
-    headline: "ROOFTOP BAITHAK",
-    subtext: "Acoustic Jam & Banter",
-    location: "PECHS Block 6 Rooftop",
-    time: "Friday · 9:00 PM",
+  nightlife: {
+    label: "Nightlife",
     posterImg: "/images/hero-rooftop.jpg",
     cardCanvasBg: "radial-gradient(ellipse at 50% 50%, rgba(255, 90, 31, 0.3) 0%, rgba(30, 10, 22, 0.95) 75%), linear-gradient(135deg, #270D1E 0%, #13050E 100%)",
     accent: "#FF5A1F",
-    posterBadge: "🎸 ACOUSTIC JAM",
+    posterBadge: "NIGHTLIFE",
   },
-  {
-    id: "quarter-life",
-    name: "Quarter-Life Crisis / Birthday",
-    category: "House Party",
-    badge: "CHROME & NEON",
-    headline: "QUARTER-LIFE CRISIS",
-    subtext: "26th Birthday Bash & Cake",
-    location: "DHA Phase 5, Karachi",
-    time: "Saturday · 10:00 PM",
-    posterImg: "/images/beacon-now-26.jpg",
-    cardCanvasBg: "radial-gradient(ellipse at 50% 50%, rgba(255, 80, 140, 0.3) 0%, rgba(32, 8, 22, 0.95) 75%), linear-gradient(135deg, #2E0B1F 0%, #15040E 100%)",
-    accent: "#FF6647",
-    posterBadge: "🎂 BIRTHDAY BASH",
-  },
-];
+};
+
+function beaconToCard(b: PublicBeaconSummary): TrendingTemplateItem {
+  const style = BEACON_CARD_STYLE[b.category] || BEACON_CARD_STYLE.casual;
+  const when = b.scheduled_at
+    ? new Date(b.scheduled_at).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit", timeZone: "Asia/Karachi" })
+    : "Time TBD";
+  const left = Math.max(0, b.total_slots - b.filled_slots);
+  return {
+    id: b.id,
+    name: b.title,
+    category: style.label,
+    badge: left > 0 ? `${left} spot${left === 1 ? "" : "s"} left` : "Squad full",
+    headline: b.title.toUpperCase(),
+    subtext: `Hosted by ${b.host_first_name}${b.location_name ? " · " + b.location_name : ""}`,
+    location: b.location_name || b.city,
+    time: when,
+    posterImg: b.image_url || style.posterImg,
+    cardCanvasBg: style.cardCanvasBg,
+    accent: style.accent,
+    posterBadge: style.posterBadge,
+  };
+}
 
 // ─── ANIMATED REVIEWS & PRESS DATA (PARTNERS & COMMUNITY MEMBERS) ────────────
 
-const PRESS_PARTNER_REVIEWS = [
-  {
-    quote: "The meetup platform replacing dead group chats.",
-    source: "TECHCRUNCH",
-    type: "partner",
-    tag: "GLOBAL TECH PRESS",
-    stars: 5,
-  },
-  {
-    quote: "The IRL invite platform everyone is obsessed with.",
-    source: "VOGUE",
-    type: "partner",
-    tag: "CULTURE & LIFESTYLE",
-    stars: 5,
-  },
-  {
-    quote: "Hangouts nationwide are officially back.",
-    source: "DAWN IMAGES",
-    type: "partner",
-    tag: "LOCAL SPOTLIGHT",
-    stars: 5,
-  },
-  {
-    quote: "Frictionless, beautiful, and actually fun.",
-    source: "THE VERGE",
-    type: "partner",
-    tag: "TECH EDITORIAL",
-    stars: 5,
-  },
-  {
-    quote: "How Gen-Z nationwide is ditching algorithms for real scenes.",
-    source: "PROPAKISTANI",
-    type: "partner",
-    tag: "COMMUNITY REPORT",
-    stars: 5,
-  },
-  {
-    quote: "The antidote to social isolation and flaky plans nationwide.",
-    source: "THE EXPRESS TRIBUNE",
-    type: "partner",
-    tag: "CULTURE DESK",
-    stars: 5,
-  },
+// Mosaic layout for the 9 Review Wall tiles (same layout as before; content comes from the admin wall).
+const WALL_TILE_LAYOUT: { span: string; fallbackImg: string }[] = [
+  { span: "col-span-12 sm:col-span-6 lg:col-span-4 row-span-2", fallbackImg: "/images/beach-bonfire.jpg" },
+  { span: "col-span-12 sm:col-span-6 lg:col-span-3 row-span-2", fallbackImg: "/images/padel-squad.jpg" },
+  { span: "col-span-12 sm:col-span-12 lg:col-span-5 row-span-1", fallbackImg: "/images/acoustic-jam.jpg" },
+  { span: "col-span-12 sm:col-span-6 lg:col-span-3 row-span-1", fallbackImg: "/images/chai-cafe.jpg" },
+  { span: "col-span-12 sm:col-span-6 lg:col-span-2 row-span-1", fallbackImg: "/images/beacon-chai.jpg" },
+  { span: "col-span-12 sm:col-span-6 lg:col-span-3 row-span-1", fallbackImg: "/images/beacon-padel.jpg" },
+  { span: "col-span-6 sm:col-span-3 lg:col-span-2 row-span-1", fallbackImg: "/images/hero-rooftop.jpg" },
+  { span: "col-span-6 sm:col-span-3 lg:col-span-2 row-span-1", fallbackImg: "/images/beacon-now-26.jpg" },
+  { span: "col-span-12 sm:col-span-12 lg:col-span-5 row-span-1", fallbackImg: "/images/hero-image.jpg" },
 ];
 
-const COMMUNITY_HOST_REVIEWS = [
-  {
-    quote: "Hosted 18 padel sessions on Solo No More. Never had an awkward flake or court fee dispute.",
-    author: "Bilal Khan",
-    handle: "@bilalpadel",
-    role: "DHA Padel Host (18 sessions)",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&h=120&fit=crop&crop=faces",
-    stars: 5,
-    zone: "Clifton Phase 8",
-  },
-  {
-    quote: "Found my entire creative circle here in two weeks. Group chats are completely dead for me now.",
-    author: "Ayesha Malik",
-    handle: "@ayeshamk",
-    role: "Sunset Chai Club Host",
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&h=120&fit=crop&crop=faces",
-    stars: 5,
-    zone: "Clifton",
-  },
-  {
-    quote: "Dropped a beacon for an acoustic rooftop jam at 6 PM. Had 14 curated people singing by 9 PM.",
-    author: "Daniyal Raza",
-    handle: "@daniyalr",
-    role: "PECHS Rooftop Host",
-    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&h=120&fit=crop&crop=faces",
-    stars: 5,
-    zone: "PECHS Block 6",
-  },
-  {
-    quote: "Guest vetting and Raast split make hosting so stress-free. 10/10 vibe every single time.",
-    author: "Mahnoor Sheikh",
-    handle: "@mahnoors",
-    role: "Boardgames & Coffee Host",
-    avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=120&h=120&fit=crop&crop=faces",
-    stars: 5,
-    zone: "E-Street DHA",
-  },
-  {
-    quote: "Midnight chai runs and 10k midnight runs are actually happening now. Instant RSVP changes everything.",
-    author: "Hamza Tariq",
-    handle: "@hamzat",
-    role: "Night Scene Explorer",
-    avatar: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=120&h=120&fit=crop&crop=faces",
-    stars: 5,
-    zone: "Sea View / DHA",
-  },
+// Feature grid — each item is a feature that exists in the product today.
+const PRODUCT_FEATURES: { title: string; text: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { title: "Beacons in seconds", text: "Post a hangout with the spots you need, the budget split and an icebreaker question.", icon: Radio },
+  { title: "You approve the squad", text: "See who wants to join and accept or decline — only approved members get the details.", icon: CheckCircle2 },
+  { title: "Vetted members", text: "CNIC and Instagram checks before anyone can join a hangout or book a pass.", icon: ShieldCheck },
+  { title: "Event passes", text: "Book a pass, pay by bank transfer and get a QR pass once payment is verified.", icon: Ticket },
+  { title: "Door scanner", text: "Hosts scan QR or short codes at the door — duplicate and unpaid passes are refused.", icon: QrCode },
+  { title: "Squad chat", text: "Coordinate timings and meeting points with your approved squad.", icon: MessageSquare },
+  { title: "Shared memories", text: "After the meetup, the squad can add photos to the hangout's album.", icon: Camera },
+  { title: "Host & sell tickets", text: "Partners and artists get a dashboard to publish events, approve guests and track sales.", icon: Users },
+];
+
+// Example scenarios for the "How people use Solo-No-More" section (illustrative — no names or ratings).
+const HOW_PEOPLE_USE: { title: string; where: string; story: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { title: "Doubles padel, short one player", where: "DHA, Karachi", story: "Post a beacon for one open spot, approve someone with a matching vibe, and play the same evening.", icon: Zap },
+  { title: "Late-night chai run", where: "Clifton, Karachi", story: "New to the city and want company for chai? Join an open hangout instead of going alone.", icon: Utensils },
+  { title: "A gig you didn't want to miss", where: "Gulberg, Lahore", story: "Book a pass, pay by bank transfer, and meet a vetted squad at the door.", icon: Music },
+  { title: "Weekend hike crew", where: "Margalla Hills, Islamabad", story: "Hosts set the plan, the budget split and how many people can join.", icon: Compass },
+  { title: "Board games after work", where: "Any city", story: "Small, approved groups — no awkward group chats, no randoms showing up.", icon: Smile },
+  { title: "Hosting your own event", where: "Partners & artists", story: "Sell tickets, approve guests and check passes at the door from one dashboard.", icon: Ticket },
+];
+
+// Trust strip: only facts the product actually enforces (no press quotes or invented reviews).
+const TRUST_POINTS: { text: string; label: string }[] = [
+  { text: "Every member is vetted with CNIC and social checks before they can join a hangout.", label: "VETTED COMMUNITY" },
+  { text: "Hosts approve who joins their squad — no randoms showing up.", label: "HOST APPROVAL" },
+  { text: "Payments are verified by our team before a pass becomes active.", label: "VERIFIED PAYMENTS" },
+  { text: "Pay by simple bank transfer and share your receipt on WhatsApp.", label: "LOCAL PAYMENTS" },
+  { text: "No-show strikes keep plans reliable for everyone.", label: "ANTI-FLAKE POLICY" },
+  { text: "Hangouts in Karachi, Lahore and Islamabad — events open to all cities.", label: "MADE FOR PAKISTAN" },
 ];
 
 // ─── TABS & EVENT DATA ───────────────────────────────────────────────────────
 
-export const GUEST_AVATARS = [
-  { name: "Omar", img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&h=120&fit=crop&crop=faces" },
-  { name: "Ayla", img: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&h=120&fit=crop&crop=faces" },
-  { name: "Bilal", img: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&h=120&fit=crop&crop=faces" },
-  { name: "Zara", img: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=120&h=120&fit=crop&crop=faces" },
-  { name: "Hamza", img: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=120&h=120&fit=crop&crop=faces" },
-  { name: "Fatima", img: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=120&h=120&fit=crop&crop=faces" },
-  { name: "Daniyal", img: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=120&h=120&fit=crop&crop=faces" },
-];
 
 export interface BeaconSimulatorItem {
   id: string;
@@ -384,136 +273,6 @@ export const SIMULATOR_BEACONS: BeaconSimulatorItem[] = [
 
 type EventCategory = "birthday" | "padel" | "chai" | "gig" | "dinner" | "games";
 
-const EVENT_PREVIEWS: Record<
-  EventCategory,
-  {
-    title: string;
-    date: string;
-    time: string;
-    host: string;
-    hostRole: string;
-    hostAvatar: string;
-    location: string;
-    addressDetail: string;
-    description: string;
-    goingCount: number;
-    maybeCount: number;
-    cantGoCount: number;
-    flyerBadge: string;
-    flyerColor: string;
-    defaultPoster: string;
-    gradientBg: string;
-  }
-> = {
-  birthday: {
-    title: "26th Birthday Bash",
-    date: "Friday, April 5",
-    time: "6:00pm",
-    host: "Sarah K.",
-    hostRole: "Birthday Host · Clifton",
-    hostAvatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&h=120&fit=crop&crop=faces",
-    location: "RSVP to see location",
-    addressDetail: "Secret Rooftop, Clifton Block 4, Karachi",
-    description: "Celebrate the end of being on my parents health insurance!",
-    goingCount: 16,
-    maybeCount: 2,
-    cantGoCount: 0,
-    flyerBadge: "NOW 26",
-    flyerColor: "#FF4D2D",
-    defaultPoster: "/images/beacon-now-26.jpg",
-    gradientBg: "radial-gradient(ellipse at 75% 45%, rgba(217, 70, 239, 0.35) 0%, rgba(249, 115, 22, 0.28) 35%, rgba(15, 14, 23, 0.98) 75%), linear-gradient(135deg, #181424 0%, #100E17 100%)",
-  },
-  padel: {
-    title: "Midnight Blue Court Padel Smash",
-    date: "Tomorrow, Oct 14",
-    time: "10:00pm",
-    host: "Aisha M.",
-    hostRole: "Padel Captain · 8 Matches",
-    hostAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&h=120&fit=crop&crop=faces",
-    location: "Velocity Padel, Clifton",
-    addressDetail: "Court 2, Marine Drive, Clifton, Karachi",
-    description: "Friendly doubles tournament under stadium floodlights. Racquets and balls provided! Losers buy the chai afterwards.",
-    goingCount: 8,
-    maybeCount: 3,
-    cantGoCount: 1,
-    flyerBadge: "10 PM",
-    flyerColor: "#FF5A1F",
-    defaultPoster: "/images/beacon-padel.jpg",
-    gradientBg: "radial-gradient(ellipse at 75% 45%, rgba(0, 229, 255, 0.28) 0%, rgba(255, 90, 31, 0.25) 35%, rgba(7, 25, 18, 0.98) 75%), linear-gradient(135deg, #071912 0%, #06150F 100%)",
-  },
-  chai: {
-    title: "Late Night Chai & Paratha Run",
-    date: "Tonight, Oct 13",
-    time: "11:00pm",
-    host: "Zain K.",
-    hostRole: "Community Lead · DHA",
-    hostAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&h=120&fit=crop&crop=faces",
-    location: "Chai Shai, DHA Phase 6",
-    addressDetail: "Main Saba Commercial, DHA Phase 6, Karachi",
-    description: "Talking tech startups, creative design, and city life over hot elaichi chai and nutella parathas. Everyone welcome!",
-    goingCount: 14,
-    maybeCount: 5,
-    cantGoCount: 0,
-    flyerBadge: "CHAI RUN",
-    flyerColor: "#FF8A3D",
-    defaultPoster: "/images/beacon-chai.jpg",
-    gradientBg: "radial-gradient(ellipse at 75% 45%, rgba(255, 90, 31, 0.38) 0%, rgba(234, 88, 12, 0.25) 35%, rgba(30, 18, 8, 0.98) 75%), linear-gradient(135deg, #1E1208 0%, #150D05 100%)",
-  },
-  gig: {
-    title: "Secret Warehouse Techno Session",
-    date: "Saturday, Oct 18",
-    time: "10:30pm",
-    host: "DJ Rumi",
-    hostRole: "Curator · District 19",
-    hostAvatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&h=120&fit=crop&crop=faces",
-    location: "District 19, Korangi Industrial, Karachi",
-    addressDetail: "Plot 19, Sector 23, Korangi Industrial, Karachi",
-    description: "Underground deep house and modular synth sets. Exclusive guestlist vetted beforehand; QR pass verified via Raast.",
-    goingCount: 42,
-    maybeCount: 12,
-    cantGoCount: 4,
-    flyerBadge: "LIVE SET",
-    flyerColor: "#FF5A1F",
-    defaultPoster: "/images/hero-rooftop.jpg",
-    gradientBg: "radial-gradient(ellipse at 75% 45%, rgba(147, 51, 234, 0.35) 0%, rgba(255, 90, 31, 0.22) 35%, rgba(19, 17, 26, 0.98) 75%), linear-gradient(135deg, #13111A 0%, #0E0C13 100%)",
-  },
-  dinner: {
-    title: "Burns Road Midnight Food Crawl",
-    date: "Sunday, Oct 19",
-    time: "7:00pm",
-    host: "Mariam S.",
-    hostRole: "Food Enthusiast · Saddar",
-    hostAvatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=120&h=120&fit=crop&crop=faces",
-    location: "Burns Road, Saddar, Karachi",
-    addressDetail: "Waheed Kabab Lane, Burns Road, Saddar, Karachi",
-    description: "Waheed Fry Kabab, steaming Delhi Rabri, and fresh lassi. Comfortable walking shoes and big appetite required!",
-    goingCount: 11,
-    maybeCount: 4,
-    cantGoCount: 1,
-    flyerBadge: "FOOD CRAWL",
-    flyerColor: "#FF4D2D",
-    defaultPoster: "/images/chai-cafe.jpg",
-    gradientBg: "radial-gradient(ellipse at 75% 45%, rgba(255, 90, 31, 0.32) 0%, rgba(234, 88, 12, 0.2) 35%, rgba(26, 13, 8, 0.98) 75%), linear-gradient(135deg, #1A0D08 0%, #120A06 100%)",
-  },
-  games: {
-    title: "Catan & Secret Hitler Strategy Night",
-    date: "Saturday, Oct 25",
-    time: "8:00pm",
-    host: "Bilal T.",
-    hostRole: "Boardgame Master · Clifton",
-    hostAvatar: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=120&h=120&fit=crop&crop=faces",
-    location: "Deli, E-Street, Clifton",
-    addressDetail: "Plot 4/A, E-Street, Block 4, Clifton, Karachi",
-    description: "Strategy board games in a relaxed coffee lounge. Beginners welcomed, rules explained in 5 minutes over iced espresso.",
-    goingCount: 6,
-    maybeCount: 2,
-    cantGoCount: 0,
-    flyerBadge: "GAME NIGHT",
-    flyerColor: "#00E5FF",
-    defaultPoster: "/images/beacon-now-26.jpg",
-    gradientBg: "radial-gradient(ellipse at 75% 45%, rgba(59, 130, 246, 0.3) 0%, rgba(255, 90, 31, 0.25) 35%, rgba(15, 23, 42, 0.98) 75%), linear-gradient(135deg, #091319 0%, #071015 100%)",
-  },
-};
 
 export interface MembersOnlyEventItem {
   id: string;
@@ -533,153 +292,47 @@ export interface MembersOnlyEventItem {
   membersOnly: boolean;
 }
 
-export const MEMBERS_ONLY_EVENTS: MembersOnlyEventItem[] = [
-  {
-    id: "safari-tourist-train",
-    category: "trips",
-    title: "Safari Tourist Train",
-    curator: "Solo-No-More Official Excursion",
-    date: "2026-06-09 • 8:00 PM",
-    location: "Safari Tourist Train Rawalpindi to...",
-    price: "PKR 4,500",
-    publicPrice: "PKR 6,000",
-    spotsLeft: "50 left",
-    spotsRemaining: 50,
-    totalSpots: 60,
-    image: "/images/event-safari-train.jpg",
-    hotBadge: "HOT",
-    perkBadge: "Scenic Vista Railcar Pass",
-    membersOnly: true,
-  },
-  {
-    id: "drift-fest-karachi",
-    category: "motorsports",
-    title: "Drift Fest Karachi",
-    curator: "Apex Racing × Solo-No-More",
-    date: "2026-06-03 • 8:00 PM",
-    location: "Omni Karting Circuit",
-    price: "PKR Rs 1,500",
-    publicPrice: "PKR 2,500",
-    spotsLeft: "38 left",
-    spotsRemaining: 38,
-    totalSpots: 50,
-    image: "/images/beacon-now-26.jpg",
-    hotBadge: "HOT",
-    perkBadge: "Pitlane & Karting Pass",
-    membersOnly: true,
-  },
-  {
-    id: "chaand-raat-bnc",
+// Event cards are built from REAL upcoming events (no sample data).
+function eventToCard(ev: PublicEventSummary): MembersOnlyEventItem {
+  const left = Math.max(0, (ev.max_capacity || 0) - (ev.joined_count || 0));
+  const price = ev.price > 0 ? `PKR ${ev.price.toLocaleString("en-US")}` : "Free";
+  return {
+    id: ev.id,
     category: "culture",
-    title: "Chaand Raat by BnC Offline",
-    curator: "BnC Offline × Solo-No-More",
-    date: "2026-03-20 • 12:00 AM",
-    location: "Third Culture Coffee",
-    price: "PKR 2,500/-",
-    publicPrice: "PKR 3,500",
-    spotsLeft: "50 left",
-    spotsRemaining: 50,
-    totalSpots: 70,
-    image: "/images/beacon-chai.jpg",
-    hotBadge: "HOT",
-    perkBadge: "Henna & Elaichi Chai Bar",
-    membersOnly: true,
-  },
-  {
-    id: "scene-92-desi-cultural",
-    category: "music",
-    title: "Scene 92 – A Desi Cultural...",
-    curator: "Arts Council Karachi Stage",
-    date: "2026-02-13 • 7:00 PM - 12:00 AM",
-    location: "Studio 1, Arts Council",
-    price: "PKR 4,000/-",
-    publicPrice: "PKR 5,500",
-    spotsLeft: "50 left",
-    spotsRemaining: 50,
-    totalSpots: 80,
-    image: "/images/acoustic-jam.jpg",
-    hotBadge: "HOT",
-    perkBadge: "Full DJ Lineup Pass",
-    membersOnly: true,
-  },
-  {
-    id: "midnight-supercars",
-    category: "motorsports",
-    title: "Supercars & Midnight Run",
-    curator: "Velocity Convoy Karachi",
-    date: "2026-04-18 • 10:30 PM",
-    location: "Emaar Oceanfront Promenade",
-    price: "PKR 3,500/-",
-    publicPrice: "PKR 5,000",
-    spotsLeft: "18 left",
-    spotsRemaining: 18,
-    totalSpots: 30,
-    image: "/images/hero-rooftop.jpg",
-    hotBadge: "HOT",
-    perkBadge: "Oceanfront VIP Convoy",
-    membersOnly: true,
-  },
-  {
-    id: "pro-am-padel",
-    category: "culture",
-    title: "Pro-Am Padel Invitational",
-    curator: "Legends Arena Padel",
-    date: "2026-05-02 • 9:00 PM",
-    location: "Legends Arena Karachi",
-    price: "PKR 2,200/-",
-    publicPrice: "PKR 3,200",
-    spotsLeft: "12 left",
-    spotsRemaining: 12,
-    totalSpots: 24,
-    image: "/images/padel-squad.jpg",
-    hotBadge: "HOT",
-    perkBadge: "Court Racquets & Drinks",
-    membersOnly: true,
-  },
-  {
-    id: "loft-acoustics",
-    category: "music",
-    title: "Secret Loft Acoustics Vol. 4",
-    curator: "Indie Acoustic Sessions",
-    date: "2026-05-20 • 8:30 PM",
-    location: "DHA Phase 5 Loft Studio",
-    price: "PKR 3,000/-",
-    publicPrice: "PKR 4,200",
-    spotsLeft: "25 left",
-    spotsRemaining: 25,
-    totalSpots: 40,
-    image: "/images/beach-bonfire.jpg",
-    hotBadge: "HOT",
-    perkBadge: "Unplugged Acoustic Jam",
-    membersOnly: true,
-  },
-  {
-    id: "retro-arcade",
-    category: "culture",
-    title: "Neon Arcade & Vinyl Night",
-    curator: "Retro Underground Karachi",
-    date: "2026-06-12 • 9:00 PM",
-    location: "Old City Retro Lounge",
-    price: "PKR 1,800/-",
-    publicPrice: "PKR 2,800",
-    spotsLeft: "30 left",
-    spotsRemaining: 30,
-    totalSpots: 50,
-    image: "/images/chai-cafe.jpg",
-    hotBadge: "HOT",
-    perkBadge: "Unlimited Arcade Tokens",
-    membersOnly: true,
-  },
-];
+    title: ev.title,
+    curator: "Solo-No-More",
+    date: new Date(ev.scheduled_at).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "Asia/Karachi" }),
+    location: ev.venue_name || ev.address || "Venue TBA",
+    price,
+    publicPrice: price,
+    spotsLeft: ev.max_capacity ? (left > 0 ? `${left} spots left` : "Sold out") : "Open",
+    spotsRemaining: left,
+    totalSpots: ev.max_capacity || 0,
+    image: ev.flyer_image_url || "/images/hero-rooftop.jpg",
+    hotBadge: ev.members_only ? "MEMBERS ONLY" : "OPEN TO ALL",
+    perkBadge: "",
+    membersOnly: ev.members_only,
+  };
+}
+
+export type LiveBeaconsByCity = Record<"Karachi" | "Lahore" | "Islamabad", PublicBeaconSummary[]>;
 
 export default function LandingPageClient({
   reviewWallData,
+  liveEvents = [],
+  liveBeacons = { Karachi: [], Lahore: [], Islamabad: [] },
 }: {
   reviewWallData?: any;
+  liveEvents?: PublicEventSummary[];
+  liveBeacons?: LiveBeaconsByCity;
 } = {}) {
+  // Beacons are local: the website shows one city at a time. Events are shown for every city.
+  const [beaconCity, setBeaconCity] = useState<keyof LiveBeaconsByCity>("Karachi");
+  const TEMPLATES: TrendingTemplateItem[] = (liveBeacons[beaconCity] || []).map(beaconToCard);
+  const totalLiveBeacons = liveBeacons.Karachi.length + liveBeacons.Lahore.length + liveBeacons.Islamabad.length;
   const [activeCategory, setActiveCategory] = useState<EventCategory>("birthday");
   const [activeRsvp, setActiveRsvp] = useState<"going" | "maybe" | "cantGo" | null>("going");
-  const [selectedTemplate, setSelectedTemplate] = useState<TrendingTemplateItem>(TEMPLATES[0]);
+  const [selectedTemplate, setSelectedTemplate] = useState<TrendingTemplateItem | null>(null);
   const [isInteracting, setIsInteracting] = useState(false);
   const rSlots = reviewWallData?.slots || [];
 
@@ -707,53 +360,26 @@ export default function LandingPageClient({
     };
   }, []);
 
-  const openEventPreview = (event: MembersOnlyEventItem) => {
-    const priceNum = parseInt(event.price.replace(/[^0-9]/g, "")) || 2500;
-    const publicPriceNum = parseInt(event.publicPrice.replace(/[^0-9]/g, "")) || 3500;
-    setPreviewEvent({
-      id: event.id,
-      title: event.title,
-      description: `${event.title} curated by ${event.curator}. Verified members-only IRL community experience. Includes ${event.perkBadge}.`,
-      venue_name: event.location,
-      location: event.location,
-      date: event.date,
-      flyer_image_url: event.image,
-      price: event.price,
-      category: event.category,
-      tag: event.hotBadge || "MEMBERS ONLY",
-      capacity: event.totalSpots,
-      joined: event.totalSpots - event.spotsRemaining,
-      hostName: event.curator,
-      metadata: {
-        is_members_only: true,
-        tier_packages: [
-          { id: "member_tier", name: "Member Tier Pass", price: priceNum, perks: event.perkBadge },
-          { id: "guest_tier", name: "Guest Pass", price: publicPriceNum, perks: "Standard Admission" },
-        ],
-      },
-    });
-  };
+
 
   const openBeaconPreview = (tmpl: TrendingTemplateItem) => {
-    const cat =
-      tmpl.category.toLowerCase().includes("padel") || tmpl.category.toLowerCase().includes("cricket")
-        ? "sports"
-        : tmpl.category.toLowerCase().includes("chai")
-        ? "casual"
-        : "nightlife";
-
+    // Real data for the preview: look the beacon up by id.
+    const real = (liveBeacons[beaconCity] || []).find((b) => b.id === tmpl.id);
+    if (!real) return;
     setPreviewBeacon({
-      id: tmpl.id,
-      title: tmpl.name,
-      category: cat,
-      location_name: tmpl.subtext,
-      location: tmpl.location,
+      id: real.id,
+      title: real.title,
+      category: real.category,
+      location_name: real.location_name || real.city,
+      location: real.location_name || real.city,
       time: tmpl.time,
-      date: "Tonight",
-      total_slots: 8,
-      filled_slots: 5,
-      description: `${tmpl.headline} — ${tmpl.name}. Join verified squad members at ${tmpl.location}. Real people showing up.`,
-      hostName: "Verified Squad Host",
+      date: real.scheduled_at
+        ? new Date(real.scheduled_at).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "Asia/Karachi" })
+        : "Date TBD",
+      total_slots: real.total_slots,
+      filled_slots: real.filled_slots,
+      description: real.description || `${real.title} in ${real.location_name || real.city}.`,
+      hostName: real.host_first_name,
     });
   };
 
@@ -770,7 +396,8 @@ export default function LandingPageClient({
 
     const interval = setInterval(() => {
       setSelectedTemplate((prev) => {
-        const currentIndex = TEMPLATES.findIndex((t) => t.id === prev.id);
+        if (TEMPLATES.length === 0) return prev;
+        const currentIndex = prev ? TEMPLATES.findIndex((t) => t.id === prev.id) : -1;
         const nextIndex = (currentIndex + 1) % TEMPLATES.length;
         const nextTemplate = TEMPLATES[nextIndex];
 
@@ -789,7 +416,7 @@ export default function LandingPageClient({
     }, 3200);
 
     return () => clearInterval(interval);
-  }, [isInteracting, isDragging]);
+  }, [isInteracting, isDragging, beaconCity, TEMPLATES.length]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!carouselRef.current) return;
@@ -1082,7 +709,7 @@ export default function LandingPageClient({
               }}
             >
               <span className="w-2 h-2 rounded-full bg-[#3DDC97] animate-pulse" style={{ boxShadow: "0 0 10px #3DDC97" }} />
-              <span>14 SQUADS HANGING OUT TONIGHT NATIONWIDE</span>
+              <span>{totalLiveBeacons > 0 ? `${totalLiveBeacons} LIVE HANGOUT${totalLiveBeacons === 1 ? "" : "S"} TO JOIN RIGHT NOW` : "EARLY BIRD PASSES NOW OPEN"}</span>
             </div>
 
             {/* Headline: Clean 2-Line Architecture Across Mobile & Desktop */}
@@ -1365,7 +992,7 @@ export default function LandingPageClient({
                     DATE
                   </div>
                   <div style={{ color: "#FFFFFF", fontWeight: 800, fontSize: "9px" }}>
-                    SAT 25 OCT • 9:30P
+                    THIS SAT • 9:30P
                   </div>
                 </div>
                 <div>
@@ -1389,7 +1016,7 @@ export default function LandingPageClient({
                     CAPACITY
                   </div>
                   <div style={{ color: "#FFA05C", fontWeight: 800, fontSize: "9px" }}>
-                    12/16 (4 Left)
+                    16 SPOTS
                   </div>
                 </div>
               </div>
@@ -1418,7 +1045,7 @@ export default function LandingPageClient({
                     </div>
                   ))}
                   <span style={{ fontSize: "9px", fontWeight: 700, color: "rgba(255, 255, 255, 0.8)", marginLeft: "6px" }}>
-                    +11 joined
+                    RSVP open
                   </span>
                 </div>
                 <div style={{ display: "inline-flex", alignItems: "center", gap: "3px", fontSize: "8.5px", color: "#C8FF00", fontWeight: 700 }}>
@@ -1688,7 +1315,7 @@ export default function LandingPageClient({
                 letterSpacing: "0.06em",
               }}
             >
-              <Radio className="w-3.5 h-3.5 text-[#FF5A1F] animate-pulse" /> LIVE RADAR NATIONWIDE
+              <Radio className="w-3.5 h-3.5 text-[#FF5A1F] animate-pulse" /> LIVE IN {beaconCity.toUpperCase()}
             </div>
             <h2
               style={{
@@ -1711,8 +1338,28 @@ export default function LandingPageClient({
                 fontWeight: 500,
               }}
             >
-              Real-world scenes broadcasting nationwide. Scroll or drag with cursor to explore.
+              Open hangouts hosted by members in {beaconCity}. Beacons are local — pick your city.
             </p>
+            <div className="flex flex-wrap gap-2 mt-4">
+              {(["Karachi", "Lahore", "Islamabad"] as const).map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => {
+                    setBeaconCity(c);
+                    setSelectedTemplate(null);
+                    carouselRef.current?.scrollTo({ left: 0 });
+                  }}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold border transition ${
+                    beaconCity === c
+                      ? "bg-[#FF5A1F] border-[#FF5A1F] text-white"
+                      : "bg-white/[0.04] border-white/15 text-white/75 hover:bg-white/10"
+                  }`}
+                >
+                  {c} ({liveBeacons[c].length})
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Navigation Controls: Perfectly Centered Buttons + Drag Hint */}
@@ -1781,8 +1428,28 @@ export default function LandingPageClient({
             onWheel={handleWheel}
             style={{ padding: "16px clamp(24px, 5vw, 64px) 28px" }}
           >
+            {TEMPLATES.length === 0 && (
+              <div
+                className="flex flex-col items-center justify-center text-center rounded-2xl border border-dashed border-white/20 bg-white/[0.03] px-8"
+                style={{ flex: "1 0 100%", minHeight: "260px" }}
+              >
+                <Radio className="w-7 h-7 text-[#FF5A1F] mb-3" />
+                <h3 className="text-lg font-bold text-white">No live beacons in {beaconCity} yet</h3>
+                <p className="text-sm text-white/65 mt-1.5 max-w-md">
+                  Be the first to host one — or grab an Early Bird pass and get notified when your city lights up.
+                </p>
+                <div className="flex flex-wrap gap-3 justify-center mt-5">
+                  <Link href="/early-bird" className="px-4 py-2 rounded-lg text-sm font-semibold bg-[#FF5A1F] text-white hover:brightness-110 transition">
+                    Get Early Bird pass
+                  </Link>
+                  <Link href="/apply" className="px-4 py-2 rounded-lg text-sm font-semibold bg-white/[0.06] text-white border border-white/15 hover:bg-white/10 transition">
+                    Join Solo-No-More
+                  </Link>
+                </div>
+              </div>
+            )}
             {TEMPLATES.map((tmpl) => {
-              const isSelected = selectedTemplate.id === tmpl.id;
+              const isSelected = selectedTemplate?.id === tmpl.id;
               return (
                 <div
                   key={tmpl.id}
@@ -2043,7 +1710,7 @@ export default function LandingPageClient({
         id="reviews-section"
         className="pf-plain-reviews-wrap"
         style={{ borderBottom: "none", background: "#060408", marginBottom: "24px", position: "relative", overflow: "hidden" }}
-        aria-label="Press and Reviews Ticker"
+        aria-label="Why members trust Solo-No-More"
       >
         {/* Subtle Geometric Dotted Texture Overlay */}
         <div
@@ -2060,13 +1727,13 @@ export default function LandingPageClient({
           aria-hidden="true"
         />
         <div className="pf-plain-reviews-track">
-          {[...PRESS_PARTNER_REVIEWS, ...COMMUNITY_HOST_REVIEWS, ...PRESS_PARTNER_REVIEWS, ...COMMUNITY_HOST_REVIEWS].map((item, idx) => {
-            const quoteText = "quote" in item ? item.quote : "";
-            const sourceText = "source" in item ? item.source : "author" in item ? `${(item as any).author} · ${(item as any).role}` : "";
+          {[...TRUST_POINTS, ...TRUST_POINTS].map((item, idx) => {
+            const quoteText = item.text;
+            const sourceText = item.label;
             return (
               <div key={idx} className="pf-plain-review-item">
                 <div className="pf-plain-review-quote">
-                  &ldquo;{quoteText}&rdquo;
+                  {quoteText}
                 </div>
                 <div className="pf-plain-review-source">
                   {sourceText}
@@ -2200,7 +1867,7 @@ export default function LandingPageClient({
                 }}
               >
                 <Flame className="w-3.5 h-3.5 text-[#FFA05C] fill-[#FFA05C]" />
-                <span>MEMBERS ONLY</span>
+                <span>UPCOMING</span>
               </div>
 
               {/* Headline: Members Only Events (Crisp White with High Contrast) */}
@@ -2216,7 +1883,7 @@ export default function LandingPageClient({
                   textShadow: "0 3px 18px rgba(0, 0, 0, 0.3)",
                 }}
               >
-                Members Only Events
+                Upcoming Events
               </h2>
 
               {/* Subtitle (Crisp White/Cream with High Contrast) */}
@@ -2230,7 +1897,7 @@ export default function LandingPageClient({
                   textShadow: "0 2px 8px rgba(0, 0, 0, 0.25)",
                 }}
               >
-                Premium access experiences curated for members.
+                Curated events across Pakistan — open to every city.
               </p>
             </div>
 
@@ -2264,12 +1931,27 @@ export default function LandingPageClient({
 
           {/* ── 4-COLUMN CARDS GRID (LARGER DEEP ONYX CARDS STANDING OUT SHARPLY ON ORANGE) ── */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-left">
-            {MEMBERS_ONLY_EVENTS.map((event) => {
+            {liveEvents.length === 0 && (
+              <div className="sm:col-span-2 lg:col-span-4 flex flex-col items-center justify-center text-center rounded-2xl border border-dashed border-white/40 bg-black/25 px-8 py-12">
+                <Calendar className="w-7 h-7 text-white mb-3" />
+                <h3 className="text-lg font-bold text-white">No events yet — the first one drops soon</h3>
+                <p className="text-sm text-white/80 mt-1.5 max-w-md">Early Bird members hear about new events first.</p>
+                <div className="flex flex-wrap gap-3 justify-center mt-5">
+                  <Link href="/early-bird" className="px-4 py-2 rounded-lg text-sm font-semibold bg-black text-white hover:bg-black/80 transition">
+                    Get Early Bird pass
+                  </Link>
+                  <Link href="/apply" className="px-4 py-2 rounded-lg text-sm font-semibold bg-white/15 text-white border border-white/30 hover:bg-white/25 transition">
+                    Join Solo-No-More
+                  </Link>
+                </div>
+              </div>
+            )}
+            {liveEvents.map(eventToCard).map((event) => {
               const isFav = !!eventFavorites[event.id];
               return (
                 <div
                   key={event.id}
-                  onClick={() => openEventPreview(event)}
+                  onClick={() => { window.location.href = `/events/${event.id}`; }}
                   className="group rounded-3xl transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_28px_65px_rgba(0,0,0,0.65)] cursor-pointer"
                   style={{
                     background: "linear-gradient(180deg, #170C14 0%, #10060C 100%)",
@@ -2507,1252 +2189,43 @@ export default function LandingPageClient({
         />
       </div>
 
-      {/* ── 8. "POWERFUL FEATURES, EASY EVENTS" (FULL-SCREEN, ROUNDED CORNERS TOP & BOTTOM, ORANGE GRADIENT & DOTTED TEXTURE) ── */}
-      <section
-        id="powerful-features-section"
-        style={{
-          width: "100%",
-          borderRadius: "clamp(32px, 4vw, 56px) clamp(32px, 4vw, 56px) 0 0",
-          background:
-            "radial-gradient(ellipse at 50% 0%, #FF6F3A 0%, #FF5A1F 35%, #E64808 70%, #B83200 100%)",
-          color: "#FFFFFF",
-          padding: "70px min(4vw, 48px) 100px",
-          marginTop: "24px",
-          marginBottom: "0px",
-          position: "relative",
-          overflow: "hidden",
-          border: "1.5px solid rgba(255, 255, 255, 0.22)",
-          borderBottom: "none",
-          boxShadow: "0 20px 60px rgba(0, 0, 0, 0.45)",
-        }}
-      >
-        {/* Subtle Geometric Dotted Texture Overlay (Matching Orange Gradient Texture) */}
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            backgroundImage: "radial-gradient(rgba(255, 255, 255, 0.24) 1.25px, transparent 1.25px)",
-            backgroundSize: "22px 22px",
-            backgroundPosition: "center",
-            pointerEvents: "none",
-            zIndex: 1,
-            opacity: 0.85,
-          }}
-          aria-hidden="true"
-        />
-
-        {/* Soft atmospheric overlay */}
-        <div
-          aria-hidden="true"
-          style={{
-            position: "absolute",
-            inset: 0,
-            pointerEvents: "none",
-            background:
-              "radial-gradient(circle at 15% 25%, rgba(255, 255, 255, 0.12) 0%, transparent 40%), radial-gradient(circle at 85% 75%, rgba(0, 0, 0, 0.25) 0%, transparent 50%)",
-          }}
-        />
-
-        <div style={{ maxWidth: "1200px", margin: "0 auto", position: "relative", zIndex: 1 }}>
-          {/* Main Section Header */}
-          <div style={{ textAlign: "center", marginBottom: "56px" }}>
-            <h2
-              style={{
-                fontFamily: "var(--font-display), system-ui, sans-serif",
-                fontSize: "clamp(34px, 4.8vw, 56px)",
-                fontWeight: 800,
-                letterSpacing: "-0.035em",
-                color: "#FFFFFF",
-                margin: 0,
-                lineHeight: 1.1,
-                textShadow: "0 4px 24px rgba(0, 0, 0, 0.35)",
-              }}
+      {/* ── 8. "POWERFUL FEATURES, EASY EVENTS" — only features that exist in the product ── */}
+      <section id="powerful-features-section" className="relative px-6 py-20 sm:py-24" style={{ background: "#060408" }}>
+        <div className="mx-auto max-w-[1180px]">
+          <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+            <div className="max-w-2xl">
+              <span className="inline-flex items-center gap-2 rounded-full border border-[#FF5A1F]/35 bg-[#FF5A1F]/10 px-3 py-1 text-[11px] font-bold tracking-wider text-[#FFA05C]">
+                <Zap className="w-3.5 h-3.5" /> FEATURES
+              </span>
+              <h2 className="mt-4 text-3xl sm:text-4xl font-black tracking-tight text-white">Powerful features, easy events</h2>
+              <p className="mt-3 text-base text-white/65">
+                Everything you need to find your people, plan the hangout and get through the door — in one place.
+              </p>
+            </div>
+            <Link
+              href="/apply"
+              className="inline-flex w-fit items-center gap-2 rounded-lg bg-[#FF5A1F] px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-110"
             >
-              Powerful features, easy events
-            </h2>
+              Get started <ArrowRight className="w-4 h-4" />
+            </Link>
           </div>
 
-          {/* ─── 3 Feature Cards Grid (BLACK & ORANGE THEMED) ─── */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 300px), 1fr))",
-              gap: "28px",
-              marginBottom: "110px",
-            }}
-          >
-            {/* Card 1: Find a time that works */}
-            <div
-              style={{
-                background: "linear-gradient(180deg, #130D1B 0%, #0E0817 100%)",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
-                borderRadius: "24px",
-                boxShadow: "0 20px 45px rgba(0, 0, 0, 0.65)",
-                display: "flex",
-                flexDirection: "column",
-                overflow: "hidden",
-                transition: "transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease",
-              }}
-              className="hover:border-[#FF5A1F]/60 hover:-translate-y-1.5 transition-all duration-300"
-            >
-              {/* Card 1 Visual: High-Tech Group Availability & Consensus Radar */}
-              <div
-                style={{
-                  height: "290px",
-                  background: "radial-gradient(circle at 50% 15%, rgba(255, 90, 31, 0.22) 0%, rgba(35, 17, 54, 0.45) 50%, #0B0813 100%)",
-                  position: "relative",
-                  overflow: "hidden",
-                  padding: "16px 14px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                {/* Subtle ambient sparkles */}
-                <span style={{ position: "absolute", top: "14px", left: "16px", color: "#FF5A1F", fontSize: "14px", opacity: 0.8 }}>✦</span>
-                <span style={{ position: "absolute", top: "24px", right: "20px", color: "#FF8A3D", fontSize: "12px", opacity: 0.7 }}>✦</span>
-                <span style={{ position: "absolute", bottom: "16px", left: "20px", color: "rgba(255,255,255,0.2)", fontSize: "10px" }}>•</span>
-
-                {/* Glassmorphic Consensus Radar Card */}
+          <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {PRODUCT_FEATURES.map((feature) => {
+              const Icon = feature.icon;
+              return (
                 <div
-                  style={{
-                    width: "100%",
-                    maxWidth: "320px",
-                    background: "rgba(18, 12, 26, 0.94)",
-                    border: "1px solid rgba(255, 255, 255, 0.14)",
-                    borderRadius: "20px",
-                    padding: "14px 14px 12px",
-                    boxShadow: "0 18px 40px rgba(0, 0, 0, 0.65), 0 0 24px rgba(255, 90, 31, 0.12)",
-                    backdropFilter: "blur(14px)",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "9px",
-                  }}
+                  key={feature.title}
+                  className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 transition hover:border-[#FF5A1F]/40 hover:bg-white/[0.05]"
                 >
-                  {/* Top Poll Info Bar */}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingBottom: "4px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <Calendar className="w-3.5 h-3.5 text-[#FF8A3D]" />
-                      <span style={{ fontSize: "10.5px", fontWeight: 800, color: "#FF8A3D", letterSpacing: "0.06em", textTransform: "uppercase" }}>
-                        Group Poll Consensus
-                      </span>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-                      <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#22C55E", boxShadow: "0 0 8px #22C55E" }} />
-                      <span style={{ fontSize: "10px", color: "rgba(255, 255, 255, 0.7)", fontWeight: 600 }}>14 Voted</span>
-                    </div>
-                  </div>
-
-                  {/* Option 1: Top Consensus Match */}
-                  <div
-                    style={{
-                      border: "1.5px solid rgba(255, 90, 31, 0.55)",
-                      background: "linear-gradient(135deg, rgba(255, 90, 31, 0.16) 0%, rgba(24, 15, 34, 0.85) 100%)",
-                      borderRadius: "14px",
-                      padding: "9px 11px",
-                      boxShadow: "0 4px 16px rgba(255, 90, 31, 0.18)",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      {/* Date block */}
-                      <div
-                        style={{
-                          width: "40px",
-                          height: "40px",
-                          background: "rgba(255, 90, 31, 0.22)",
-                          border: "1px solid rgba(255, 90, 31, 0.45)",
-                          borderRadius: "10px",
-                          display: "flex",
-                          flexDirection: "column",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          flexShrink: 0,
-                        }}
-                      >
-                        <span style={{ fontSize: "8px", fontWeight: 800, color: "#FF8A3D", letterSpacing: "0.08em", lineHeight: 1 }}>FRI</span>
-                        <span style={{ fontSize: "16px", fontWeight: 900, color: "#FFFFFF", lineHeight: 1.1 }}>24</span>
-                      </div>
-
-                      {/* Middle Details */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                          <span style={{ fontSize: "12px", fontWeight: 800, color: "#FFFFFF", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                            Rooftop Sunset 🌅
-                          </span>
-                          <span style={{ fontSize: "9px", fontWeight: 700, color: "#FF8A3D" }}>12 can go</span>
-                        </div>
-                        {/* Progress Bar */}
-                        <div style={{ height: "4px", background: "rgba(255, 255, 255, 0.12)", borderRadius: "999px", margin: "5px 0 3px", overflow: "hidden" }}>
-                          <div style={{ width: "86%", height: "100%", background: "linear-gradient(90deg, #FF5A1F, #FF8A3D)", borderRadius: "999px" }} />
-                        </div>
-                        <div style={{ fontSize: "9px", color: "rgba(255, 255, 255, 0.65)" }}>8:30 PM • 86% agreement</div>
-                      </div>
-
-                      {/* Right Checkmark */}
-                      <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: "rgba(34, 197, 94, 0.18)", border: "1px solid rgba(34, 197, 94, 0.5)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                        <Check className="w-3 h-3 text-[#22C55E]" />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Option 2: Alternative Date */}
-                  <div
-                    style={{
-                      border: "1px solid rgba(255, 255, 255, 0.08)",
-                      background: "rgba(255, 255, 255, 0.03)",
-                      borderRadius: "14px",
-                      padding: "8px 11px",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      {/* Date block */}
-                      <div
-                        style={{
-                          width: "38px",
-                          height: "38px",
-                          background: "rgba(255, 255, 255, 0.05)",
-                          border: "1px solid rgba(255, 255, 255, 0.1)",
-                          borderRadius: "10px",
-                          display: "flex",
-                          flexDirection: "column",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          flexShrink: 0,
-                        }}
-                      >
-                        <span style={{ fontSize: "8px", fontWeight: 800, color: "#9CA3AF", letterSpacing: "0.08em", lineHeight: 1 }}>SAT</span>
-                        <span style={{ fontSize: "15px", fontWeight: 800, color: "#E5E7EB", lineHeight: 1.1 }}>25</span>
-                      </div>
-
-                      {/* Middle Details */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                          <span style={{ fontSize: "11.5px", fontWeight: 700, color: "#D1D5DB", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                            Late Drive & Chai ☕
-                          </span>
-                          <span style={{ fontSize: "9px", fontWeight: 600, color: "#9CA3AF" }}>6 can go</span>
-                        </div>
-                        {/* Progress Bar */}
-                        <div style={{ height: "4px", background: "rgba(255, 255, 255, 0.08)", borderRadius: "999px", margin: "4px 0 3px", overflow: "hidden" }}>
-                          <div style={{ width: "43%", height: "100%", background: "rgba(255, 255, 255, 0.4)", borderRadius: "999px" }} />
-                        </div>
-                        <div style={{ fontSize: "9px", color: "rgba(255, 255, 255, 0.5)" }}>10:00 PM • 43% agreement</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Micro Footer Notice */}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "5px", paddingTop: "2px" }}>
-                    <Sparkles className="w-3 h-3 text-[#FF8A3D]" />
-                    <span style={{ fontSize: "9.5px", fontWeight: 700, color: "#FF8A3D" }}>Best match automatically scheduled for Friday</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 1 Text & Action */}
-              <div style={{ padding: "24px 22px 22px", display: "flex", flexDirection: "column", flexGrow: 1, justifyContent: "space-between" }}>
-                <div>
-                  <h3 style={{ fontSize: "20px", fontWeight: 800, color: "#FFFFFF", margin: "0 0 8px", letterSpacing: "-0.02em" }}>
-                    Find a time that works
-                  </h3>
-                  <p style={{ fontSize: "15px", color: "rgba(255, 255, 255, 0.7)", lineHeight: 1.4, margin: "0 0 20px" }}>
-                    Poll your guests before selecting a date
-                  </p>
-                </div>
-                <Link
-                  href="/apply"
-                  style={{
-                    background: "rgba(255, 90, 31, 0.12)",
-                    border: "1.5px solid rgba(255, 90, 31, 0.4)",
-                    color: "#FF8A3D",
-                    fontSize: "14px",
-                    fontWeight: 700,
-                    padding: "12px 18px",
-                    borderRadius: "999px",
-                    textAlign: "center",
-                    textDecoration: "none",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "6px",
-                    transition: "all 0.2s ease",
-                  }}
-                  className="hover:bg-[#FF5A1F] hover:text-white hover:shadow-[0_4px_22px_rgba(255,90,31,0.4)] transition-all"
-                >
-                  Try it ↗
-                </Link>
-              </div>
-            </div>
-
-            {/* Card 2: Get answers upfront */}
-            <div
-              style={{
-                background: "linear-gradient(180deg, #130D1B 0%, #0E0817 100%)",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
-                borderRadius: "24px",
-                boxShadow: "0 20px 45px rgba(0, 0, 0, 0.65)",
-                display: "flex",
-                flexDirection: "column",
-                overflow: "hidden",
-                transition: "transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease",
-              }}
-              className="hover:border-[#FF5A1F]/60 hover:-translate-y-1.5 transition-all duration-300"
-            >
-              {/* Card 2 Visual: Interactive Event Customizer & Guest Preference Feed */}
-              <div
-                style={{
-                  height: "290px",
-                  background: "radial-gradient(circle at 60% 25%, rgba(225, 29, 72, 0.16) 0%, rgba(255, 90, 31, 0.14) 45%, #0C0814 100%)",
-                  position: "relative",
-                  overflow: "hidden",
-                  padding: "16px 14px",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "7px",
-                }}
-              >
-                {/* Host Question Header Card */}
-                <div
-                  style={{
-                    width: "100%",
-                    maxWidth: "320px",
-                    background: "linear-gradient(135deg, rgba(255, 90, 31, 0.18) 0%, rgba(22, 14, 30, 0.95) 100%)",
-                    border: "1.5px solid rgba(255, 90, 31, 0.45)",
-                    borderRadius: "14px",
-                    padding: "9px 12px",
-                    boxShadow: "0 8px 24px rgba(0, 0, 0, 0.55), 0 0 18px rgba(255, 90, 31, 0.12)",
-                    backdropFilter: "blur(12px)",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "3px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <div
-                        style={{
-                          width: "18px",
-                          height: "18px",
-                          borderRadius: "50%",
-                          background: "linear-gradient(135deg, #FF5A1F, #D63900)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: "9px",
-                          fontWeight: 800,
-                          color: "#FFF",
-                        }}
-                      >
-                        H
-                      </div>
-                      <span style={{ fontSize: "10px", fontWeight: 800, color: "#FF8A3D", letterSpacing: "0.06em", textTransform: "uppercase" }}>
-                        Host Question
-                      </span>
-                    </div>
-                    <span style={{ fontSize: "9px", color: "rgba(255, 255, 255, 0.6)", fontWeight: 600 }}>Required for RSVP</span>
-                  </div>
-                  <div style={{ fontSize: "12px", fontWeight: 800, color: "#FFFFFF" }}>
-                    &quot;What should we prep for the squad?&quot; 📝
-                  </div>
-                </div>
-
-                {/* Response 1: Dietary */}
-                <div
-                  style={{
-                    width: "100%",
-                    maxWidth: "320px",
-                    background: "rgba(20, 14, 28, 0.88)",
-                    border: "1px solid rgba(34, 197, 94, 0.35)",
-                    borderRadius: "12px",
-                    padding: "7px 11px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "9px",
-                    boxShadow: "0 4px 14px rgba(0, 0, 0, 0.4)",
-                    backdropFilter: "blur(10px)",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "26px",
-                      height: "26px",
-                      borderRadius: "50%",
-                      background: "linear-gradient(135deg, #22C55E, #15803D)",
-                      color: "#FFF",
-                      fontSize: "11px",
-                      fontWeight: 800,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                    }}
-                  >
-                    S
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: "8.5px", fontWeight: 800, color: "#4ADE80", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                      Dietary • Sarah K.
-                    </div>
-                    <div style={{ fontSize: "11px", fontWeight: 700, color: "#FFFFFF", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      Gluten-free & strictly vegetarian 🥗
-                    </div>
-                  </div>
-                  <Check className="w-3.5 h-3.5 text-[#4ADE80] shrink-0" />
-                </div>
-
-                {/* Response 2: Playlist */}
-                <div
-                  style={{
-                    width: "100%",
-                    maxWidth: "320px",
-                    background: "rgba(20, 14, 28, 0.88)",
-                    border: "1px solid rgba(255, 90, 31, 0.4)",
-                    borderRadius: "12px",
-                    padding: "7px 11px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "9px",
-                    boxShadow: "0 4px 14px rgba(0, 0, 0, 0.4)",
-                    backdropFilter: "blur(10px)",
-                    transform: "translateX(8px)",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "26px",
-                      height: "26px",
-                      borderRadius: "50%",
-                      background: "linear-gradient(135deg, #FF5A1F, #C2410C)",
-                      color: "#FFF",
-                      fontSize: "11px",
-                      fontWeight: 800,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                    }}
-                  >
-                    T
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: "8.5px", fontWeight: 800, color: "#FF8A3D", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                      Song Request • Taha M.
-                    </div>
-                    <div style={{ fontSize: "11px", fontWeight: 700, color: "#FFFFFF", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      Kaytranada & Keinemusik vibes 🎵
-                    </div>
-                  </div>
-                  <Check className="w-3.5 h-3.5 text-[#FF8A3D] shrink-0" />
-                </div>
-
-                {/* Response 3: Theme / Contribution */}
-                <div
-                  style={{
-                    width: "100%",
-                    maxWidth: "320px",
-                    background: "rgba(20, 14, 28, 0.88)",
-                    border: "1px solid rgba(168, 85, 247, 0.35)",
-                    borderRadius: "12px",
-                    padding: "7px 11px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "9px",
-                    boxShadow: "0 4px 14px rgba(0, 0, 0, 0.4)",
-                    backdropFilter: "blur(10px)",
-                    transform: "translateX(-6px)",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "26px",
-                      height: "26px",
-                      borderRadius: "50%",
-                      background: "linear-gradient(135deg, #A855F7, #7E22CE)",
-                      color: "#FFF",
-                      fontSize: "11px",
-                      fontWeight: 800,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                    }}
-                  >
-                    Z
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: "8.5px", fontWeight: 800, color: "#C084FC", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                      Bringing • Zainab
-                    </div>
-                    <div style={{ fontSize: "11px", fontWeight: 700, color: "#FFFFFF", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      Ginger mocktails & matcha bites 🍹
-                    </div>
-                  </div>
-                  <Check className="w-3.5 h-3.5 text-[#C084FC] shrink-0" />
-                </div>
-              </div>
-
-              {/* Card 2 Text & Action */}
-              <div style={{ padding: "24px 22px 22px", display: "flex", flexDirection: "column", flexGrow: 1, justifyContent: "space-between" }}>
-                <div>
-                  <h3 style={{ fontSize: "20px", fontWeight: 800, color: "#FFFFFF", margin: "0 0 8px", letterSpacing: "-0.02em" }}>
-                    Get answers upfront
-                  </h3>
-                  <p style={{ fontSize: "15px", color: "rgba(255, 255, 255, 0.7)", lineHeight: 1.4, margin: "0 0 20px" }}>
-                    Ask your guests about diets, playlists, or party themes.
-                  </p>
-                </div>
-                <Link
-                  href="/apply"
-                  style={{
-                    background: "rgba(255, 90, 31, 0.12)",
-                    border: "1.5px solid rgba(255, 90, 31, 0.4)",
-                    color: "#FF8A3D",
-                    fontSize: "14px",
-                    fontWeight: 700,
-                    padding: "12px 18px",
-                    borderRadius: "999px",
-                    textAlign: "center",
-                    textDecoration: "none",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "6px",
-                    transition: "all 0.2s ease",
-                  }}
-                  className="hover:bg-[#FF5A1F] hover:text-white hover:shadow-[0_4px_22px_rgba(255,90,31,0.4)] transition-all"
-                >
-                  Try it ↗
-                </Link>
-              </div>
-            </div>
-
-            {/* Card 3: Collect payments */}
-            <div
-              style={{
-                background: "linear-gradient(180deg, #130D1B 0%, #0E0817 100%)",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
-                borderRadius: "24px",
-                boxShadow: "0 20px 45px rgba(0, 0, 0, 0.65)",
-                display: "flex",
-                flexDirection: "column",
-                overflow: "hidden",
-                transition: "transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease",
-              }}
-              className="hover:border-[#FF5A1F]/60 hover:-translate-y-1.5 transition-all duration-300"
-            >
-              {/* Card 3 Visual: Luxury Digital Event Pass & Instant Split-Pay Module */}
-              <div
-                style={{
-                  height: "290px",
-                  background: "radial-gradient(circle at 50% 35%, rgba(255, 90, 31, 0.22) 0%, rgba(45, 18, 10, 0.3) 50%, #0B060F 100%)",
-                  position: "relative",
-                  overflow: "hidden",
-                  padding: "16px 14px",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                {/* Layer 1: Luxury Digital Ticket Pass (Angled behind) */}
-                <div
-                  style={{
-                    width: "92%",
-                    maxWidth: "300px",
-                    background: "linear-gradient(135deg, rgba(255, 120, 60, 0.16) 0%, rgba(22, 12, 32, 0.95) 100%)",
-                    border: "1.2px solid rgba(255, 110, 40, 0.45)",
-                    borderRadius: "16px",
-                    padding: "10px 14px 8px",
-                    transform: "translateY(-14px) rotate(-2deg)",
-                    boxShadow: "0 14px 34px rgba(0, 0, 0, 0.7), 0 0 25px rgba(255, 90, 31, 0.18)",
-                    position: "relative",
-                  }}
-                >
-                  {/* Left & Right stub notches */}
-                  <div style={{ position: "absolute", left: "-7px", top: "50%", width: "12px", height: "12px", borderRadius: "50%", background: "#0B060F", transform: "translateY(-50%)" }} />
-                  <div style={{ position: "absolute", right: "-7px", top: "50%", width: "12px", height: "12px", borderRadius: "50%", background: "#0B060F", transform: "translateY(-50%)" }} />
-
-                  {/* Header */}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "2px" }}>
-                    <span style={{ fontSize: "8.5px", fontWeight: 800, color: "#FF8A3D", letterSpacing: "0.1em", textTransform: "uppercase" }}>
-                      SOLO-NO-MORE VIP PASS
-                    </span>
-                    <span style={{ fontSize: "8.5px", fontWeight: 700, color: "rgba(255,255,255,0.6)", fontFamily: "monospace" }}>#0842</span>
-                  </div>
-
-                  {/* Title & Meta */}
-                  <div style={{ fontSize: "13px", fontWeight: 800, color: "#FFFFFF" }}>Rooftop Afterhours 🪩</div>
-                  <div style={{ fontSize: "9.5px", color: "rgba(255, 255, 255, 0.7)" }}>Sat, Oct 25 • 10:00 PM • PKR 3,500</div>
-
-                  {/* Perforated Divider & Barcode lines */}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px dashed rgba(255,255,255,0.22)", paddingTop: "5px", marginTop: "5px" }}>
-                    <div style={{ display: "flex", gap: "2px", alignItems: "flex-end", height: "12px" }}>
-                      <span style={{ width: "2px", height: "12px", background: "#FF8A3D" }} />
-                      <span style={{ width: "1px", height: "9px", background: "#FF8A3D" }} />
-                      <span style={{ width: "3px", height: "12px", background: "#FF8A3D" }} />
-                      <span style={{ width: "1px", height: "7px", background: "#FF8A3D" }} />
-                      <span style={{ width: "2px", height: "12px", background: "#FF8A3D" }} />
-                      <span style={{ width: "1px", height: "10px", background: "#FF8A3D" }} />
-                      <span style={{ width: "3px", height: "12px", background: "#FF8A3D" }} />
-                      <span style={{ width: "2px", height: "12px", background: "#FF8A3D" }} />
-                      <span style={{ width: "1px", height: "8px", background: "#FF8A3D" }} />
-                    </div>
-                    <span style={{ fontSize: "7.5px", fontWeight: 800, letterSpacing: "0.12em", color: "#FF8A3D" }}>VERIFIED ENTRY TICKET</span>
-                  </div>
-                </div>
-
-                {/* Layer 2: Instant Split-Pay Settlement Card (Floating Forward) */}
-                <div
-                  style={{
-                    width: "96%",
-                    maxWidth: "310px",
-                    background: "rgba(16, 10, 22, 0.95)",
-                    border: "1.5px solid rgba(255, 255, 255, 0.16)",
-                    borderRadius: "15px",
-                    padding: "10px 14px",
-                    transform: "translateY(8px) rotate(1.5deg)",
-                    boxShadow: "0 18px 42px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 0, 0, 0.5)",
-                    backdropFilter: "blur(14px)",
-                  }}
-                >
-                  {/* Top Row */}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <CreditCard className="w-3.5 h-3.5 text-[#FF8A3D]" />
-                      <span style={{ fontSize: "11px", fontWeight: 800, color: "#FFFFFF" }}>Instant Split-Pay</span>
-                    </div>
-                    <span style={{ fontSize: "10px", fontWeight: 800, color: "#22C55E", display: "flex", alignItems: "center", gap: "3px" }}>
-                      <Check className="w-3 h-3" /> Auto-Collected
-                    </span>
-                  </div>
-
-                  {/* Amount Display */}
-                  <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", margin: "4px 0 6px" }}>
-                    <div style={{ display: "flex", alignItems: "baseline" }}>
-                      <span style={{ fontSize: "21px", fontWeight: 900, color: "#FFFFFF", letterSpacing: "-0.03em" }}>PKR 3,500</span>
-                      <span style={{ fontSize: "10.5px", color: "rgba(255,255,255,0.55)", marginLeft: "4px" }}>/ guest</span>
-                    </div>
-                    <span style={{ fontSize: "9px", fontWeight: 600, color: "rgba(255,255,255,0.7)", background: "rgba(255,255,255,0.08)", padding: "2px 8px", borderRadius: "999px" }}>
-                      Bank Transfer
-                    </span>
-                  </div>
-
-                  {/* Live Settlement Feed */}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "9.5px", color: "#9CA3AF", borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "5px" }}>
-                    <span style={{ color: "#E5E7EB" }}>✓ Maya R. (PKR 3,500)</span>
-                    <span>•</span>
-                    <span style={{ color: "#E5E7EB" }}>✓ Liam T. (PKR 3,500)</span>
-                    <span style={{ display: "inline-block", width: "6px", height: "6px", borderRadius: "50%", background: "#22C55E", boxShadow: "0 0 6px #22C55E" }} />
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 3 Text & Action */}
-              <div style={{ padding: "24px 22px 22px", display: "flex", flexDirection: "column", flexGrow: 1, justifyContent: "space-between" }}>
-                <div>
-                  <h3 style={{ fontSize: "20px", fontWeight: 800, color: "#FFFFFF", margin: "0 0 8px", letterSpacing: "-0.02em" }}>
-                    Collect payments
-                  </h3>
-                  <p style={{ fontSize: "15px", color: "rgba(255, 255, 255, 0.7)", lineHeight: 1.4, margin: "0 0 20px" }}>
-                    Sell tickets or request money from guests
-                  </p>
-                </div>
-                <Link
-                  href="/apply"
-                  style={{
-                    background: "rgba(255, 90, 31, 0.12)",
-                    border: "1.5px solid rgba(255, 90, 31, 0.4)",
-                    color: "#FF8A3D",
-                    fontSize: "14px",
-                    fontWeight: 700,
-                    padding: "12px 18px",
-                    borderRadius: "999px",
-                    textAlign: "center",
-                    textDecoration: "none",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "6px",
-                    transition: "all 0.2s ease",
-                  }}
-                  className="hover:bg-[#FF5A1F] hover:text-white hover:shadow-[0_4px_22px_rgba(255,90,31,0.4)] transition-all"
-                >
-                  Try it ↗
-                </Link>
-              </div>
-            </div>
-          </div>
-
-          {/* ─── SUB-FEATURE BANNERS (ELEVATED OBSIDIAN PARTY CARDS WITH HIGH DYNAMIC ENERGY) ─── */}
-
-          {/* Sub-row 1 Banner Card: Send invites on any platform */}
-          <div
-            style={{
-              background: "linear-gradient(145deg, #130D1C 0%, #0A0612 100%)",
-              border: "1.5px solid rgba(255, 255, 255, 0.18)",
-              borderRadius: "32px",
-              padding: "42px 36px",
-              boxShadow: "0 28px 70px rgba(0, 0, 0, 0.55), 0 0 45px rgba(255, 90, 31, 0.08)",
-              marginBottom: "36px",
-              position: "relative",
-              overflow: "hidden",
-            }}
-          >
-            {/* Subtle radial ambient glow inside card */}
-            <div
-              style={{
-                position: "absolute",
-                top: "-30%",
-                left: "-10%",
-                width: "450px",
-                height: "450px",
-                background: "radial-gradient(circle, rgba(255, 90, 31, 0.12) 0%, transparent 70%)",
-                pointerEvents: "none",
-              }}
-            />
-
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 300px), 1fr))",
-                gap: "48px",
-                alignItems: "center",
-                position: "relative",
-                zIndex: 2,
-              }}
-            >
-              {/* Visual Box (Left): High-Fidelity Holographic RSVP Pass with Layered Floating App Badges */}
-              <div
-                style={{
-                  background: "radial-gradient(ellipse at 50% 50%, rgba(255, 90, 31, 0.22) 0%, rgba(18, 10, 24, 0.95) 70%), #0D0714",
-                  borderRadius: "28px",
-                  height: "380px",
-                  position: "relative",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  border: "1.5px solid rgba(255, 90, 31, 0.35)",
-                  boxShadow: "0 20px 50px rgba(0, 0, 0, 0.7), 0 0 35px rgba(255, 90, 31, 0.15)",
-                  overflow: "hidden",
-                }}
-              >
-                {/* Floating Instagram Close Friends Share Badge (Top Left) */}
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "18px",
-                    left: "22px",
-                    background: "rgba(18, 10, 26, 0.92)",
-                    border: "1.5px solid #FF5A1F",
-                    borderRadius: "14px",
-                    padding: "7px 12px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    boxShadow: "0 8px 24px rgba(255, 90, 31, 0.25)",
-                    transform: "rotate(-8deg)",
-                    zIndex: 5,
-                    backdropFilter: "blur(12px)",
-                  }}
-                >
-                  <div style={{ width: "22px", height: "22px", borderRadius: "6px", background: "linear-gradient(45deg, #F58529, #DD2A7B, #8134AF)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Share2 className="w-3 h-3 text-white" />
-                  </div>
-                  <span style={{ fontSize: "11px", fontWeight: 800, color: "#FFFFFF" }}>IG Close Friends</span>
-                </div>
-
-                {/* Floating Brand Badge (Top Right) */}
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "18px",
-                    right: "22px",
-                    background: "#120A16",
-                    border: "2px solid #FF5A1F",
-                    padding: "6px 12px",
-                    boxShadow: "3px 3px 0 #FF5A1F",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    fontSize: "12px",
-                    fontWeight: 900,
-                    color: "#FFFFFF",
-                    transform: "rotate(4deg)",
-                    zIndex: 5,
-                  }}
-                >
-                  <span style={{ fontSize: "14px", fontWeight: 900, color: "#FF5A1F" }}>✦</span> solo-no-more
-                </div>
-
-                {/* Floating Interactive Cursor (Bottom Left) */}
-                <div
-                  style={{
-                    position: "absolute",
-                    bottom: "24px",
-                    left: "26px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    zIndex: 5,
-                    transform: "rotate(-12deg)",
-                  }}
-                >
-                  <svg viewBox="0 0 24 24" fill="#FF5A1F" style={{ width: "28px", height: "28px", filter: "drop-shadow(2px 2px 0 #000)" }}>
-                    <polygon points="2,2 2,22 8,16 14,22 17,19 11,13 19,13" />
-                  </svg>
-                  <span style={{ background: "#FF5A1F", color: "#FFFFFF", fontSize: "10px", fontWeight: 800, padding: "2px 7px", borderRadius: "999px" }}>
-                    1-Tap RSVP
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FF5A1F]/15 text-[#FF8A3D]">
+                    <Icon className="w-5 h-5" />
                   </span>
+                  <h3 className="mt-4 text-[15px] font-bold text-white">{feature.title}</h3>
+                  <p className="mt-1.5 text-sm leading-relaxed text-white/60">{feature.text}</p>
                 </div>
-
-                {/* Floating WhatsApp Squad Chat Drop (Bottom Right) */}
-                <div
-                  style={{
-                    position: "absolute",
-                    bottom: "22px",
-                    right: "24px",
-                    background: "rgba(14, 26, 18, 0.94)",
-                    border: "1.5px solid #25D366",
-                    borderRadius: "12px",
-                    padding: "7px 12px",
-                    boxShadow: "0 8px 24px rgba(37, 211, 102, 0.25)",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "7px",
-                    transform: "rotate(6deg)",
-                    zIndex: 5,
-                    backdropFilter: "blur(12px)",
-                  }}
-                >
-                  <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#25D366", boxShadow: "0 0 6px #25D366" }} />
-                  <span style={{ fontSize: "11px", fontWeight: 800, color: "#FFFFFF" }}>WhatsApp Squad (14)</span>
-                </div>
-
-                {/* Floating Neon Hearts & Sparkles */}
-                <span style={{ position: "absolute", top: "72px", left: "28%", color: "#FF5A1F", fontSize: "16px", zIndex: 4 }}>♥</span>
-                <span style={{ position: "absolute", top: "120px", left: "18%", color: "#FF8A3D", fontSize: "13px", zIndex: 4 }}>♥</span>
-                <span style={{ position: "absolute", bottom: "80px", right: "22%", color: "#FF5A1F", fontSize: "15px", zIndex: 4 }}>♥</span>
-                <span style={{ position: "absolute", top: "85px", right: "20%", color: "#FFB088", fontSize: "12px", zIndex: 4 }}>✦</span>
-
-                {/* Central Holographic RSVP Pass */}
-                <div
-                  style={{
-                    width: "220px",
-                    background: "linear-gradient(155deg, rgba(32, 16, 42, 0.95) 0%, rgba(16, 8, 22, 0.98) 100%)",
-                    borderRadius: "18px",
-                    boxShadow: "0 18px 45px rgba(0, 0, 0, 0.8), 0 0 25px rgba(255, 90, 31, 0.25)",
-                    overflow: "hidden",
-                    border: "1.5px solid rgba(255, 90, 31, 0.45)",
-                    textAlign: "center",
-                    position: "relative",
-                    zIndex: 3,
-                  }}
-                >
-                  {/* Top Header Tag */}
-                  <div style={{ background: "rgba(255, 90, 31, 0.14)", padding: "7px 10px", borderBottom: "1px solid rgba(255, 90, 31, 0.3)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: "9px", fontWeight: 800, color: "#FF8A3D", letterSpacing: "0.08em" }}>SOLO-NO-MORE PASS</span>
-                    <span style={{ fontSize: "8.5px", color: "rgba(255,255,255,0.7)", fontWeight: 700 }}>LIVE</span>
-                  </div>
-
-                  {/* Artwork / Party Card Body */}
-                  <div style={{ padding: "14px 12px 10px", background: "linear-gradient(180deg, #2A1308 0%, #150905 100%)", position: "relative" }}>
-                    {/* Retro Dove / Party Emblem */}
-                    <div style={{ height: "70px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <svg viewBox="0 0 100 70" style={{ width: "75%", height: "100%" }}>
-                        <path d="M20,40 C28,25 45,18 65,20 C55,12 40,9 25,15 C15,19 8,26 20,40 Z" fill="#FFFFFF" stroke="#FF5A1F" strokeWidth="1.5" />
-                        <path d="M25,35 C35,33 52,33 70,37 C80,39 88,35 92,29 C85,41 72,49 55,51 C42,53 30,47 25,35 Z" fill="#FFFFFF" stroke="#FF5A1F" strokeWidth="1.5" />
-                        <path d="M22,39 Q14,50 18,59" fill="none" stroke="#FF5A1F" strokeWidth="2" />
-                        <rect x="12" y="56" width="22" height="12" fill="#FEF08A" stroke="#FF5A1F" strokeWidth="1" rx="2" />
-                        <text x="14" y="64" fontSize="4.5" fontWeight="bold" fill="#000">you&apos;re invited</text>
-                      </svg>
-                    </div>
-
-                    {/* Party Details */}
-                    <div style={{ fontSize: "14px", fontWeight: 800, color: "#FFFFFF", marginTop: "4px" }}>RSVP to my party</div>
-                    <div style={{ fontSize: "11px", color: "#FF8A3D", fontWeight: 800, marginTop: "2px" }}>solonomore.com</div>
-                    <div style={{ fontSize: "9px", color: "rgba(255,255,255,0.6)", marginTop: "3px" }}>24 Attending • Nationwide</div>
-                  </div>
-
-                  {/* Barcode & Share Link Stub */}
-                  <div style={{ background: "#0A050E", padding: "8px 10px", borderTop: "1px dashed rgba(255, 255, 255, 0.18)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <div style={{ display: "flex", gap: "2px", alignItems: "flex-end", height: "11px" }}>
-                      <span style={{ width: "2px", height: "11px", background: "#FF8A3D" }} />
-                      <span style={{ width: "1px", height: "8px", background: "#FF8A3D" }} />
-                      <span style={{ width: "2.5px", height: "11px", background: "#FF8A3D" }} />
-                      <span style={{ width: "1px", height: "6px", background: "#FF8A3D" }} />
-                      <span style={{ width: "2px", height: "11px", background: "#FF8A3D" }} />
-                      <span style={{ width: "1.5px", height: "9px", background: "#FF8A3D" }} />
-                    </div>
-                    <span style={{ fontSize: "8.5px", color: "#22C55E", fontWeight: 800, display: "flex", alignItems: "center", gap: "3px" }}>
-                      <Check className="w-2.5 h-2.5" /> Instant Share
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Content (Right) */}
-              <div style={{ paddingLeft: "8px" }}>
-                <h3
-                  style={{
-                    fontFamily: "var(--font-display), system-ui, sans-serif",
-                    fontSize: "clamp(28px, 3.5vw, 42px)",
-                    fontWeight: 800,
-                    letterSpacing: "-0.03em",
-                    color: "#FFFFFF",
-                    lineHeight: 1.15,
-                    margin: "0 0 16px",
-                  }}
-                >
-                  Send invites on any platform 📫
-                </h3>
-                <p
-                  style={{
-                    fontSize: "17px",
-                    color: "rgba(255, 255, 255, 0.75)",
-                    lineHeight: 1.5,
-                    margin: "0 0 24px",
-                    maxWidth: "460px",
-                  }}
-                >
-                  Share anywhere: Email, Text, Instagram, WhatsApp, phone contacts and more. Guests don&apos;t even need an app to RSVP.
-                </p>
-
-                {/* Feature Value Props Pills */}
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "28px" }}>
-                  <span style={{ background: "rgba(255, 90, 31, 0.12)", border: "1px solid rgba(255, 90, 31, 0.3)", color: "#FF8A3D", padding: "4px 12px", borderRadius: "999px", fontSize: "12px", fontWeight: 700 }}>
-                    ⚡ 1-Tap WhatsApp Blast
-                  </span>
-                  <span style={{ background: "rgba(255, 255, 255, 0.06)", border: "1px solid rgba(255, 255, 255, 0.12)", color: "#FFFFFF", padding: "4px 12px", borderRadius: "999px", fontSize: "12px", fontWeight: 700 }}>
-                    📲 No App Required for Guests
-                  </span>
-                  <span style={{ background: "rgba(255, 255, 255, 0.06)", border: "1px solid rgba(255, 255, 255, 0.12)", color: "#FFFFFF", padding: "4px 12px", borderRadius: "999px", fontSize: "12px", fontWeight: 700 }}>
-                    🔒 Secret Venue Protection
-                  </span>
-                </div>
-
-                <Link
-                  href="/apply"
-                  style={{
-                    background: "#FF5A1F",
-                    color: "#FFFFFF",
-                    fontSize: "15px",
-                    fontWeight: 800,
-                    padding: "14px 34px",
-                    borderRadius: "999px",
-                    textDecoration: "none",
-                    display: "inline-block",
-                    letterSpacing: "-0.01em",
-                    boxShadow: "0 8px 26px rgba(255, 90, 31, 0.4)",
-                    transition: "all 0.2s ease",
-                  }}
-                  className="hover:bg-[#FF7A45] hover:scale-105 transition-all cursor-pointer"
-                >
-                  Create event
-                </Link>
-              </div>
-            </div>
-          </div>
-
-          {/* Sub-row 2 Banner Card: Get a shareable photo album (IMAGE 1 ELEVATED EXACT MATCH) */}
-          <div
-            style={{
-              background: "linear-gradient(145deg, #130D1C 0%, #0A0612 100%)",
-              border: "1.5px solid rgba(255, 255, 255, 0.18)",
-              borderRadius: "32px",
-              padding: "42px 36px",
-              boxShadow: "0 28px 70px rgba(0, 0, 0, 0.55), 0 0 45px rgba(255, 90, 31, 0.08)",
-              position: "relative",
-              overflow: "hidden",
-            }}
-          >
-            {/* Subtle radial ambient glow inside card */}
-            <div
-              style={{
-                position: "absolute",
-                top: "-20%",
-                right: "-10%",
-                width: "450px",
-                height: "450px",
-                background: "radial-gradient(circle, rgba(255, 90, 31, 0.14) 0%, transparent 70%)",
-                pointerEvents: "none",
-              }}
-            />
-
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 300px), 1fr))",
-                gap: "48px",
-                alignItems: "center",
-                position: "relative",
-                zIndex: 2,
-              }}
-            >
-              {/* Content (Left) */}
-              <div style={{ paddingRight: "8px" }}>
-                <h3
-                  style={{
-                    fontFamily: "var(--font-display), system-ui, sans-serif",
-                    fontSize: "clamp(28px, 3.5vw, 42px)",
-                    fontWeight: 800,
-                    letterSpacing: "-0.03em",
-                    color: "#FFFFFF",
-                    lineHeight: 1.15,
-                    margin: "0 0 16px",
-                  }}
-                >
-                  Get a shareable photo album 🤳
-                </h3>
-                <p
-                  style={{
-                    fontSize: "17px",
-                    color: "rgba(255, 255, 255, 0.75)",
-                    lineHeight: 1.5,
-                    margin: "0 0 24px",
-                    maxWidth: "460px",
-                  }}
-                >
-                  Look back on memories and add your snaps to the album — guests can add too!
-                </p>
-
-                {/* Feature Value Props Pills */}
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "28px" }}>
-                  <span style={{ background: "rgba(255, 90, 31, 0.12)", border: "1px solid rgba(255, 90, 31, 0.3)", color: "#FF8A3D", padding: "4px 12px", borderRadius: "999px", fontSize: "12px", fontWeight: 700 }}>
-                    📸 Original 4K Quality
-                  </span>
-                  <span style={{ background: "rgba(255, 255, 255, 0.06)", border: "1px solid rgba(255, 255, 255, 0.12)", color: "#FFFFFF", padding: "4px 12px", borderRadius: "999px", fontSize: "12px", fontWeight: 700 }}>
-                    ⚡ Guests Upload Without Signup
-                  </span>
-                  <span style={{ background: "rgba(255, 255, 255, 0.06)", border: "1px solid rgba(255, 255, 255, 0.12)", color: "#FFFFFF", padding: "4px 12px", borderRadius: "999px", fontSize: "12px", fontWeight: 700 }}>
-                    🔒 Private Link for Your Crew
-                  </span>
-                </div>
-
-                <Link
-                  href="/apply"
-                  style={{
-                    background: "#FF5A1F",
-                    color: "#FFFFFF",
-                    fontSize: "15px",
-                    fontWeight: 800,
-                    padding: "14px 34px",
-                    borderRadius: "999px",
-                    textDecoration: "none",
-                    display: "inline-block",
-                    letterSpacing: "-0.01em",
-                    boxShadow: "0 8px 26px rgba(255, 90, 31, 0.4)",
-                    transition: "all 0.2s ease",
-                  }}
-                  className="hover:bg-[#FF7A45] hover:scale-105 transition-all cursor-pointer"
-                >
-                  Create event
-                </Link>
-              </div>
-
-              {/* Visual Box (Right): Flash photography album with reaction pills (IMAGE 1 EXACT DESIGN) */}
-              <div
-                style={{
-                  height: "380px",
-                  position: "relative",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                {/* Top Speech Bubble Pill: "Add your photos to the album ⚡" (Tilted Pill from Image 1) */}
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "14px",
-                    left: "14px",
-                    background: "rgba(24, 14, 28, 0.95)",
-                    border: "1.5px solid rgba(255, 90, 31, 0.5)",
-                    color: "#FFFFFF",
-                    fontSize: "13px",
-                    fontWeight: 800,
-                    padding: "9px 18px",
-                    borderRadius: "999px",
-                    boxShadow: "0 12px 28px rgba(0, 0, 0, 0.7), 0 0 20px rgba(255, 90, 31, 0.2)",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    zIndex: 10,
-                    transform: "rotate(-5deg)",
-                    backdropFilter: "blur(12px)",
-                  }}
-                >
-                  <span>Add your photos to the album</span>
-                  <span style={{ color: "#FF8A3D" }}>⚡</span>
-                </div>
-
-                {/* Photo Collage Grid (Image 1 Exact 2x2 Layout) */}
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: "12px",
-                    width: "320px",
-                    height: "310px",
-                  }}
-                >
-                  {/* Photo 1 (Top Left): Girls Laughing */}
-                  <div
-                    style={{
-                      position: "relative",
-                      borderRadius: "16px",
-                      overflow: "hidden",
-                      border: "1.5px solid rgba(255,255,255,0.14)",
-                      boxShadow: "0 10px 24px rgba(0,0,0,0.65)",
-                    }}
-                    className="hover:scale-[1.03] transition-transform duration-300"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src="/images/partiful-photo-girls.jpg"
-                      alt="Party moment"
-                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                    />
-                  </div>
-
-                  {/* Photo 2 (Top Right): Padel squad with Heart Reaction Badge */}
-                  <div
-                    style={{
-                      position: "relative",
-                      borderRadius: "16px",
-                      overflow: "hidden",
-                      border: "1.5px solid rgba(255,255,255,0.14)",
-                      boxShadow: "0 10px 24px rgba(0,0,0,0.65)",
-                    }}
-                    className="hover:scale-[1.03] transition-transform duration-300"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src="/images/padel-squad.jpg"
-                      alt="Party friend squad"
-                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                    />
-                    {/* Floating Heart reaction badge (Image 1 Match: ❤️ 12) */}
-                    <div
-                      style={{
-                        position: "absolute",
-                        top: "10px",
-                        right: "8px",
-                        background: "rgba(18, 12, 22, 0.94)",
-                        border: "1.2px solid rgba(255, 90, 31, 0.5)",
-                        color: "#FFFFFF",
-                        padding: "3px 9px",
-                        borderRadius: "999px",
-                        fontSize: "11px",
-                        fontWeight: 800,
-                        boxShadow: "0 4px 12px rgba(0,0,0,0.6)",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "4px",
-                        backdropFilter: "blur(8px)",
-                      }}
-                    >
-                      <span>❤️</span> 12
-                    </div>
-                  </div>
-
-                  {/* Photo 3 (Bottom Left): Chai Cafe with Smiling Reaction Badge */}
-                  <div
-                    style={{
-                      position: "relative",
-                      borderRadius: "16px",
-                      overflow: "hidden",
-                      border: "1.5px solid rgba(255,255,255,0.14)",
-                      boxShadow: "0 10px 24px rgba(0,0,0,0.65)",
-                    }}
-                    className="hover:scale-[1.03] transition-transform duration-300"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src="/images/chai-cafe.jpg"
-                      alt="Party hangout"
-                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                    />
-                    {/* Floating In-Love reaction badge (Image 1 Match: 😍 8) */}
-                    <div
-                      style={{
-                        position: "absolute",
-                        bottom: "10px",
-                        left: "8px",
-                        background: "rgba(18, 12, 22, 0.94)",
-                        border: "1.2px solid rgba(255, 90, 31, 0.5)",
-                        color: "#FFFFFF",
-                        padding: "3px 9px",
-                        borderRadius: "999px",
-                        fontSize: "11px",
-                        fontWeight: 800,
-                        boxShadow: "0 4px 12px rgba(0,0,0,0.6)",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "4px",
-                        backdropFilter: "blur(8px)",
-                      }}
-                    >
-                      <span>😍</span> 8
-                    </div>
-                  </div>
-
-                  {/* Photo 4 (Bottom Right): Rooftop Party with +20 overlay & Fire Reaction Badge */}
-                  <div
-                    style={{
-                      position: "relative",
-                      borderRadius: "16px",
-                      overflow: "hidden",
-                      border: "1.5px solid rgba(255,255,255,0.14)",
-                      boxShadow: "0 10px 24px rgba(0,0,0,0.65)",
-                    }}
-                    className="hover:scale-[1.03] transition-transform duration-300"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src="/images/hero-rooftop.jpg"
-                      alt="More party photos"
-                      style={{ width: "100%", height: "100%", objectFit: "cover", filter: "blur(2.5px) brightness(0.65)" }}
-                    />
-                    <div
-                      style={{
-                        position: "absolute",
-                        inset: 0,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "#FFFFFF",
-                        fontSize: "22px",
-                        fontWeight: 900,
-                        letterSpacing: "-0.02em",
-                      }}
-                    >
-                      +20
-                    </div>
-                    {/* Floating Fire reaction badge (Image 1 Match: 🔥 13) */}
-                    <div
-                      style={{
-                        position: "absolute",
-                        bottom: "8px",
-                        left: "10px",
-                        background: "rgba(18, 12, 22, 0.94)",
-                        border: "1.2px solid rgba(255, 90, 31, 0.5)",
-                        color: "#FFFFFF",
-                        padding: "3px 9px",
-                        borderRadius: "999px",
-                        fontSize: "11px",
-                        fontWeight: 800,
-                        boxShadow: "0 4px 12px rgba(0,0,0,0.6)",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "4px",
-                        backdropFilter: "blur(8px)",
-                      }}
-                    >
-                      <span>🔥</span> 13
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -3780,367 +2253,37 @@ export default function LandingPageClient({
         />
       </div>
 
-      {/* ── 9. "REAL REVIEWS, FROM REAL USERS" (ANIMATED DYNAMIC MARQUEE SHOWCASE) ─── */}
-      <section
-        id="reviews-section"
-        style={{
-          background: "#060408",
-          color: "#FFFFFF",
-          padding: "96px 24px 100px",
-          borderTop: "1px solid rgba(255, 255, 255, 0.08)",
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        {/* Subtle Geometric Dotted Texture Overlay */}
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            backgroundImage: "radial-gradient(rgba(255, 255, 255, 0.18) 1.25px, transparent 1.25px)",
-            backgroundSize: "22px 22px",
-            backgroundPosition: "center",
-            pointerEvents: "none",
-            zIndex: 0,
-            opacity: 0.85,
-          }}
-          aria-hidden="true"
-        />
-        {/* Scoped Keyframes to guarantee 100% animation execution */}
-        <style dangerouslySetInnerHTML={{ __html: `
-          @keyframes reviewScrollUp {
-            0% { transform: translateY(0); }
-            100% { transform: translateY(-50%); }
-          }
-          @keyframes reviewScrollDown {
-            0% { transform: translateY(-50%); }
-            100% { transform: translateY(0); }
-          }
-          .review-track-up {
-            animation: reviewScrollUp 24s linear infinite !important;
-            will-change: transform;
-          }
-          .review-track-down {
-            animation: reviewScrollDown 28s linear infinite !important;
-            will-change: transform;
-          }
-          .reviews-marquee-box:hover .review-track-up,
-          .reviews-marquee-box:hover .review-track-down {
-            animation-play-state: paused !important;
-          }
-        `}} />
-
-        <div
-          style={{
-            maxWidth: "1200px",
-            margin: "0 auto",
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 300px), 1fr))",
-            gap: "54px",
-            alignItems: "center",
-          }}
-        >
-          {/* Left Column: Rating Badge, Clean Aligned Heading, Subtitle & CTA */}
-          <div style={{ maxWidth: "460px" }}>
-            {/* Rating pill */}
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "8px",
-                border: "1px solid rgba(255, 90, 31, 0.4)",
-                background: "rgba(255, 90, 31, 0.12)",
-                padding: "6px 16px",
-                borderRadius: "999px",
-                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.4)",
-                marginBottom: "20px",
-              }}
-            >
-              <div style={{ display: "flex", gap: "2px", color: "#FF9500", fontSize: "13px" }}>
-                {"★★★★★"}
-              </div>
-              <span style={{ fontSize: "13.5px", fontWeight: 700, color: "#FFFFFF" }}>
-                5.0 • 217K Verified Ratings
-              </span>
-            </div>
-
-            {/* Display Heading (Cleanly Aligned) */}
-            <h2
-              style={{
-                fontFamily: "var(--font-display), system-ui, sans-serif",
-                fontSize: "clamp(34px, 4.4vw, 54px)",
-                fontWeight: 800,
-                letterSpacing: "-0.035em",
-                color: "#FFFFFF",
-                lineHeight: 1.1,
-                margin: "0 0 16px",
-              }}
-            >
-              Real reviews, from<br />real users
-            </h2>
-
-            {/* Description */}
-            <p
-              style={{
-                fontSize: "17px",
-                color: "rgba(255, 255, 255, 0.72)",
-                lineHeight: 1.55,
-                margin: "0 0 28px",
-              }}
-            >
-              Don&apos;t just take our word for it. See what our growing party community has to say.
+      {/* ── 9. "HOW PEOPLE USE SOLO-NO-MORE" — example scenarios (no names, ratings or invented reviews) ─── */}
+      <section id="how-people-use-section" className="relative px-6 py-20 sm:py-24" style={{ background: "#060408" }}>
+        <div className="mx-auto max-w-[1180px]">
+          <div className="max-w-2xl">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[#FF5A1F]/35 bg-[#FF5A1F]/10 px-3 py-1 text-[11px] font-bold tracking-wider text-[#FFA05C]">
+              <Sparkles className="w-3.5 h-3.5" /> HOW IT WORKS IN REAL LIFE
+            </span>
+            <h2 className="mt-4 text-3xl sm:text-4xl font-black tracking-tight text-white">How people use Solo-No-More</h2>
+            <p className="mt-3 text-base text-white/65">
+              A few of the plans members can make. Real stories from our Early Birds will appear here as the community grows.
             </p>
-
-            {/* Rounded Pill CTA Button */}
-            <Link
-              href="/apply"
-              style={{
-                background: "#FF5A1F",
-                color: "#FFFFFF",
-                fontSize: "15px",
-                fontWeight: 800,
-                padding: "14px 34px",
-                borderRadius: "999px",
-                textDecoration: "none",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "8px",
-                letterSpacing: "-0.01em",
-                boxShadow: "0 8px 24px rgba(255, 90, 31, 0.35)",
-                transition: "all 0.2s ease",
-              }}
-              className="hover:bg-[#FF7A45] hover:scale-105 transition-all cursor-pointer"
-            >
-              <span>Try it out</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
           </div>
 
-          {/* Right Column: Animated Dual-Column Review Marquee with Top & Bottom Fade Mask */}
-          <div
-            className="reviews-marquee-box"
-            style={{
-              height: "440px",
-              position: "relative",
-              overflow: "hidden",
-              maskImage: "linear-gradient(to bottom, transparent 0%, black 14%, black 86%, transparent 100%)",
-              WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 14%, black 86%, transparent 100%)",
-            }}
-          >
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "16px",
-                height: "100%",
-              }}
-            >
-              {/* Animated Track 1 (Upward Scroll) */}
-              <div
-                className="review-track-up"
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "16px",
-                }}
-              >
-                {/* Review 1 */}
-                <div style={{ background: "linear-gradient(145deg, #130D1C 0%, #0A0612 100%)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "18px", padding: "18px 20px", boxShadow: "0 6px 20px rgba(0, 0, 0, 0.5)" }} className="hover:border-[#FF5A1F]/50 transition-colors">
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
-                    <span style={{ fontSize: "14px", fontWeight: 800, color: "#FFFFFF" }}>A must</span>
-                    <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.45)" }}>May 29 • r3boi</span>
+          <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {HOW_PEOPLE_USE.map((item) => {
+              const Icon = item.icon;
+              return (
+                <div key={item.title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 transition hover:border-[#FF5A1F]/40">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FF5A1F]/15 text-[#FF8A3D]">
+                      <Icon className="w-5 h-5" />
+                    </span>
+                    <div>
+                      <div className="text-[15px] font-bold text-white">{item.title}</div>
+                      <div className="text-xs text-white/50">{item.where}</div>
+                    </div>
                   </div>
-                  <div style={{ color: "#FF9500", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
-                  <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
-                    I don&apos;t even hang out with my friends if they don&apos;t send me the Solo-No-More link first.
-                  </p>
+                  <p className="mt-4 text-sm leading-relaxed text-white/70">{item.story}</p>
                 </div>
-
-                {/* Review 3 */}
-                <div style={{ background: "linear-gradient(145deg, #130D1C 0%, #0A0612 100%)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "18px", padding: "18px 20px", boxShadow: "0 6px 20px rgba(0, 0, 0, 0.5)" }} className="hover:border-[#FF5A1F]/50 transition-colors">
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
-                    <span style={{ fontSize: "14px", fontWeight: 800, color: "#FFFFFF" }}>Best App Ever</span>
-                    <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.45)" }}>Mar 25 • charleigh</span>
-                  </div>
-                  <div style={{ color: "#FF9500", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
-                  <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
-                    If Solo-No-More has one million users I am one. The group planning vibe and ease is unmatched.
-                  </p>
-                </div>
-
-                {/* Review 5 */}
-                <div style={{ background: "linear-gradient(145deg, #130D1C 0%, #0A0612 100%)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "18px", padding: "18px 20px", boxShadow: "0 6px 20px rgba(0, 0, 0, 0.5)" }} className="hover:border-[#FF5A1F]/50 transition-colors">
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
-                    <span style={{ fontSize: "14px", fontWeight: 800, color: "#FFFFFF" }}>The rare *perfect* app</span>
-                    <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.45)" }}>Jun 11 • LibertyLikes</span>
-                  </div>
-                  <div style={{ color: "#FF9500", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
-                  <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
-                    Solo-No-More sets out to do one thing — coordinate parties with zero friction. And it does that perfectly.
-                  </p>
-                </div>
-
-                {/* Review 7 */}
-                <div style={{ background: "linear-gradient(145deg, #130D1C 0%, #0A0612 100%)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "18px", padding: "18px 20px", boxShadow: "0 6px 20px rgba(0, 0, 0, 0.5)" }} className="hover:border-[#FF5A1F]/50 transition-colors">
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
-                    <span style={{ fontSize: "14px", fontWeight: 800, color: "#FFFFFF" }}>I love Solo-No-More</span>
-                    <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.45)" }}>Nov 18 • Juliette Legault</span>
-                  </div>
-                  <div style={{ color: "#FF9500", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
-                  <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
-                    Helped me coordinate a rooftop party for my bf. I love how it makes planning social nights so easy!
-                  </p>
-                </div>
-
-                {/* ── DUPLICATE SET 1 FOR PERFECT SEAMLESS INFINITE LOOP ── */}
-                <div style={{ background: "linear-gradient(145deg, #130D1C 0%, #0A0612 100%)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "18px", padding: "18px 20px", boxShadow: "0 6px 20px rgba(0, 0, 0, 0.5)" }} className="hover:border-[#FF5A1F]/50 transition-colors">
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
-                    <span style={{ fontSize: "14px", fontWeight: 800, color: "#FFFFFF" }}>A must</span>
-                    <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.45)" }}>May 29 • r3boi</span>
-                  </div>
-                  <div style={{ color: "#FF9500", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
-                  <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
-                    I don&apos;t even hang out with my friends if they don&apos;t send me the Solo-No-More link first.
-                  </p>
-                </div>
-
-                <div style={{ background: "linear-gradient(145deg, #130D1C 0%, #0A0612 100%)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "18px", padding: "18px 20px", boxShadow: "0 6px 20px rgba(0, 0, 0, 0.5)" }} className="hover:border-[#FF5A1F]/50 transition-colors">
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
-                    <span style={{ fontSize: "14px", fontWeight: 800, color: "#FFFFFF" }}>Best App Ever</span>
-                    <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.45)" }}>Mar 25 • charleigh</span>
-                  </div>
-                  <div style={{ color: "#FF9500", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
-                  <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
-                    If Solo-No-More has one million users I am one. The group planning vibe and ease is unmatched.
-                  </p>
-                </div>
-
-                <div style={{ background: "linear-gradient(145deg, #130D1C 0%, #0A0612 100%)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "18px", padding: "18px 20px", boxShadow: "0 6px 20px rgba(0, 0, 0, 0.5)" }} className="hover:border-[#FF5A1F]/50 transition-colors">
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
-                    <span style={{ fontSize: "14px", fontWeight: 800, color: "#FFFFFF" }}>The rare *perfect* app</span>
-                    <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.45)" }}>Jun 11 • LibertyLikes</span>
-                  </div>
-                  <div style={{ color: "#FF9500", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
-                  <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
-                    Solo-No-More sets out to do one thing — coordinate parties with zero friction. And it does that perfectly.
-                  </p>
-                </div>
-
-                <div style={{ background: "linear-gradient(145deg, #130D1C 0%, #0A0612 100%)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "18px", padding: "18px 20px", boxShadow: "0 6px 20px rgba(0, 0, 0, 0.5)" }} className="hover:border-[#FF5A1F]/50 transition-colors">
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
-                    <span style={{ fontSize: "14px", fontWeight: 800, color: "#FFFFFF" }}>I love Solo-No-More</span>
-                    <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.45)" }}>Nov 18 • Juliette Legault</span>
-                  </div>
-                  <div style={{ color: "#FF9500", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
-                  <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
-                    Helped me coordinate a rooftop party for my bf. I love how it makes planning social nights so easy!
-                  </p>
-                </div>
-              </div>
-
-              {/* Animated Track 2 (Offset Downward Scroll) */}
-              <div
-                className="review-track-down"
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "16px",
-                }}
-              >
-                {/* Review 2 */}
-                <div style={{ background: "linear-gradient(145deg, #130D1C 0%, #0A0612 100%)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "18px", padding: "18px 20px", boxShadow: "0 6px 20px rgba(0, 0, 0, 0.5)" }} className="hover:border-[#FF5A1F]/50 transition-colors">
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
-                    <span style={{ fontSize: "14px", fontWeight: 800, color: "#FFFFFF" }}>Best Party App</span>
-                    <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.45)" }}>Nov 14 • MarpZilla</span>
-                  </div>
-                  <div style={{ color: "#FF9500", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
-                  <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
-                    By far the best app for events. Puts old event planners or evites to shame.
-                  </p>
-                </div>
-
-                {/* Review 4 */}
-                <div style={{ background: "linear-gradient(145deg, #130D1C 0%, #0A0612 100%)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "18px", padding: "18px 20px", boxShadow: "0 6px 20px rgba(0, 0, 0, 0.5)" }} className="hover:border-[#FF5A1F]/50 transition-colors">
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
-                    <span style={{ fontSize: "14px", fontWeight: 800, color: "#FFFFFF" }}>100% free & cute</span>
-                    <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.45)" }}>Nov 7 • Tlackshots</span>
-                  </div>
-                  <div style={{ color: "#FF9500", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
-                  <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
-                    I LOVE THIS APP! It&apos;s cute, modern, and innovative. The RSVP flow is effortless.
-                  </p>
-                </div>
-
-                {/* Review 6 */}
-                <div style={{ background: "linear-gradient(145deg, #130D1C 0%, #0A0612 100%)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "18px", padding: "18px 20px", boxShadow: "0 6px 20px rgba(0, 0, 0, 0.5)" }} className="hover:border-[#FF5A1F]/50 transition-colors">
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
-                    <span style={{ fontSize: "14px", fontWeight: 800, color: "#FFFFFF" }}>Best friend planner</span>
-                    <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.45)" }}>Nov 3 • PartyPlanner</span>
-                  </div>
-                  <div style={{ color: "#FF9500", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
-                  <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
-                    I rarely write reviews. This app is so great that I specifically came here to tell everyone.
-                  </p>
-                </div>
-
-                {/* Review 8 */}
-                <div style={{ background: "linear-gradient(145deg, #130D1C 0%, #0A0612 100%)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "18px", padding: "18px 20px", boxShadow: "0 6px 20px rgba(0, 0, 0, 0.5)" }} className="hover:border-[#FF5A1F]/50 transition-colors">
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
-                    <span style={{ fontSize: "14px", fontWeight: 800, color: "#FFFFFF" }}>Changed my life</span>
-                    <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.45)" }}>Oct 26 • xjoejoex121</span>
-                  </div>
-                  <div style={{ color: "#FF9500", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
-                  <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
-                    Made so many great memories with friends because of this app. 10/10 recommendation!
-                  </p>
-                </div>
-
-                {/* ── DUPLICATE SET 2 FOR PERFECT SEAMLESS INFINITE LOOP ── */}
-                <div style={{ background: "linear-gradient(145deg, #130D1C 0%, #0A0612 100%)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "18px", padding: "18px 20px", boxShadow: "0 6px 20px rgba(0, 0, 0, 0.5)" }} className="hover:border-[#FF5A1F]/50 transition-colors">
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
-                    <span style={{ fontSize: "14px", fontWeight: 800, color: "#FFFFFF" }}>Best Party App</span>
-                    <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.45)" }}>Nov 14 • MarpZilla</span>
-                  </div>
-                  <div style={{ color: "#FF9500", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
-                  <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
-                    By far the best app for events. Puts old event planners or evites to shame.
-                  </p>
-                </div>
-
-                <div style={{ background: "linear-gradient(145deg, #130D1C 0%, #0A0612 100%)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "18px", padding: "18px 20px", boxShadow: "0 6px 20px rgba(0, 0, 0, 0.5)" }} className="hover:border-[#FF5A1F]/50 transition-colors">
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
-                    <span style={{ fontSize: "14px", fontWeight: 800, color: "#FFFFFF" }}>100% free & cute</span>
-                    <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.45)" }}>Nov 7 • Tlackshots</span>
-                  </div>
-                  <div style={{ color: "#FF9500", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
-                  <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
-                    I LOVE THIS APP! It&apos;s cute, modern, and innovative. The RSVP flow is effortless.
-                  </p>
-                </div>
-
-                <div style={{ background: "linear-gradient(145deg, #130D1C 0%, #0A0612 100%)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "18px", padding: "18px 20px", boxShadow: "0 6px 20px rgba(0, 0, 0, 0.5)" }} className="hover:border-[#FF5A1F]/50 transition-colors">
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
-                    <span style={{ fontSize: "14px", fontWeight: 800, color: "#FFFFFF" }}>Best friend planner</span>
-                    <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.45)" }}>Nov 3 • PartyPlanner</span>
-                  </div>
-                  <div style={{ color: "#FF9500", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
-                  <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
-                    I rarely write reviews. This app is so great that I specifically came here to tell everyone.
-                  </p>
-                </div>
-
-                <div style={{ background: "linear-gradient(145deg, #130D1C 0%, #0A0612 100%)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "18px", padding: "18px 20px", boxShadow: "0 6px 20px rgba(0, 0, 0, 0.5)" }} className="hover:border-[#FF5A1F]/50 transition-colors">
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
-                    <span style={{ fontSize: "14px", fontWeight: 800, color: "#FFFFFF" }}>Changed my life</span>
-                    <span style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.45)" }}>Oct 26 • xjoejoex121</span>
-                  </div>
-                  <div style={{ color: "#FF9500", fontSize: "12px", marginBottom: "8px" }}>★★★★★</div>
-                  <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.45, margin: 0 }}>
-                    Made so many great memories with friends because of this app. 10/10 recommendation!
-                  </p>
-                </div>
-              </div>
-            </div>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -4278,538 +2421,48 @@ export default function LandingPageClient({
             </span>
           </div>
 
-          {/* ── STANDARD-SIZE PHOTO & VIDEO COLLAGE (TIGHT MOSAIC GRID: FEW LARGE, FEW MEDIUM, FEW SMALL) ── */}
+          {/* ── PHOTO & VIDEO COLLAGE — every tile comes from the admin Review Wall (Admin → Review Wall) ── */}
           <div className="grid grid-cols-12 gap-3.5 mb-10 text-left auto-rows-[200px] md:auto-rows-[225px]">
-            {/* 1. LARGE FEATURE PHOTO TILE: (Col 1-4, Row 1-2) */}
-            <a
-              href={rSlots[0]?.url || "https://www.instagram.com"}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="col-span-12 sm:col-span-6 lg:col-span-4 row-span-2 rounded-3xl overflow-hidden relative group transition-all duration-300 hover:border-[#FF5A1F] hover:shadow-[0_18px_45px_rgba(255,90,31,0.3)] block cursor-pointer"
-              style={{
-                border: "1.2px solid rgba(255, 255, 255, 0.14)",
-                background: "#140A0D",
-              }}
-            >
-              {/* Full Image */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={rSlots[0]?.image_url || "/images/beach-bonfire.jpg"}
-                alt="French Beach Bonfire Gathering"
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-              />
-
-              {/* Cinematic Vignette Overlay */}
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  background: "linear-gradient(180deg, rgba(14,6,9,0.72) 0%, rgba(14,6,9,0.1) 40%, rgba(14,6,9,0.85) 100%)",
-                  pointerEvents: "none",
-                }}
-              />
-
-              {/* Floating Top Elements */}
-              <div style={{ position: "absolute", top: "14px", left: "14px", right: "14px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "rgba(10, 6, 8, 0.8)", backdropFilter: "blur(12px)", padding: "5px 12px 5px 6px", borderRadius: "999px", border: "1px solid rgba(255, 255, 255, 0.14)" }}>
-                  <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: "#FF5A1F", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 800, color: "#FFF" }}>
-                    D
-                  </div>
-                  <span style={{ fontSize: "12px", fontWeight: 800, color: "#FFFFFF", display: "flex", alignItems: "center", gap: "4px" }}>
-                    @danish_beaches <Check className="w-3 h-3 text-[#FF5A1F]" />
-                  </span>
-                </div>
-
-                <span style={{ fontSize: "10px", fontWeight: 800, color: "#FF8A3D", background: "rgba(255,90,31,0.22)", border: "1px solid rgba(255,90,31,0.45)", padding: "4px 10px", borderRadius: "999px" }}>
-                  🔥 FEATURED
-                </span>
-              </div>
-
-              {/* Center Audio Track Badge */}
-              <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", zIndex: 2, pointerEvents: "none" }}>
-                <div style={{ background: "rgba(10, 6, 8, 0.82)", backdropFilter: "blur(12px)", padding: "6px 14px", borderRadius: "999px", fontSize: "11.5px", fontWeight: 700, color: "#FF8A3D", border: "1px solid rgba(255,90,31,0.4)", display: "flex", alignItems: "center", gap: "6px" }}>
-                  <Music className="w-3.5 h-3.5 text-[#FF5A1F]" />
-                  <span>Channo (Acoustic Jam) • 0:42</span>
-                </div>
-              </div>
-
-              {/* Floating Bottom Info & Likes */}
-              <div style={{ position: "absolute", bottom: "14px", left: "14px", right: "14px", zIndex: 2 }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
-                  <div style={{ background: "rgba(10, 6, 8, 0.82)", backdropFilter: "blur(12px)", padding: "5px 12px", borderRadius: "999px", fontSize: "11px", fontWeight: 700, color: "#FFFFFF", display: "flex", alignItems: "center", gap: "5px", border: "1px solid rgba(255, 255, 255, 0.12)" }}>
-                    <MapPin className="w-3 h-3 text-[#FF5A1F]" />
-                    <span>French Beach Hut #42</span>
-                  </div>
-                  <div style={{ background: "rgba(10, 6, 8, 0.82)", backdropFilter: "blur(12px)", padding: "5px 12px", borderRadius: "999px", fontSize: "11px", fontWeight: 700, color: "#FFFFFF", border: "1px solid rgba(255, 255, 255, 0.12)" }}>
-                    ❤️ 384
-                  </div>
-                </div>
-              </div>
-            </a>
-
-            {/* 2. TALL VIDEO REEL TILE: (Col 5-7, Row 1-2) */}
-            <a
-              href={rSlots[1]?.url || "https://www.instagram.com"}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="col-span-12 sm:col-span-6 lg:col-span-3 row-span-2 rounded-3xl overflow-hidden relative group transition-all duration-300 hover:border-[#FF5A1F] hover:shadow-[0_18px_45px_rgba(255,90,31,0.3)] block cursor-pointer"
-              style={{
-                border: "1.2px solid rgba(255, 255, 255, 0.14)",
-                background: "#081410",
-              }}
-            >
-              {/* Full Image */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={rSlots[1]?.image_url || "/images/padel-squad.jpg"}
-                alt="Velocity Padel Squad Reel"
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-              />
-
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  background: "linear-gradient(180deg, rgba(8,20,16,0.72) 0%, rgba(8,20,16,0.1) 40%, rgba(8,20,16,0.85) 100%)",
-                  pointerEvents: "none",
-                }}
-              />
-
-              {/* Floating Top Elements */}
-              <div style={{ position: "absolute", top: "14px", left: "14px", right: "14px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "rgba(10, 6, 8, 0.8)", backdropFilter: "blur(12px)", padding: "5px 12px 5px 6px", borderRadius: "999px", border: "1px solid rgba(255, 255, 255, 0.14)" }}>
-                  <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: "#FF5A1F", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 800, color: "#FFF" }}>
-                    S
-                  </div>
-                  <span style={{ fontSize: "12px", fontWeight: 800, color: "#FFFFFF", display: "flex", alignItems: "center", gap: "4px" }}>
-                    @sara_speed <Check className="w-3 h-3 text-[#FF5A1F]" />
-                  </span>
-                </div>
-
-                <span style={{ fontSize: "10px", fontWeight: 800, color: "#FFFFFF", background: "rgba(255,90,31,0.9)", padding: "4px 10px", borderRadius: "999px", display: "flex", alignItems: "center", gap: "4px" }}>
-                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                  REEL 0:15
-                </span>
-              </div>
-
-              {/* Center Glowing Play Button */}
-              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}>
-                <div
-                  style={{
-                    width: "56px",
-                    height: "56px",
-                    borderRadius: "50%",
-                    background: "rgba(18, 9, 7, 0.85)",
-                    border: "2px solid rgba(255, 90, 31, 0.8)",
-                    boxShadow: "0 0 25px rgba(255, 90, 31, 0.5)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    transition: "all 0.25s ease",
-                  }}
-                  className="group-hover:scale-110 group-hover:bg-[#FF5A1F] text-white"
+            {WALL_TILE_LAYOUT.map((layout, i) => {
+              const slot = rSlots[i] || {};
+              const img = slot.image_url || layout.fallbackImg;
+              const handle = (slot.author || "@solonomore").trim();
+              const caption = (slot.venue || "").trim();
+              const isReel = slot.type === "reel";
+              return (
+                <a
+                  key={i}
+                  href={slot.url || "https://www.instagram.com/solonomore"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`${layout.span} rounded-3xl overflow-hidden relative group border border-white/15 bg-[#160C10] transition-all duration-300 hover:border-[#FF5A1F]`}
                 >
-                  <Play className="w-6 h-6 fill-white text-white ml-0.5" />
-                </div>
-              </div>
-
-              {/* Floating Bottom Info */}
-              <div style={{ position: "absolute", bottom: "14px", left: "14px", right: "14px", zIndex: 2 }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
-                  <div style={{ background: "rgba(10, 6, 8, 0.82)", backdropFilter: "blur(12px)", padding: "5px 12px", borderRadius: "999px", fontSize: "11px", fontWeight: 700, color: "#FFFFFF", border: "1px solid rgba(255, 255, 255, 0.12)" }}>
-                    📍 Velocity Clifton
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={img}
+                    alt={caption || "Solo-No-More on Instagram"}
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" aria-hidden="true" />
+                  {isReel && (
+                    <span className="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 backdrop-blur" aria-label="Video">
+                      <Play className="w-3.5 h-3.5 text-white fill-white" />
+                    </span>
+                  )}
+                  <div className="absolute bottom-3 left-3 right-3 flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-black/70 px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur">
+                      <InstagramIcon className="w-3 h-3" /> {handle}
+                    </span>
+                    {caption && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-black/70 px-2.5 py-1 text-[11px] font-semibold text-white/85 backdrop-blur">
+                        <MapPin className="w-3 h-3 text-[#FF5A1F]" /> {caption}
+                      </span>
+                    )}
                   </div>
-                  <div style={{ background: "rgba(10, 6, 8, 0.82)", backdropFilter: "blur(12px)", padding: "5px 12px", borderRadius: "999px", fontSize: "11px", fontWeight: 700, color: "#FF8A3D", border: "1px solid rgba(255,90,31,0.3)" }}>
-                    ★ 2.4k views
-                  </div>
-                </div>
-              </div>
-            </a>
-
-            {/* 3. MEDIUM WIDE PHOTO/VIDEO TILE: (Col 8-12, Row 1) */}
-            <a
-              href={rSlots[2]?.url || "https://www.instagram.com"}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="col-span-12 sm:col-span-12 lg:col-span-5 row-span-1 rounded-3xl overflow-hidden relative group transition-all duration-300 hover:border-[#FF5A1F] hover:shadow-[0_18px_45px_rgba(255,90,31,0.3)] block cursor-pointer"
-              style={{
-                border: "1.2px solid rgba(255, 255, 255, 0.14)",
-                background: "#160C14",
-              }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={rSlots[2]?.image_url || "/images/acoustic-jam.jpg"}
-                alt="Secret Loft Acoustic Session"
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-              />
-
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  background: "linear-gradient(180deg, rgba(16,8,14,0.72) 0%, rgba(16,8,14,0.1) 40%, rgba(16,8,14,0.85) 100%)",
-                  pointerEvents: "none",
-                }}
-              />
-
-              {/* Floating Top Elements */}
-              <div style={{ position: "absolute", top: "12px", left: "14px", right: "14px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "rgba(10, 6, 8, 0.8)", backdropFilter: "blur(12px)", padding: "4px 12px 4px 6px", borderRadius: "999px", border: "1px solid rgba(255, 255, 255, 0.14)" }}>
-                  <div style={{ width: "22px", height: "22px", borderRadius: "50%", background: "#FF5A1F", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10.5px", fontWeight: 800, color: "#FFF" }}>
-                    Z
-                  </div>
-                  <span style={{ fontSize: "12px", fontWeight: 800, color: "#FFFFFF" }}>@zayd_khi</span>
-                </div>
-
-                <span style={{ fontSize: "10px", fontWeight: 800, color: "#FF8A3D", background: "rgba(255,90,31,0.22)", border: "1px solid rgba(255,90,31,0.45)", padding: "4px 10px", borderRadius: "999px" }}>
-                  🎸 LIVE ACOUSTICS
-                </span>
-              </div>
-
-              {/* Center Play Icon */}
-              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}>
-                <div
-                  style={{
-                    width: "46px",
-                    height: "46px",
-                    borderRadius: "50%",
-                    background: "rgba(18, 9, 7, 0.82)",
-                    border: "2px solid rgba(255, 90, 31, 0.7)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    transition: "all 0.25s ease",
-                  }}
-                  className="group-hover:scale-110 group-hover:bg-[#FF5A1F] text-white"
-                >
-                  <Play className="w-5 h-5 fill-white text-white ml-0.5" />
-                </div>
-              </div>
-
-              {/* Floating Bottom Info */}
-              <div style={{ position: "absolute", bottom: "12px", left: "14px", right: "14px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
-                <div style={{ background: "rgba(10, 6, 8, 0.82)", backdropFilter: "blur(12px)", padding: "4px 10px", borderRadius: "999px", fontSize: "11px", fontWeight: 700, color: "#FFFFFF", border: "1px solid rgba(255, 255, 255, 0.12)" }}>
-                  📍 Secret Loft Phase 5
-                </div>
-                <div style={{ background: "rgba(10, 6, 8, 0.82)", backdropFilter: "blur(12px)", padding: "4px 10px", borderRadius: "999px", fontSize: "11px", fontWeight: 700, color: "#FFFFFF", border: "1px solid rgba(255, 255, 255, 0.12)" }}>
-                  ❤️ 445
-                </div>
-              </div>
-            </a>
-
-            {/* 4. MEDIUM PHOTO TILE: (Col 8-10, Row 2) */}
-            <a
-              href={rSlots[3]?.url || "https://www.instagram.com"}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="col-span-12 sm:col-span-6 lg:col-span-3 row-span-1 rounded-3xl overflow-hidden relative group transition-all duration-300 hover:border-[#FF5A1F] hover:shadow-[0_18px_45px_rgba(255,90,31,0.3)] block cursor-pointer"
-              style={{
-                border: "1.2px solid rgba(255, 255, 255, 0.14)",
-                background: "#160C10",
-              }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={rSlots[3]?.image_url || "/images/chai-cafe.jpg"}
-                alt="Chai Cafe Boardgames"
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-              />
-
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  background: "linear-gradient(180deg, rgba(16,8,10,0.72) 0%, rgba(16,8,10,0.1) 40%, rgba(16,8,10,0.85) 100%)",
-                  pointerEvents: "none",
-                }}
-              />
-
-              <div style={{ position: "absolute", top: "12px", left: "12px", right: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px", background: "rgba(10, 6, 8, 0.8)", backdropFilter: "blur(12px)", padding: "4px 10px 4px 6px", borderRadius: "999px", border: "1px solid rgba(255, 255, 255, 0.14)" }}>
-                  <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: "#FF5A1F", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: 800, color: "#FFF" }}>
-                    A
-                  </div>
-                  <span style={{ fontSize: "11.5px", fontWeight: 800, color: "#FFFFFF" }}>@alizeh_vibe</span>
-                </div>
-                <InstagramIcon className="w-3.5 h-3.5 text-[#FF5A1F]" />
-              </div>
-
-              <div style={{ position: "absolute", bottom: "12px", left: "12px", right: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
-                <div style={{ background: "rgba(10, 6, 8, 0.82)", backdropFilter: "blur(12px)", padding: "4px 10px", borderRadius: "999px", fontSize: "10.5px", fontWeight: 700, color: "#FFFFFF" }}>
-                  📍 Alamgir Clifton
-                </div>
-                <div style={{ background: "rgba(10, 6, 8, 0.82)", backdropFilter: "blur(12px)", padding: "4px 10px", borderRadius: "999px", fontSize: "10.5px", fontWeight: 700, color: "#FFFFFF" }}>
-                  ❤️ 198
-                </div>
-              </div>
-            </a>
-
-            {/* 5. SMALL SNAPSHOT TILE: (Col 11-12, Row 2) */}
-            <a
-              href={rSlots[4]?.url || "https://www.instagram.com"}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="col-span-12 sm:col-span-6 lg:col-span-2 row-span-1 rounded-3xl overflow-hidden relative group transition-all duration-300 hover:border-[#FF5A1F] hover:shadow-[0_18px_45px_rgba(255,90,31,0.3)] block cursor-pointer"
-              style={{
-                border: "1.2px solid rgba(255, 255, 255, 0.14)",
-                background: "#160C10",
-              }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={rSlots[4]?.image_url || "/images/beacon-chai.jpg"}
-                alt="Frere Hall Chai Run"
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-              />
-
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  background: "linear-gradient(180deg, rgba(16,8,10,0.72) 0%, rgba(16,8,10,0.1) 40%, rgba(16,8,10,0.85) 100%)",
-                  pointerEvents: "none",
-                }}
-              />
-
-              <div style={{ position: "absolute", top: "12px", left: "12px", right: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px", background: "rgba(10, 6, 8, 0.8)", backdropFilter: "blur(12px)", padding: "4px 10px 4px 6px", borderRadius: "999px", border: "1px solid rgba(255, 255, 255, 0.14)" }}>
-                  <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: "#FF5A1F", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: 800, color: "#FFF" }}>
-                    H
-                  </div>
-                  <span style={{ fontSize: "11px", fontWeight: 800, color: "#FFFFFF" }}>@hamza_clicks</span>
-                </div>
-              </div>
-
-              <div style={{ position: "absolute", bottom: "12px", left: "12px", right: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
-                <div style={{ background: "rgba(10, 6, 8, 0.82)", backdropFilter: "blur(12px)", padding: "4px 8px", borderRadius: "999px", fontSize: "10px", fontWeight: 700, color: "#FFFFFF" }}>
-                  📍 Frere Hall
-                </div>
-                <div style={{ background: "rgba(10, 6, 8, 0.82)", backdropFilter: "blur(12px)", padding: "4px 8px", borderRadius: "999px", fontSize: "10px", fontWeight: 700, color: "#FFFFFF" }}>
-                  ❤️ 142
-                </div>
-              </div>
-            </a>
-
-            {/* 6. VIDEO REEL TILE: (Col 1-3, Row 3) */}
-            <a
-              href={rSlots[5]?.url || "https://www.instagram.com"}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="col-span-12 sm:col-span-6 lg:col-span-3 row-span-1 rounded-3xl overflow-hidden relative group transition-all duration-300 hover:border-[#FF5A1F] hover:shadow-[0_18px_45px_rgba(255,90,31,0.3)] block cursor-pointer"
-              style={{
-                border: "1.2px solid rgba(255, 255, 255, 0.14)",
-                background: "#0E1210",
-              }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={rSlots[5]?.image_url || "/images/beacon-padel.jpg"}
-                alt="Legends Arena Match"
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-              />
-
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  background: "linear-gradient(180deg, rgba(8,18,14,0.72) 0%, rgba(8,18,14,0.1) 40%, rgba(8,18,14,0.85) 100%)",
-                  pointerEvents: "none",
-                }}
-              />
-
-              <div style={{ position: "absolute", top: "12px", left: "12px", right: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px", background: "rgba(10, 6, 8, 0.8)", backdropFilter: "blur(12px)", padding: "4px 10px 4px 6px", borderRadius: "999px", border: "1px solid rgba(255, 255, 255, 0.14)" }}>
-                  <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: "#FF5A1F", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: 800, color: "#FFF" }}>
-                    B
-                  </div>
-                  <span style={{ fontSize: "11.5px", fontWeight: 800, color: "#FFFFFF" }}>@bilal_smash</span>
-                </div>
-                <span style={{ fontSize: "9.5px", fontWeight: 800, color: "#FFFFFF", background: "rgba(255,90,31,0.9)", padding: "3px 8px", borderRadius: "999px" }}>
-                  🎥 MATCH
-                </span>
-              </div>
-
-              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}>
-                <div
-                  style={{
-                    width: "44px",
-                    height: "44px",
-                    borderRadius: "50%",
-                    background: "rgba(18, 9, 7, 0.82)",
-                    border: "2px solid rgba(255, 90, 31, 0.7)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                  className="group-hover:scale-110 group-hover:bg-[#FF5A1F] text-white transition-transform"
-                >
-                  <Play className="w-5 h-5 fill-white text-white ml-0.5" />
-                </div>
-              </div>
-
-              <div style={{ position: "absolute", bottom: "12px", left: "12px", right: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
-                <div style={{ background: "rgba(10, 6, 8, 0.82)", backdropFilter: "blur(12px)", padding: "4px 8px", borderRadius: "999px", fontSize: "10.5px", fontWeight: 700, color: "#FFFFFF" }}>
-                  📍 Legends Arena
-                </div>
-                <div style={{ background: "rgba(10, 6, 8, 0.82)", backdropFilter: "blur(12px)", padding: "4px 8px", borderRadius: "999px", fontSize: "10.5px", fontWeight: 700, color: "#FFFFFF" }}>
-                  ❤️ 215
-                </div>
-              </div>
-            </a>
-
-            {/* 7. SMALL SNAPSHOT: Sunset Rooftop BBQ (Col 4-5, Row 3) */}
-            <div
-              className="col-span-6 sm:col-span-3 lg:col-span-2 row-span-1 rounded-3xl overflow-hidden relative group transition-all duration-300 hover:border-[#FF5A1F] hover:shadow-[0_18px_45px_rgba(255,90,31,0.3)]"
-              style={{
-                border: "1.2px solid rgba(255, 255, 255, 0.14)",
-                background: "#160C10",
-              }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/images/hero-rooftop.jpg"
-                alt="Sunset Rooftop BBQ"
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-              />
-
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  background: "linear-gradient(180deg, rgba(16,8,10,0.72) 0%, rgba(16,8,10,0.1) 40%, rgba(16,8,10,0.85) 100%)",
-                  pointerEvents: "none",
-                }}
-              />
-
-              <div style={{ position: "absolute", top: "12px", left: "12px", right: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px", background: "rgba(10, 6, 8, 0.8)", backdropFilter: "blur(12px)", padding: "4px 10px 4px 6px", borderRadius: "999px", border: "1px solid rgba(255, 255, 255, 0.14)" }}>
-                  <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: "#FF5A1F", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: 800, color: "#FFF" }}>
-                    M
-                  </div>
-                  <span style={{ fontSize: "11px", fontWeight: 800, color: "#FFFFFF" }}>@maya.khi</span>
-                </div>
-              </div>
-
-              <div style={{ position: "absolute", bottom: "12px", left: "12px", right: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
-                <div style={{ background: "rgba(10, 6, 8, 0.82)", backdropFilter: "blur(12px)", padding: "4px 8px", borderRadius: "999px", fontSize: "10px", fontWeight: 700, color: "#FFFFFF" }}>
-                  📍 Phase 6
-                </div>
-                <div style={{ background: "rgba(10, 6, 8, 0.82)", backdropFilter: "blur(12px)", padding: "4px 8px", borderRadius: "999px", fontSize: "10px", fontWeight: 700, color: "#FFFFFF" }}>
-                  ❤️ 267
-                </div>
-              </div>
-            </div>
-
-            {/* 8. SMALL SNAPSHOT: Burns Road Night Crawl (Col 6-7, Row 3) */}
-            <div
-              className="col-span-6 sm:col-span-3 lg:col-span-2 row-span-1 rounded-3xl overflow-hidden relative group transition-all duration-300 hover:border-[#FF5A1F] hover:shadow-[0_18px_45px_rgba(255,90,31,0.3)]"
-              style={{
-                border: "1.2px solid rgba(255, 255, 255, 0.14)",
-                background: "#160C10",
-              }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/images/partiful-photo-girls.jpg"
-                alt="Burns Road Street Food"
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-              />
-
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  background: "linear-gradient(180deg, rgba(16,8,10,0.72) 0%, rgba(16,8,10,0.1) 40%, rgba(16,8,10,0.85) 100%)",
-                  pointerEvents: "none",
-                }}
-              />
-
-              <div style={{ position: "absolute", top: "12px", left: "12px", right: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px", background: "rgba(10, 6, 8, 0.8)", backdropFilter: "blur(12px)", padding: "4px 10px 4px 6px", borderRadius: "999px", border: "1px solid rgba(255, 255, 255, 0.14)" }}>
-                  <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: "#FF5A1F", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: 800, color: "#FFF" }}>
-                    N
-                  </div>
-                  <span style={{ fontSize: "11px", fontWeight: 800, color: "#FFFFFF" }}>@nida_eats</span>
-                </div>
-              </div>
-
-              <div style={{ position: "absolute", bottom: "12px", left: "12px", right: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
-                <div style={{ background: "rgba(10, 6, 8, 0.82)", backdropFilter: "blur(12px)", padding: "4px 8px", borderRadius: "999px", fontSize: "10px", fontWeight: 700, color: "#FFFFFF" }}>
-                  📍 Burns Road
-                </div>
-                <div style={{ background: "rgba(10, 6, 8, 0.82)", backdropFilter: "blur(12px)", padding: "4px 8px", borderRadius: "999px", fontSize: "10px", fontWeight: 700, color: "#FFFFFF" }}>
-                  ❤️ 188
-                </div>
-              </div>
-            </div>
-
-            {/* 9. MEDIUM WIDE VIDEO REEL TILE: Warehouse DJ Set (Col 8-12, Row 3) */}
-            <div
-              className="col-span-12 sm:col-span-12 lg:col-span-5 row-span-1 rounded-3xl overflow-hidden relative group transition-all duration-300 hover:border-[#FF5A1F] hover:shadow-[0_18px_45px_rgba(255,90,31,0.3)]"
-              style={{
-                border: "1.2px solid rgba(255, 255, 255, 0.14)",
-                background: "#160C14",
-              }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/images/beacon-now-26.jpg"
-                alt="Warehouse Underground Music"
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-              />
-
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  background: "linear-gradient(180deg, rgba(16,8,14,0.72) 0%, rgba(16,8,14,0.1) 40%, rgba(16,8,14,0.85) 100%)",
-                  pointerEvents: "none",
-                }}
-              />
-
-              <div style={{ position: "absolute", top: "12px", left: "14px", right: "14px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "rgba(10, 6, 8, 0.8)", backdropFilter: "blur(12px)", padding: "4px 12px 4px 6px", borderRadius: "999px", border: "1px solid rgba(255, 255, 255, 0.14)" }}>
-                  <div style={{ width: "22px", height: "22px", borderRadius: "50%", background: "#FF5A1F", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10.5px", fontWeight: 800, color: "#FFF" }}>
-                    O
-                  </div>
-                  <span style={{ fontSize: "12px", fontWeight: 800, color: "#FFFFFF" }}>@omar_now</span>
-                </div>
-
-                <span style={{ fontSize: "10px", fontWeight: 800, color: "#FF8A3D", background: "rgba(255,90,31,0.22)", border: "1px solid rgba(255,90,31,0.45)", padding: "4px 10px", borderRadius: "999px" }}>
-                  🎵 DJ SET
-                </span>
-              </div>
-
-              {/* Center Play Icon */}
-              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}>
-                <div
-                  style={{
-                    width: "46px",
-                    height: "46px",
-                    borderRadius: "50%",
-                    background: "rgba(18, 9, 7, 0.82)",
-                    border: "2px solid rgba(255, 90, 31, 0.7)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    transition: "all 0.25s ease",
-                  }}
-                  className="group-hover:scale-110 group-hover:bg-[#FF5A1F] text-white"
-                >
-                  <Play className="w-5 h-5 fill-white text-white ml-0.5" />
-                </div>
-              </div>
-
-              <div style={{ position: "absolute", bottom: "12px", left: "14px", right: "14px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
-                <div style={{ background: "rgba(10, 6, 8, 0.82)", backdropFilter: "blur(12px)", padding: "4px 10px", borderRadius: "999px", fontSize: "11px", fontWeight: 700, color: "#FFFFFF", border: "1px solid rgba(255, 255, 255, 0.12)" }}>
-                  📍 Warehouse 10 Korangi
-                </div>
-                <div style={{ background: "rgba(10, 6, 8, 0.82)", backdropFilter: "blur(12px)", padding: "4px 10px", borderRadius: "999px", fontSize: "11px", fontWeight: 700, color: "#FFFFFF", border: "1px solid rgba(255, 255, 255, 0.12)" }}>
-                  ❤️ 320
-                </div>
-              </div>
-            </div>
+                </a>
+              );
+            })}
           </div>
 
           {/* Bottom Pill Action: [ 📷 Tag @solonomore on your post and we'll showcase you here! ] */}

@@ -615,8 +615,8 @@ export default function BeaconCard({
                   appliedStatus === "requested" || beacon.application_status === "pending"
                     ? "1px solid rgba(39, 201, 63, 0.4)"
                     : "none",
-                borderRadius: "12px",
-                padding: "11px",
+                borderRadius: "10px",
+                padding: "8px 12px",
                 fontSize: "13px",
                 fontWeight: 800,
                 cursor: isFull ? "not-allowed" : "pointer",

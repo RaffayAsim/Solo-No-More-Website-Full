@@ -189,6 +189,7 @@ export default function ApprovedScreen({
     } catch {
       // Ignored
     }
+    if (ev.scheduled_at && new Date(ev.scheduled_at).getTime() < Date.now()) return false;
     if (eventCategoryFilter === "all") return true;
     if (eventCategoryFilter === "nightlife") return ev.title.toLowerCase().includes("rave") || ev.title.toLowerCase().includes("night") || ev.title.toLowerCase().includes("fest");
     if (eventCategoryFilter === "concert") return ev.event_type === "artist_split";
@@ -198,84 +199,8 @@ export default function ApprovedScreen({
 
   const firstName = name ? name.split(" ")[0] : "Member";
 
-  // Provide curated sample official events if database is empty so it looks full & rich like Image 2
-  const displayEvents: OfficialEvent[] =
-    officialEvents.length > 0
-      ? filteredEvents
-      : [
-          {
-            id: "ev-1",
-            title: "Safari Tourist Train",
-            description: "Scenic private heritage railway journey through Rawalpindi to Attock Khurd with curated acoustic soundscapes.",
-            venue_name: "Safari Tourist Train, Rawalpindi",
-            event_type: "platform_owned",
-            price: 4500,
-            max_capacity: 100,
-            scheduled_at: new Date(Date.now() + 86400000 * 3).toISOString(),
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-          {
-            id: "ev-2",
-            title: "Drift Fest Karachi",
-            description: "High-octane asphalt show with premier underground drifters, DJ sets, and VIP pit-lane access.",
-            venue_name: "Grand Karting Circuit",
-            event_type: "artist_split",
-            price: 1500,
-            max_capacity: 250,
-            scheduled_at: new Date(Date.now() + 86400000 * 5).toISOString(),
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-          {
-            id: "ev-3",
-            title: "VibeFest 2.0 Headline Night",
-            description: "Young Stunners x Hassan Raheem live arena set with immersive visual lasers and exclusive lounge hospitality.",
-            venue_name: "Defence Authority Creek Club, Phase 8",
-            event_type: "artist_split",
-            price: 2500,
-            max_capacity: 400,
-            scheduled_at: new Date(Date.now() + 86400000 * 7).toISOString(),
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-          {
-            id: "ev-4",
-            title: "Hand Raat by BnC Offline",
-            description: "Underground pre-dawn electronic set with analog synths and private rooftop chai garden.",
-            venue_name: "Third Culture Coffee Rooftop",
-            event_type: "artist_split",
-            price: 3500,
-            max_capacity: 120,
-            scheduled_at: new Date(Date.now() + 86400000 * 10).toISOString(),
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-          {
-            id: "ev-5",
-            title: "Scene 92 - Desi Cultural Soirée",
-            description: "BLUK, Catalyst and touring DJ lineup bringing high-energy eastern rhythm fusion.",
-            venue_name: "Studio 1, Arts Council Karachi",
-            event_type: "artist_split",
-            price: 4000,
-            max_capacity: 180,
-            scheduled_at: new Date(Date.now() + 86400000 * 14).toISOString(),
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-          {
-            id: "ev-6",
-            title: "VIP Padel Tournament & Espresso Match",
-            description: "Doubles tournament with exclusive merchandise, professional coaches, and unlimited complimentary espresso bar.",
-            venue_name: "Padel Arena Pro Center, Clifton",
-            event_type: "platform_owned",
-            price: 2000,
-            max_capacity: 64,
-            scheduled_at: new Date(Date.now() + 86400000 * 18).toISOString(),
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-        ];
+  // Only real, published, upcoming events (no sample data). Events are visible in every city.
+  const displayEvents: OfficialEvent[] = filteredEvents;
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", gap: "32px" }}>
@@ -389,26 +314,8 @@ export default function ApprovedScreen({
 
         {/* Quick Stats & Primary Action Buttons (Matching Image 2) */}
         <div className="w-full sm:w-auto flex items-center gap-2.5 sm:gap-3 flex-wrap justify-between sm:justify-start relative z-10">
-          {/* XP & Bookings Counter Group */}
+          {/* Bookings Counter Group */}
           <div className="flex items-center gap-2.5">
-            {/* XP Badge */}
-            <div
-              style={{
-                background: "rgba(0, 0, 0, 0.45)",
-                border: "1px solid rgba(255, 255, 255, 0.14)",
-                borderRadius: "14px",
-                padding: "8px 14px",
-                textAlign: "center",
-              }}
-            >
-              <div style={{ fontSize: "16px", fontWeight: 900, color: "#FF8A3D", lineHeight: 1 }}>
-                1.2K
-              </div>
-              <div style={{ fontSize: "9px", fontWeight: 800, letterSpacing: "0.06em", color: "rgba(255,255,255,0.6)", marginTop: "3px" }}>
-                TOTAL XP
-              </div>
-            </div>
-
             {/* Bookings Counter */}
             <div
               style={{
@@ -1068,7 +975,7 @@ export default function ApprovedScreen({
                         e.stopPropagation();
                         setEventToShare(event);
                       }}
-                      style={{
+                      style={{ whiteSpace: "nowrap",
                         background: "rgba(255, 111, 38, 0.12)",
                         border: "1px solid rgba(255, 111, 38, 0.3)",
                         borderRadius: "8px",
@@ -1091,7 +998,7 @@ export default function ApprovedScreen({
 
                   {isRestrictedRole ? (
                     <div
-                      style={{
+                      style={{ whiteSpace: "nowrap",
                         background: "rgba(255, 255, 255, 0.04)",
                         border: "1px solid rgba(255, 255, 255, 0.1)",
                         color: "rgba(255, 255, 255, 0.45)",
@@ -1114,6 +1021,7 @@ export default function ApprovedScreen({
                       type="button"
                       disabled
                       style={{
+                        whiteSpace: "nowrap",
                         background: "rgba(39, 201, 63, 0.15)",
                         border: "1px solid rgba(39, 201, 63, 0.35)",
                         color: "#27C93F",
@@ -1132,6 +1040,7 @@ export default function ApprovedScreen({
                       disabled={isBookingThis}
                       onClick={() => handleBookEvent(event)}
                       style={{
+                        whiteSpace: "nowrap",
                         background: "linear-gradient(135deg, #FF6F26 0%, #FF5A1F 100%)",
                         border: "1px solid rgba(255, 255, 255, 0.2)",
                         color: "#FFFFFF",
@@ -1156,6 +1065,30 @@ export default function ApprovedScreen({
             );
           })}
         </div>
+
+        {displayEvents.length === 0 && (
+          <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] px-6 py-12 text-center">
+            <Calendar className="w-7 h-7 text-[#FF8A3D] mx-auto mb-3" />
+            <h3 className="text-base font-bold text-white">No events yet — the first one drops soon</h3>
+            <p className="text-sm text-zinc-400 mt-1.5 max-w-md mx-auto">
+              New events appear here as soon as they go live. Grab an Early Bird pass to be first in line.
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-3 mt-5">
+              <Link
+                href="/early-bird"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-[#FF6F26] text-white hover:brightness-110 transition"
+              >
+                Get Early Bird pass
+              </Link>
+              <a
+                href="#radar-section"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-white/[0.06] text-white border border-white/15 hover:bg-white/10 transition"
+              >
+                Browse hangouts
+              </a>
+            </div>
+          </div>
+        )}
       </section>
 
       {/* ── SECTION 3: ACTIVITY ANALYSIS (User's Real Activity Tracker) ── */}

@@ -346,12 +346,12 @@ export default function BrowseEventsPage() {
               }}
             >
               <Users className="w-12 h-12 text-[#FF5A1F] mx-auto mb-3 opacity-60" />
-              <h3 style={{ fontSize: "20px", fontWeight: 800, margin: "0 0 6px" }}>No Beacons Found in this Filter</h3>
+              <h3 style={{ fontSize: "20px", fontWeight: 800, margin: "0 0 6px" }}>No events match this filter yet</h3>
               <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.6)", margin: "0 0 20px" }}>
-                Be the first to drop a beacon for this vibe or location.
+                New events appear here as soon as they go live. Early Bird members hear first.
               </p>
               <Link
-                href="/sell-tickets"
+                href="/early-bird"
                 style={{
                   background: "linear-gradient(135deg, #FF6F26 0%, #FF5A1F 100%)",
                   color: "#fff",
@@ -362,7 +362,7 @@ export default function BrowseEventsPage() {
                   textDecoration: "none",
                 }}
               >
-                Host This Vibe Instead
+                Get Early Bird pass
               </Link>
             </div>
           ) : (

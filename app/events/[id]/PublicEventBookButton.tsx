@@ -42,7 +42,7 @@ export default function PublicEventBookButton({
     <>
       <button
         onClick={handleClick}
-        className="w-full sm:w-auto px-7 py-3.5 rounded-2xl text-xs font-black uppercase tracking-wider bg-gradient-to-r from-[#FF6F26] to-[#FF5A1F] text-white hover:brightness-110 shadow-[0_4px_24px_rgba(255,111,38,0.5)] transition-all flex items-center justify-center gap-2 group cursor-pointer"
+        className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-gradient-to-r from-[#FF6F26] to-[#FF5A1F] text-white hover:brightness-110 shadow-[0_4px_24px_rgba(255,111,38,0.5)] transition-all flex items-center justify-center gap-2 group cursor-pointer"
       >
         <Ticket className="w-4 h-4 text-white" />
         <span>Book Passes &amp; QR Pass</span>
