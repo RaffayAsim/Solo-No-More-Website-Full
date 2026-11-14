@@ -2,6 +2,34 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Press_Start_2P, VT323, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import "./skin-party.css";
+import { CONTACT_EMAIL, CONTACT_PHONE, INSTAGRAM_URL, SITE_NAME, SITE_URL, jsonLd } from "@/lib/seo";
+
+// Who we are, for Google (invisible structured data — no visual change).
+const ORGANIZATION_LD = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": `${SITE_URL}/#organization`,
+      name: SITE_NAME,
+      url: SITE_URL,
+      logo: `${SITE_URL}/icon-512x512.png`,
+      email: CONTACT_EMAIL,
+      telephone: CONTACT_PHONE,
+      sameAs: [INSTAGRAM_URL],
+      areaServed: ["Karachi", "Lahore", "Islamabad"].map((name) => ({ "@type": "City", name })),
+      description: "A vetted members' community in Pakistan for finding people to go out with — padel, chai runs, gigs, food walks and events.",
+    },
+    {
+      "@type": "WebSite",
+      "@id": `${SITE_URL}/#website`,
+      url: SITE_URL,
+      name: SITE_NAME,
+      publisher: { "@id": `${SITE_URL}/#organization` },
+      inLanguage: "en-PK",
+    },
+  ],
+};
 
 // ── Exact Partiful Typography (Plus Jakarta Sans site-wide) ───────────────
 const plusJakarta = Plus_Jakarta_Sans({
@@ -42,9 +70,15 @@ const ibmPlexMono = IBM_Plex_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || (process.env.VERCEL_ENV === "production" ? "https://solonomore.online" : "http://localhost:3000")),
-  title: "Solo-No-More — Find Your People IRL Nationwide",
+  title: {
+    default: "Solo-No-More — Find Your People IRL in Karachi, Lahore & Islamabad",
+    template: "%s",
+  },
   description:
-    "Never go out alone again. Join squads for padel, chai runs, gigs and rooftop hangs across cities nationwide — or host your own in seconds.",
+    "Never go out alone again. Join vetted squads for padel, chai runs, gigs and food walks in Karachi, Lahore and Islamabad — or host your own in seconds.",
+  applicationName: SITE_NAME,
+  openGraph: { siteName: SITE_NAME, locale: "en_PK", type: "website" },
+  twitter: { card: "summary_large_image" },
   icons: {
     icon: [
       { url: "/favicon.ico" },
@@ -104,6 +138,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-full font-sans antialiased transition-colors duration-300" suppressHydrationWarning>
         {children}
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(ORGANIZATION_LD) }} />
         <script
           dangerouslySetInnerHTML={{
             __html: `

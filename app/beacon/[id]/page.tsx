@@ -36,6 +36,9 @@ const CATEGORY_META = {
   nightlife: { label: "Nightlife & Rave", icon: Moon, color: "#FF8A3D", bg: "rgba(255, 90, 31, 0.15)" },
 };
 
+// Members' personal hangouts: shareable by link, but kept out of search results.
+export const metadata = { title: "Join this hangout | Solo-No-More", robots: { index: false, follow: false } };
+
 export default async function PublicBeaconPage({ params }: PageProps) {
   const { id: beaconId } = await params;
 

@@ -62,6 +62,7 @@ export default function AdminSidebarClient({
     { label: "Beacons Control", href: "/admin/beacons" },
     { label: "Partners", href: "/admin/partners" },
     { label: "Artist", href: "/admin/artists" },
+    { label: "Blog", href: "/admin/blog" },
     { label: "Review Wall", href: "/admin/review-wall" },
     { label: "Access & Settings", href: "/admin/settings" },
   ];

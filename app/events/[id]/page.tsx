@@ -21,6 +21,43 @@ import PublicEventShareButton from "./PublicEventShareButton";
 import PublicEventBookButton from "./PublicEventBookButton";
 import { isAdminEmail } from "@/lib/server/auth";
 import { PKT_TIME_ZONE } from "@/lib/time";
+import { SITE_NAME, SITE_URL, jsonLd, pageMetadata } from "@/lib/seo";
+import { cache } from "react";
+
+/** One database read per request, shared by generateMetadata and the page. */
+const loadEvent = cache(async (id: string) => {
+  const { data } = await (supabaseAdmin.from("official_events") as any).select("*").eq("id", id).maybeSingle();
+  return data || null;
+});
+
+/** Usable public image for search/social cards (never inline base64). */
+function eventImage(event: any, meta: any): string | null {
+  const img = meta?.feature_image || event?.flyer_image_url || "";
+  return typeof img === "string" && /^https?:\/\//i.test(img) ? img : null;
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const event = await loadEvent(id);
+  if (!event) return { title: "Event not found | Solo-No-More", robots: { index: false } };
+  const parsed = parseEventDescription(event.description || "");
+  const meta: any = parsed.metadata || {};
+  const hidden = meta.status === "draft" || meta.status === "pending_review";
+  const when = event.scheduled_at
+    ? new Date(event.scheduled_at).toLocaleString("en-PK", { timeZone: PKT_TIME_ZONE, weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })
+    : "";
+  const where = [event.venue_name, meta.full_address].filter(Boolean).join(", ");
+  const price = Number(event.price) > 0 ? `PKR ${Number(event.price).toLocaleString("en-US")}` : "Free";
+  const summary = (parsed.cleanDescription || "").replace(/\s+/g, " ").trim();
+  const description = [`${when}${where ? ` · ${where}` : ""} · ${price}.`, summary].filter(Boolean).join(" ").slice(0, 300);
+  return pageMetadata({
+    title: `${event.title}${when ? ` — ${when}` : ""} | Solo-No-More`,
+    description,
+    path: `/events/${event.id}`,
+    image: eventImage(event, meta),
+    noindex: hidden,
+  });
+}
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -30,13 +67,9 @@ export default async function PublicEventPage({ params }: PageProps) {
   const { id: eventId } = await params;
 
   // Fetch official / partner / artist event
-  const { data: event, error } = await (supabaseAdmin
-    .from("official_events") as any)
-    .select("*")
-    .eq("id", eventId)
-    .maybeSingle();
+  const event = await loadEvent(eventId);
 
-  if (error || !event) {
+  if (!event) {
     notFound();
   }
 
@@ -267,6 +300,38 @@ export default async function PublicEventPage({ params }: PageProps) {
           </a>
         </div>
       </main>
+
+      {/* Google Event structured data — invisible, no visual change */}
+      {event.scheduled_at && metadata?.status !== "draft" && metadata?.status !== "pending_review" && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: jsonLd({
+              "@context": "https://schema.org",
+              "@type": "Event",
+              name: event.title,
+              description: (cleanDescription || event.title).replace(/\s+/g, " ").slice(0, 500),
+              startDate: event.scheduled_at,
+              eventStatus: "https://schema.org/EventScheduled",
+              eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+              location: {
+                "@type": "Place",
+                name: event.venue_name || "Venue shared after booking",
+                address: { "@type": "PostalAddress", streetAddress: (metadata as any)?.full_address || event.venue_name || "", addressCountry: "PK" },
+              },
+              image: eventImage(event, metadata) ? [eventImage(event, metadata)] : [`${SITE_URL}/opengraph-image`],
+              organizer: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
+              offers: {
+                "@type": "Offer",
+                url: `${SITE_URL}/events/${event.id}`,
+                price: Number(event.price) || 0,
+                priceCurrency: "PKR",
+                availability: "https://schema.org/InStock",
+              },
+            }),
+          }}
+        />
+      )}
 
       <SubpageFooter />
     </div>

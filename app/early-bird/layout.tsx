@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/early-bird" },
   title: "Early Bird VIP Pass | Solo-No-More — Find Your Vibe IRL",
   description:
     "Join Solo-No-More before our official launch. Claim your early bird founding member pass, choose your vibes, and unlock exclusive IRL squad meetups.",

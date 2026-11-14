@@ -6,6 +6,8 @@ import DashboardFooter from "@/components/DashboardFooter";
 
 export const revalidate = 0; // Fresh stats on every admin view
 
+export const metadata = { title: "Admin | Solo-No-More", robots: { index: false, follow: false } };
+
 export default async function AdminLayout({
   children,
 }: {

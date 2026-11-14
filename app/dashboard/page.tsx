@@ -13,6 +13,7 @@ import { parseEventDescription } from "@/lib/event-metadata";
 export const metadata = {
   title: "Dashboard — Solo-No-More",
   description: "Your Solo-No-More membership dashboard.",
+  robots: { index: false, follow: false },
 };
 
 // ─── Helper to read the Supabase session from cookies ───────────────────────

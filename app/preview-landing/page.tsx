@@ -4,6 +4,7 @@ import { getReviewWallDataAction } from "@/app/actions/review-wall";
 export const revalidate = 0;
 
 export const metadata = {
+  robots: { index: false, follow: false },
   title: "Solo-No-More — Preview Landing",
   description: "Internal preview of the full Solo-No-More landing page.",
 };
