@@ -18,7 +18,7 @@ export default function PublicEventShareButton({
   const shortCode = eventId.length >= 8 ? eventId.slice(0, 8) : eventId;
   const shareUrl = typeof window !== "undefined"
     ? `${window.location.origin}/e/${shortCode}`
-    : `https://solonomore.com/e/${shortCode}`;
+    : `https://solonomore.online/e/${shortCode}`;
 
   return (
     <>

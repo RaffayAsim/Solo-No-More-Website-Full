@@ -18,7 +18,7 @@ export default async function PartnerDashboardPage(props: {
 }) {
   const sessionResult = await getSessionUserSecurely();
   if ("error" in sessionResult || !sessionResult.userId) {
-    redirect("/login");
+    redirect("/portal?type=partner&mode=signin");
   }
   const userId = sessionResult.userId;
 

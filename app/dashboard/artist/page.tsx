@@ -20,7 +20,7 @@ interface PageProps {
 export default async function ArtistDashboardPage({ searchParams }: PageProps) {
   const sessionResult = await getSessionUserSecurely();
   if ("error" in sessionResult || !sessionResult.userId) {
-    redirect("/login");
+    redirect("/portal?type=artist&mode=signin");
   }
   const userId = sessionResult.userId;
   const params = searchParams ? await searchParams : {};

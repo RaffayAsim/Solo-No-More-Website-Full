@@ -19,6 +19,18 @@ import { isAdminEmail } from "@/lib/server/auth";
 import { bankDetailRows, notifyAdminByEmail, sendEmail } from "@/lib/server/email";
 import { getSiteUrl } from "@/lib/server/site-url";
 import { activateSubscription } from "@/lib/server/subscriptions";
+import { isEmailVerified } from "@/lib/server/email-verification";
+import {
+  checkBusinessName,
+  checkInstagram,
+  checkPersonName,
+  checkPkMobile,
+  firstError,
+  normalizeCnic,
+  normalizeInstagram,
+  normalizePkMobile,
+  validateMemberSignup,
+} from "@/lib/signup-validation";
 
 export type ApplicationStatus =
   | "pending_admin_approval"
@@ -179,6 +191,31 @@ async function hasOpenApplication(email: string): Promise<boolean> {
   return !!data && data.length > 0;
 }
 
+/**
+ * The same CNIC or phone number may not be used by another application that is still
+ * open or approved, or by an existing account (stops one person applying many times).
+ */
+async function findDuplicateIdentity(opts: { email: string; cnic?: string; phone?: string }): Promise<string | null> {
+  const live = ["pending_admin_approval", "payment_pending", "payment_submitted", "approved", "credentials_created"];
+  if (opts.cnic) {
+    const { data } = await (supabaseAdmin.from(TABLE) as any).select("email").eq("cnic", opts.cnic).in("status", live).limit(5);
+    if ((data || []).some((r: any) => (r.email || "").toLowerCase() !== opts.email)) {
+      return "This CNIC is already registered with another application. If this is you, contact support.";
+    }
+    const { data: prof } = await (supabaseAdmin.from("profiles") as any).select("id").eq("cnic", opts.cnic).limit(1);
+    if (prof && prof.length) return "This CNIC already belongs to a Solo-No-More account. Please sign in instead.";
+  }
+  if (opts.phone) {
+    const { data } = await (supabaseAdmin.from(TABLE) as any).select("email").eq("phone", opts.phone).in("status", live).limit(5);
+    if ((data || []).some((r: any) => (r.email || "").toLowerCase() !== opts.email)) {
+      return "This phone number is already used by another application. Please use your own number.";
+    }
+  }
+  return null;
+}
+
+const EMAIL_NOT_VERIFIED = "Please verify your email address with the 6-digit code first.";
+
 function firstNameOf(fullName: string): string {
   return (fullName || "").trim().split(/\s+/)[0] || "there";
 }
@@ -240,15 +277,33 @@ export async function submitMemberApplicationAction(formData: {
   packageSelected: string;
   packagePricePkr: number;
   billingCycle?: "monthly" | "annual";
+  /** From the email code step (components/forms/EmailVerifyBox). */
+  emailVerifiedToken?: string;
 }): Promise<{ success: boolean; applicationId?: string; error?: string }> {
   try {
     const email = clean(formData.email).toLowerCase();
-    const fullName = clean(formData.fullName, 120);
-    if (!isValidEmail(email)) return { success: false, error: "Please enter a valid email address." };
-    if (!fullName) return { success: false, error: "Full name is required." };
-    if (!clean(formData.phone, 30)) return { success: false, error: "Phone number is required." };
-    if (!clean(formData.cnic, 30)) return { success: false, error: "CNIC is required." };
+    const fullName = clean(formData.fullName, 120).replace(/\s+/g, " ");
+    const problems = validateMemberSignup({
+      username: clean(formData.username, 60),
+      email,
+      fullName,
+      phone: clean(formData.phone, 30),
+      gender: clean(formData.gender, 40),
+      dateOfBirth: clean(formData.dateOfBirth, 20),
+      cnic: clean(formData.cnic, 30),
+      emergencyName: clean(formData.emergencyName, 120),
+      emergencyPhone: clean(formData.emergencyPhone, 30),
+      instagram: clean(formData.instagram, 80),
+    });
+    const problem = firstError(problems);
+    if (problem) return { success: false, error: problem };
     if (isAdminEmail(email)) return { success: false, error: "This email address cannot be used." };
+    if (!isEmailVerified(email, formData.emailVerifiedToken)) return { success: false, error: EMAIL_NOT_VERIFIED };
+
+    const phone = normalizePkMobile(formData.phone)!;
+    const cnic = normalizeCnic(formData.cnic)!;
+    const duplicate = await findDuplicateIdentity({ email, cnic, phone });
+    if (duplicate) return { success: false, error: duplicate };
 
     if (await hasOpenApplication(email)) {
       return {
@@ -270,18 +325,18 @@ export async function submitMemberApplicationAction(formData: {
     const { error: dbError } = await (supabaseAdmin.from(TABLE) as any).insert({
       id,
       type: "member",
-      username: clean(formData.username, 60),
+      username: clean(formData.username, 60).replace(/^@/, ""),
       email,
       full_name: fullName,
-      phone: clean(formData.phone, 30),
+      phone,
       city: clean(formData.city, 60) || "Karachi",
       gender: clean(formData.gender, 40),
       vibe: clean(formData.vibe, 500),
       date_of_birth: clean(formData.dateOfBirth, 20),
-      cnic: clean(formData.cnic, 30),
+      cnic,
       emergency_name: clean(formData.emergencyName, 120),
-      emergency_phone: clean(formData.emergencyPhone, 30),
-      instagram: clean(formData.instagram, 80) || null,
+      emergency_phone: normalizePkMobile(formData.emergencyPhone),
+      instagram: formData.instagram ? `@${normalizeInstagram(formData.instagram)}` : null,
       interests: (Array.isArray(formData.interests) ? formData.interests : []).slice(0, 20).map((i) => clean(i, 40)),
       photo_url: photoRef,
       package_selected: packageSelected,
@@ -317,7 +372,7 @@ export async function submitMemberApplicationAction(formData: {
       await notifyAdminByEmail(
         "New membership application",
         [`${fullName} (${email}) applied for ${packageSelected}.`],
-        { label: "Review applications", url: `${siteUrl}/admin/users` }
+        { label: "Review application", url: `${siteUrl}/admin/applications?id=${id}` }
       );
     });
 
@@ -342,13 +397,23 @@ export async function submitPartnerApplicationAction(formData: {
   partnerPerks?: string;
   packageSelected?: string;
   packagePricePkr?: number;
+  instagram?: string;
+  emailVerifiedToken?: string;
 }): Promise<{ success: boolean; applicationId?: string; error?: string }> {
   try {
     const email = clean(formData.email).toLowerCase();
-    if (!isValidEmail(email)) return { success: false, error: "Please enter a valid email address." };
-    if (!clean(formData.fullName)) return { success: false, error: "Contact name is required." };
-    if (!clean(formData.partnerBusinessName)) return { success: false, error: "Business name is required." };
+    const isArtist = /artist/i.test(clean(formData.packageSelected, 80));
+    const problem =
+      (!isValidEmail(email) ? "Please enter a valid email address." : null) ||
+      checkBusinessName(formData.partnerBusinessName, isArtist ? "Artist / stage name" : "Business / venue name") ||
+      checkPersonName(formData.fullName, "Contact name") ||
+      checkPkMobile(formData.phone, "Phone / WhatsApp") ||
+      checkInstagram(formData.instagram || "", isArtist);
+    if (problem) return { success: false, error: problem };
     if (isAdminEmail(email)) return { success: false, error: "This email address cannot be used." };
+    if (!isEmailVerified(email, formData.emailVerifiedToken)) return { success: false, error: EMAIL_NOT_VERIFIED };
+    const duplicate = await findDuplicateIdentity({ email, phone: normalizePkMobile(formData.phone)! });
+    if (duplicate) return { success: false, error: duplicate };
 
     if (await hasOpenApplication(email)) {
       return {
@@ -358,7 +423,7 @@ export async function submitPartnerApplicationAction(formData: {
     }
 
     const id = newApplicationId("app_part_");
-    const packageSelected = clean(formData.packageSelected, 80) || "Partner Residency";
+    const packageSelected = isArtist ? "Artist Residency" : "Partner Residency";
     const now = new Date().toISOString();
 
     const { error: dbError } = await (supabaseAdmin.from(TABLE) as any).insert({
@@ -367,9 +432,10 @@ export async function submitPartnerApplicationAction(formData: {
       username: clean(formData.username, 60) || email.split("@")[0],
       email,
       full_name: clean(formData.fullName, 120),
-      phone: clean(formData.phone, 30),
+      phone: normalizePkMobile(formData.phone),
       city: clean(formData.city, 60) || "Karachi",
       gender: "partner",
+      instagram: formData.instagram ? `@${normalizeInstagram(formData.instagram)}` : null,
       vibe: clean(formData.partnerCategory, 120),
       interests: [clean(formData.partnerCategory, 40)].filter(Boolean),
       partner_business_name: clean(formData.partnerBusinessName, 120),
@@ -404,7 +470,7 @@ export async function submitPartnerApplicationAction(formData: {
       await notifyAdminByEmail(
         "New partner application",
         [`${clean(formData.partnerBusinessName, 120)} — ${clean(formData.fullName, 120)} (${email}).`],
-        { label: "Review applications", url: `${siteUrl}/admin/users` }
+        { label: "Review application", url: `${siteUrl}/admin/applications?id=${id}` }
       );
     });
 
@@ -530,12 +596,12 @@ export async function adminApproveApplicationAction(
 }
 
 /**
- * Applicant submits bank payment proof (screenshot & transaction ID)
+ * Applicant submits bank payment proof (screenshot)
  */
 export async function submitApplicationPaymentAction(
   id: string,
   payment: {
-    transactionRef: string;
+    transactionRef?: string;
     paymentMethod: string;
     proofImageUrl?: string;
   }
@@ -579,6 +645,7 @@ export async function submitApplicationPaymentAction(
     }
 
     const siteUrl = await getSiteUrl();
+    after(async () => {
     await sendEmail({
       to: app.email,
       subject: "We received your payment proof",
@@ -592,8 +659,9 @@ export async function submitApplicationPaymentAction(
     await notifyAdminByEmail(
       "Membership payment proof to verify",
       [`${app.fullName} (${app.email}) uploaded payment proof for ${app.packageSelected} — PKR ${app.packagePricePkr.toLocaleString("en-US")}.`],
-      { label: "Verify payment", url: `${siteUrl}/admin/users` }
+      { label: "Verify payment", url: `${siteUrl}/admin/applications?id=${app.id}` }
     );
+    });
     return { success: true };
   } catch (err: any) {
     return { success: false, error: "Failed to submit payment details. Please try again." };
@@ -656,7 +724,9 @@ export async function setupMemberCredentialsAction(data: {
     const pkg = (app.packageSelected || "").toLowerCase();
     const isPartner = app.type === "partner";
     let tier = "member";
-    if (isPartner || pkg.includes("partner")) tier = "partner";
+    const isArtistApp = pkg.includes("artist");
+    if (isArtistApp) tier = "artist";
+    else if (isPartner || pkg.includes("partner")) tier = "partner";
     else if (pkg.includes("vip") || pkg.includes("inner circle")) tier = "family";
     else if (pkg.includes("explorer") || pkg.includes("scout")) tier = "none";
 
@@ -701,7 +771,7 @@ export async function setupMemberCredentialsAction(data: {
       bio: app.vibe || "Vetted Solo-No-More Member",
       social_link: socialLink || null,
       account_status: "approved",
-      is_partner: isPartner,
+      is_partner: isPartner && !isArtistApp,
       business_name: app.partnerBusinessName || null,
       is_guest: false,
     };
@@ -738,7 +808,15 @@ export async function setupMemberCredentialsAction(data: {
         `Hi ${firstNameOf(app.fullName)},`,
         "Your password is set and your account is active. Log in with this email address to complete your profile and start joining hangouts.",
       ],
-      button: { label: "Log in", url: `${siteUrl}/login` },
+      button: {
+        label: "Log in",
+        url:
+          tier === "artist"
+            ? `${siteUrl}/portal?type=artist&mode=signin`
+            : tier === "partner"
+            ? `${siteUrl}/portal?type=partner&mode=signin`
+            : `${siteUrl}/login`,
+      },
     });
 
     await (supabaseAdmin.from(TABLE) as any)

@@ -323,249 +323,33 @@ export default function PartnerRegistrationPage() {
                 <Sparkles className="w-3.5 h-3.5" /> INSTANT ONBOARDING
               </div>
               <h2 style={{ fontSize: "clamp(26px, 4vw, 36px)", fontWeight: 900, margin: "0 0 10px", color: "#fff" }}>
-                Submit Your Partner Application
-              </h2>
+                Apply as a Partner</h2>
               <p style={{ fontSize: "15px", color: "rgba(255,255,255,0.65)", margin: 0 }}>
-                Our partnerships team will review your application and activate your listing within 24 hours.
-              </p>
+                One short form on our Partner &amp; Artist Portal — verified email, reviewed by our team within 24 hours.</p>
             </div>
 
-            {submitted ? (
-              <div style={{ textAlign: "center", padding: "40px 20px" }}>
-                <ShieldCheck className="w-16 h-16 text-[#27C93F] mx-auto mb-4" />
-                <h3 style={{ fontSize: "24px", fontWeight: 900, margin: "0 0 8px" }}>Application Received!</h3>
-                <p style={{ fontSize: "15px", color: "rgba(255,255,255,0.7)", maxWidth: "520px", margin: "0 auto 24px" }}>
-                  Thank you <strong>{contactName}</strong> from <strong>{businessName}</strong>. Our partnerships lead will connect with you via WhatsApp ({phone}) within 24 hours.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setSubmitted(false)}
-                  style={{
-                    background: "rgba(255,255,255,0.1)",
-                    border: "none",
-                    color: "#fff",
-                    padding: "10px 24px",
-                    borderRadius: "10px",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                  }}
-                >
-                  Submit Another Venue
-                </button>
-              </div>
-            ) : (
-              <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-                {/* Partner Category Selector */}
-                <div>
-                  <label style={{ display: "block", fontSize: "12px", fontWeight: 800, color: "rgba(255,255,255,0.6)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "8px" }}>
-                    Select Your Category:
-                  </label>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "10px" }}>
-                    {[
-                      { id: "venue", label: "Cafe / Restaurant ☕" },
-                      { id: "artist", label: "Artist / Musician 🎸" },
-                      { id: "sports", label: "Padel / Sports Court 🏐" },
-                    ].map((t) => (
-                      <button
-                        key={t.id}
-                        type="button"
-                        onClick={() => setPartnerType(t.id as any)}
-                        style={{
-                          padding: "11px 14px",
-                          borderRadius: "12px",
-                          fontSize: "13px",
-                          fontWeight: 800,
-                          border: "1px solid " + (partnerType === t.id ? "#FF5A1F" : "rgba(255,255,255,0.14)"),
-                          background: partnerType === t.id ? "rgba(255,90,31,0.2)" : "rgba(0,0,0,0.4)",
-                          color: partnerType === t.id ? "#fff" : "rgba(255,255,255,0.7)",
-                          cursor: "pointer",
-                          transition: "all 0.15s ease",
-                        }}
-                      >
-                        {t.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px" }}>
-                  <div>
-                    <label style={{ display: "block", fontSize: "12px", fontWeight: 800, color: "rgba(255,255,255,0.6)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "6px" }}>
-                      Venue / Artist Name
-                    </label>
-                    <input
-                      required
-                      value={businessName}
-                      onChange={(e) => setBusinessName(e.target.value)}
-                      placeholder="e.g. Smash Arena, Dali Cafe"
-                      style={{
-                        width: "100%",
-                        background: "rgba(0,0,0,0.5)",
-                        border: "1px solid rgba(255,255,255,0.14)",
-                        borderRadius: "12px",
-                        padding: "12px 14px",
-                        color: "#fff",
-                        fontSize: "14px",
-                        outline: "none",
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: "block", fontSize: "12px", fontWeight: 800, color: "rgba(255,255,255,0.6)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "6px" }}>
-                      Contact Person
-                    </label>
-                    <input
-                      required
-                      value={contactName}
-                      onChange={(e) => setContactName(e.target.value)}
-                      placeholder="e.g. Daniyal Khan"
-                      style={{
-                        width: "100%",
-                        background: "rgba(0,0,0,0.5)",
-                        border: "1px solid rgba(255,255,255,0.14)",
-                        borderRadius: "12px",
-                        padding: "12px 14px",
-                        color: "#fff",
-                        fontSize: "14px",
-                        outline: "none",
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px" }}>
-                  <div>
-                    <label style={{ display: "block", fontSize: "12px", fontWeight: 800, color: "rgba(255,255,255,0.6)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "6px" }}>
-                      Email Address
-                    </label>
-                    <input
-                      required
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="contact@business.com"
-                      style={{
-                        width: "100%",
-                        background: "rgba(0,0,0,0.5)",
-                        border: "1px solid rgba(255,255,255,0.14)",
-                        borderRadius: "12px",
-                        padding: "12px 14px",
-                        color: "#fff",
-                        fontSize: "14px",
-                        outline: "none",
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: "block", fontSize: "12px", fontWeight: 800, color: "rgba(255,255,255,0.6)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "6px" }}>
-                      WhatsApp Number
-                    </label>
-                    <input
-                      required
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="0300 1234567"
-                      style={{
-                        width: "100%",
-                        background: "rgba(0,0,0,0.5)",
-                        border: "1px solid rgba(255,255,255,0.14)",
-                        borderRadius: "12px",
-                        padding: "12px 14px",
-                        color: "#fff",
-                        fontSize: "14px",
-                        outline: "none",
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px" }}>
-                  <div>
-                    <label style={{ display: "block", fontSize: "12px", fontWeight: 800, color: "rgba(255,255,255,0.6)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "6px" }}>
-                      Location / Neighborhood
-                    </label>
-                    <input
-                      required
-                      value={location}
-                      onChange={(e) => setLocation(e.target.value)}
-                      placeholder="e.g. Zamzama DHA Phase V, Karachi"
-                      style={{
-                        width: "100%",
-                        background: "rgba(0,0,0,0.5)",
-                        border: "1px solid rgba(255,255,255,0.14)",
-                        borderRadius: "12px",
-                        padding: "12px 14px",
-                        color: "#fff",
-                        fontSize: "14px",
-                        outline: "none",
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: "block", fontSize: "12px", fontWeight: 800, color: "rgba(255,255,255,0.6)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "6px" }}>
-                      Instagram Handle / Website
-                    </label>
-                    <input
-                      value={instagram}
-                      onChange={(e) => setInstagram(e.target.value)}
-                      placeholder="@handle"
-                      style={{
-                        width: "100%",
-                        background: "rgba(0,0,0,0.5)",
-                        border: "1px solid rgba(255,255,255,0.14)",
-                        borderRadius: "12px",
-                        padding: "12px 14px",
-                        color: "#fff",
-                        fontSize: "14px",
-                        outline: "none",
-                      }}
-                    />
-                  </div>
-                </div>
-
-                {errorMsg && (
-                  <div
-                    style={{
-                      background: "rgba(239, 68, 68, 0.15)",
-                      border: "1px solid rgba(239, 68, 68, 0.4)",
-                      color: "#FCA5A5",
-                      padding: "10px 14px",
-                      borderRadius: "10px",
-                      fontSize: "13px",
-                      fontWeight: 600,
-                    }}
-                  >
-                    ⚠️ {errorMsg}
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  style={{
-                    marginTop: "8px",
-                    background: "linear-gradient(135deg, #FF6F26 0%, #FF5A1F 45%, #E6450A 100%)",
-                    border: "none",
-                    borderRadius: "14px",
-                    padding: "15px",
-                    color: "#fff",
-                    fontSize: "14.5px",
-                    fontWeight: 900,
-                    letterSpacing: "0.03em",
-                    cursor: "pointer",
-                    boxShadow: "0 10px 28px rgba(255, 90, 31, 0.45)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "8px",
-                    opacity: loading ? 0.75 : 1,
-                  }}
-                >
-                  <Send className="w-4 h-4" />
-                  {loading ? "SUBMITTING REGISTRATION…" : "REGISTER AS PARTNER"}
-                </button>
-              </form>
-            )}
+            {/* Partner & artist signup lives on one page: /portal (email-verified, checked data). */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "14px", textAlign: "center" }}>
+              <Link
+                href="/portal?type=partner"
+                style={{
+                  background: "#FF5A1F",
+                  color: "#fff",
+                  padding: "14px 28px",
+                  fontSize: "15px",
+                  fontWeight: 900,
+                  textDecoration: "none",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                Apply on the Partner Portal →
+              </Link>
+              <Link href="/portal?type=partner&mode=signin" style={{ color: "rgba(255,255,255,0.65)", fontSize: "13px" }}>
+                Already approved? Sign in to your hub
+              </Link>
+            </div>
           </div>
         </div>
       </main>

@@ -6,6 +6,21 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { signUpAction } from "@/app/actions/auth";
 import { compressImageFile } from "@/lib/image-compress";
+import { SIGNUP_INTERESTS } from "@/lib/signup-options";
+import EmailVerifyBox from "@/components/forms/EmailVerifyBox";
+import {
+  checkCnic,
+  checkDateOfBirth,
+  checkEmail,
+  checkInstagram,
+  checkPersonName,
+  checkPkMobile,
+  checkUsername,
+  firstError,
+  latestAllowedDob,
+  normalizePkMobile,
+  validateMemberSignup,
+} from "@/lib/signup-validation";
 import { submitMemberApplicationAction, submitPartnerApplicationAction } from "@/app/actions/member-applications";
 import {
   Sparkles,
@@ -34,17 +49,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 
-const INTERESTS_OPTIONS = [
-  "Music",
-  "Comedy",
-  "Theatre",
-  "Sports",
-  "Food & Dining",
-  "Art & Culture",
-  "Nightlife",
-  "Festivals",
-  "Networking",
-];
+const INTERESTS_OPTIONS: readonly string[] = SIGNUP_INTERESTS;
 
 const PACKAGES_OPTIONS = [
   {
@@ -106,13 +111,17 @@ function ApplyPageContent() {
   const urlType = searchParams.get("type");
 
   // Mode: guest | member | partner
-  const [formType, setFormType] = useState<"guest" | "member" | "partner">("member");
+  const [formType, setFormType] = useState<"guest" | "member">("member");
 
   useEffect(() => {
     if (urlType === "guest") setFormType("guest");
-    else if (urlType === "partner") setFormType("partner");
+    else if (urlType === "partner" || urlType === "artist") router.replace(`/portal?type=${urlType}`);
     else if (urlType === "member") setFormType("member");
-  }, [urlType]);
+  }, [urlType, router]);
+
+  // Signed proof that the applicant owns the email (see components/forms/EmailVerifyBox).
+  const [guestEmailToken, setGuestEmailToken] = useState<string | null>(null);
+  const [memberEmailToken, setMemberEmailToken] = useState<string | null>(null);
 
   // ── GUEST FORM STATE ──
   const [guestEmail, setGuestEmail] = useState("");
@@ -187,9 +196,20 @@ function ApplyPageContent() {
   const handleGuestSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setGuestError(null);
+    const guestProblem =
+      checkPersonName(guestFullName) ||
+      checkEmail(guestEmail) ||
+      (guestEmailToken ? null : "Please verify your email: tap \"Send verification code\" and enter the 6-digit code.") ||
+      (guestPassword.length < 8 ? "Password must be at least 8 characters." : null) ||
+      checkInstagram(guestSocialLink);
+    if (guestProblem) {
+      setGuestError(guestProblem);
+      return;
+    }
     setGuestLoading(true);
 
     const result = await signUpAction({
+      emailVerifiedToken: guestEmailToken || undefined,
       email: guestEmail,
       password: guestPassword,
       fullName: guestFullName,
@@ -228,17 +248,24 @@ function ApplyPageContent() {
     setMemberError(null);
     setMemberLoading(true);
 
-    if (!memberUsername || !memberEmail || !memberFullName || !memberPhone || !memberDob) {
-      setMemberError("Please ensure all required personal fields are completed.");
+    const problems = validateMemberSignup({
+      username: memberUsername,
+      email: memberEmail,
+      fullName: memberFullName,
+      phone: memberPhone,
+      gender: memberGender,
+      dateOfBirth: memberDob,
+      cnic: memberCnic,
+      emergencyName: memberEmergencyName,
+      emergencyPhone: memberEmergencyPhone,
+      instagram: memberInstagram,
+    });
+    const problem = firstError(problems) || (memberEmailToken ? null : "Please verify your email address first.");
+    if (problem) {
+      setMemberError(problem);
       setMemberLoading(false);
-      setStep(1);
-      return;
-    }
-
-    if (!memberCnic || !memberEmergencyName || !memberEmergencyPhone) {
-      setMemberError("Please provide your CNIC and Emergency Contact.");
-      setMemberLoading(false);
-      setStep(2);
+      const stepOne = ["username", "email", "fullName", "phone", "dateOfBirth"];
+      setStep(!memberEmailToken || stepOne.some((k) => problems[k]) ? 1 : 2);
       return;
     }
 
@@ -260,6 +287,7 @@ function ApplyPageContent() {
       packageSelected: memberPackage,
       packagePricePkr: memberPackagePrice,
       billingCycle: memberBilling,
+      emailVerifiedToken: memberEmailToken || undefined,
     }));
 
     setMemberLoading(false);
@@ -272,39 +300,6 @@ function ApplyPageContent() {
     }
   };
 
-  // ── PARTNER APPLICATION HANDLER ──
-  const handlePartnerSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setPartnerError(null);
-    setPartnerLoading(true);
-
-    if (!partnerBusinessName.trim() || !partnerEmail.trim() || !partnerContactName.trim()) {
-      setPartnerError("Please fill all required partner details.");
-      setPartnerLoading(false);
-      return;
-    }
-
-    const res = await withSubmitTimeout(() => submitPartnerApplicationAction({
-      partnerBusinessName,
-      fullName: partnerContactName,
-      email: partnerEmail,
-      phone: partnerPhone,
-      city: partnerCity,
-      partnerCategory,
-      partnerPerks,
-      packageSelected: "Partner Residency",
-      packagePricePkr: 0,
-    }));
-
-    setPartnerLoading(false);
-
-    if (res.success && res.applicationId) {
-      setApplicationId(res.applicationId);
-      setPartnerSubmitted(true);
-    } else {
-      setPartnerError(res.error || "Failed to submit partner application.");
-    }
-  };
 
   return (
     <div
@@ -466,27 +461,24 @@ function ApplyPageContent() {
           >
             <Crown className="w-3.5 h-3.5" /> Apply as Member (Vetted)
           </button>
-          <button
-            type="button"
-            onClick={() => setFormType("partner")}
+          <Link
+            href="/portal"
             style={{
               padding: "9px 18px",
               borderRadius: "12px",
-              border: "none",
               fontSize: "13px",
               fontWeight: 800,
-              cursor: "pointer",
-              background: formType === "partner" ? "#FF5A1F" : "transparent",
-              color: formType === "partner" ? "#fff" : "rgba(255,255,255,0.7)",
-              transition: "all 0.15s ease",
+              background: "transparent",
+              color: "rgba(255,255,255,0.7)",
+              textDecoration: "none",
               display: "inline-flex",
               alignItems: "center",
               gap: "6px",
               whiteSpace: "nowrap",
             }}
           >
-            <Store className="w-3.5 h-3.5" /> Sign up as Partner
-          </button>
+            <Store className="w-3.5 h-3.5" /> Partner or artist? →
+          </Link>
         </div>
 
         {/* ══════════════════════════════════════════════════════
@@ -593,6 +585,7 @@ function ApplyPageContent() {
                       fontSize: "14px",
                     }}
                   />
+                  <EmailVerifyBox email={guestEmail} verifiedToken={guestEmailToken} onVerified={setGuestEmailToken} />
                 </div>
 
                 <div>
@@ -1031,6 +1024,7 @@ function ApplyPageContent() {
                             fontSize: "14px",
                           }}
                         />
+                        <EmailVerifyBox email={memberEmail} verifiedToken={memberEmailToken} onVerified={setMemberEmailToken} />
                       </div>
                     </div>
 
@@ -1064,7 +1058,7 @@ function ApplyPageContent() {
                           required
                           value={memberPhone}
                           onChange={(e) => setMemberPhone(e.target.value)}
-                          placeholder="+92 300 1234567"
+                          placeholder="0300 1234567"
                           style={{
                             width: "100%",
                             background: "rgba(0,0,0,0.45)",
@@ -1160,6 +1154,7 @@ function ApplyPageContent() {
                       <input
                         required
                         type="date"
+                        max={latestAllowedDob()}
                         value={memberDob}
                         onChange={(e) => setMemberDob(e.target.value)}
                         style={{
@@ -1178,8 +1173,16 @@ function ApplyPageContent() {
                       <button
                         type="button"
                         onClick={() => {
-                          if (!memberUsername || !memberEmail || !memberFullName || !memberPhone || !memberDob) {
-                            setMemberError("Please fill all required personal information fields.");
+                          const problem =
+                            checkUsername(memberUsername) ||
+                            checkEmail(memberEmail) ||
+                            (memberEmailToken ? null : "Please verify your email: tap \"Send verification code\" and enter the 6-digit code.") ||
+                            checkPersonName(memberFullName) ||
+                            checkPkMobile(memberPhone) ||
+                            (memberGender ? null : "Please select your gender.") ||
+                            checkDateOfBirth(memberDob);
+                          if (problem) {
+                            setMemberError(problem);
                             return;
                           }
                           setMemberError(null);
@@ -1222,7 +1225,7 @@ function ApplyPageContent() {
                         required
                         value={memberCnic}
                         onChange={(e) => setMemberCnic(e.target.value)}
-                        placeholder="XXXXX-XXXXXXX-X"
+                        placeholder="42101-1234567-1"
                         style={{
                           width: "100%",
                           background: "rgba(0,0,0,0.45)",
@@ -1268,7 +1271,7 @@ function ApplyPageContent() {
                           required
                           value={memberEmergencyPhone}
                           onChange={(e) => setMemberEmergencyPhone(e.target.value)}
-                          placeholder="+92 300 1234567"
+                          placeholder="0300 1234567"
                           style={{
                             width: "100%",
                             background: "rgba(0,0,0,0.45)",
@@ -1326,8 +1329,16 @@ function ApplyPageContent() {
                       <button
                         type="button"
                         onClick={() => {
-                          if (!memberCnic || !memberEmergencyName || !memberEmergencyPhone) {
-                            setMemberError("Please fill your CNIC and Emergency Contact.");
+                          const problem =
+                            checkCnic(memberCnic, memberGender) ||
+                            checkPersonName(memberEmergencyName, "Emergency contact name") ||
+                            checkPkMobile(memberEmergencyPhone, "Emergency contact phone") ||
+                            (normalizePkMobile(memberEmergencyPhone) === normalizePkMobile(memberPhone)
+                              ? "Emergency contact phone must be someone else's number."
+                              : null) ||
+                            checkInstagram(memberInstagram);
+                          if (problem) {
+                            setMemberError(problem);
                             return;
                           }
                           setMemberError(null);
@@ -1653,250 +1664,6 @@ function ApplyPageContent() {
           </div>
         )}
 
-        {/* ══════════════════════════════════════════════════════
-            MODE 3: PARTNER REGISTRATION FORM
-        ══════════════════════════════════════════════════════ */}
-        {formType === "partner" && (
-          <div
-            style={{
-              width: "100%",
-              maxWidth: "580px",
-              background: "linear-gradient(160deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%)",
-              border: "1.5px solid rgba(255, 255, 255, 0.14)",
-              borderRadius: "28px",
-              padding: "clamp(28px, 4.5vw, 44px)",
-              backdropFilter: "blur(16px)",
-              boxShadow: "0 30px 80px rgba(0, 0, 0, 0.6)",
-            }}
-          >
-            <div style={{ textAlign: "center", marginBottom: "28px" }}>
-              <div
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  background: "rgba(255, 90, 31, 0.15)",
-                  color: "#FF8A3D",
-                  padding: "4px 14px",
-                  borderRadius: "999px",
-                  fontSize: "11.5px",
-                  fontWeight: 800,
-                  marginBottom: "12px",
-                }}
-              >
-                <Store className="w-3.5 h-3.5" /> HOST &amp; VENUE APPLICATION
-              </div>
-              <h1 style={{ fontSize: "28px", fontWeight: 900, margin: "0 0 8px" }}>Partner Registration</h1>
-              <p style={{ fontSize: "14px", color: "rgba(255, 255, 255, 0.65)", margin: 0, lineHeight: 1.5 }}>
-                Host curated meetups, padel tournaments, or secret supper clubs at your space.
-              </p>
-            </div>
-
-            {partnerSubmitted ? (
-              <div style={{ textAlign: "center", padding: "26px 10px" }}>
-                <CheckCircle2 className="w-14 h-14 text-[#27C93F] mx-auto mb-3" />
-                <h3 style={{ fontSize: "22px", fontWeight: 900, margin: "0 0 8px" }}>Partner Request Submitted!</h3>
-                <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.75)", lineHeight: 1.6, maxWidth: "460px", margin: "0 auto 20px" }}>
-                  Your partner profile is shared with our curation team. Once approved, you will receive bank settlement and door scanner onboarding instructions.
-                </p>
-                <Link
-                  href="/"
-                  style={{
-                    display: "inline-block",
-                    background: "linear-gradient(135deg, #FF6F26 0%, #FF5A1F 100%)",
-                    color: "#fff",
-                    padding: "10px 24px",
-                    borderRadius: "10px",
-                    fontWeight: 800,
-                    fontSize: "13.5px",
-                    textDecoration: "none",
-                  }}
-                >
-                  Return to Home
-                </Link>
-              </div>
-            ) : (
-              <form onSubmit={handlePartnerSubmit} style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
-                {partnerError && (
-                  <div
-                    style={{
-                      background: "rgba(235, 57, 57, 0.15)",
-                      border: "1px solid rgba(235, 57, 57, 0.35)",
-                      borderRadius: "12px",
-                      padding: "12px 16px",
-                      color: "#FF6B6B",
-                      fontSize: "13px",
-                    }}
-                  >
-                    {partnerError}
-                  </div>
-                )}
-
-                <div>
-                  <label style={{ display: "block", fontSize: "12px", fontWeight: 800, color: "rgba(255,255,255,0.6)", textTransform: "uppercase", marginBottom: "6px" }}>
-                    Business / Venue / Stage Name *
-                  </label>
-                  <input
-                    required
-                    value={partnerBusinessName}
-                    onChange={(e) => setPartnerBusinessName(e.target.value)}
-                    placeholder="e.g. Velocity Padel Club, E-Street Cafe"
-                    style={{
-                      width: "100%",
-                      background: "rgba(0,0,0,0.45)",
-                      border: "1px solid rgba(255,255,255,0.15)",
-                      borderRadius: "12px",
-                      padding: "12px 14px",
-                      color: "#fff",
-                      fontSize: "14px",
-                    }}
-                  />
-                </div>
-
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                  <div>
-                    <label style={{ display: "block", fontSize: "12px", fontWeight: 800, color: "rgba(255,255,255,0.6)", textTransform: "uppercase", marginBottom: "6px" }}>
-                      Curator Contact Name *
-                    </label>
-                    <input
-                      required
-                      value={partnerContactName}
-                      onChange={(e) => setPartnerContactName(e.target.value)}
-                      placeholder="e.g. Hamza Tariq"
-                      style={{
-                        width: "100%",
-                        background: "rgba(0,0,0,0.45)",
-                        border: "1px solid rgba(255,255,255,0.15)",
-                        borderRadius: "12px",
-                        padding: "12px 14px",
-                        color: "#fff",
-                        fontSize: "14px",
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", fontSize: "12px", fontWeight: 800, color: "rgba(255,255,255,0.6)", textTransform: "uppercase", marginBottom: "6px" }}>
-                      Phone / WhatsApp *
-                    </label>
-                    <input
-                      required
-                      value={partnerPhone}
-                      onChange={(e) => setPartnerPhone(e.target.value)}
-                      placeholder="+92 300 1234567"
-                      style={{
-                        width: "100%",
-                        background: "rgba(0,0,0,0.45)",
-                        border: "1px solid rgba(255,255,255,0.15)",
-                        borderRadius: "12px",
-                        padding: "12px 14px",
-                        color: "#fff",
-                        fontSize: "14px",
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                  <div>
-                    <label style={{ display: "block", fontSize: "12px", fontWeight: 800, color: "rgba(255,255,255,0.6)", textTransform: "uppercase", marginBottom: "6px" }}>
-                      Work Email *
-                    </label>
-                    <input
-                      required
-                      type="email"
-                      value={partnerEmail}
-                      onChange={(e) => setPartnerEmail(e.target.value)}
-                      placeholder="curator@venue.com"
-                      style={{
-                        width: "100%",
-                        background: "rgba(0,0,0,0.45)",
-                        border: "1px solid rgba(255,255,255,0.15)",
-                        borderRadius: "12px",
-                        padding: "12px 14px",
-                        color: "#fff",
-                        fontSize: "14px",
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", fontSize: "12px", fontWeight: 800, color: "rgba(255,255,255,0.6)", textTransform: "uppercase", marginBottom: "6px" }}>
-                      Partner Category
-                    </label>
-                    <select
-                      value={partnerCategory}
-                      onChange={(e) => setPartnerCategory(e.target.value)}
-                      style={{
-                        width: "100%",
-                        background: "rgba(0,0,0,0.45)",
-                        border: "1px solid rgba(255,255,255,0.15)",
-                        borderRadius: "12px",
-                        padding: "12px 14px",
-                        color: "#fff",
-                        fontSize: "14px",
-                      }}
-                    >
-                      <option value="Venue / Cafe">Venue / Cafe</option>
-                      <option value="Sports / Padel Facility">Sports / Padel Facility</option>
-                      <option value="Live Music / DJ Stage">Live Music / DJ Stage</option>
-                      <option value="Community Curator">Community Curator</option>
-                      <option value="Other">Other Experience</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label style={{ display: "block", fontSize: "12px", fontWeight: 800, color: "rgba(255,255,255,0.6)", textTransform: "uppercase", marginBottom: "6px" }}>
-                    Proposed Perks or Events for Squad Members
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={partnerPerks}
-                    onChange={(e) => setPartnerPerks(e.target.value)}
-                    placeholder="e.g. 15% discount on coffee, reserved court hours every Friday 8-10 PM"
-                    style={{
-                      width: "100%",
-                      background: "rgba(0,0,0,0.45)",
-                      border: "1px solid rgba(255,255,255,0.15)",
-                      borderRadius: "12px",
-                      padding: "12px 14px",
-                      color: "#fff",
-                      fontSize: "14px",
-                      resize: "none",
-                    }}
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={partnerLoading}
-                  style={{
-                    marginTop: "8px",
-                    background: "linear-gradient(135deg, #FF6F26 0%, #FF5A1F 45%, #E6450A 100%)",
-                    border: "none",
-                    borderRadius: "14px",
-                    padding: "14px",
-                    color: "#fff",
-                    fontSize: "14.5px",
-                    fontWeight: 900,
-                    letterSpacing: "0.03em",
-                    cursor: "pointer",
-                    boxShadow: "0 10px 28px rgba(255, 90, 31, 0.45)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "8px",
-                  }}
-                  className="hover:scale-[1.02] active:scale-98"
-                >
-                  <span>{partnerLoading ? "SUBMITTING PARTNER PROFILE…" : "SUBMIT PARTNER APPLICATION"}</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </form>
-            )}
-          </div>
-        )}
       </main>
     </div>
   );

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { submitPaymentProof } from "@/app/actions/billing";
 import BankTransferPanel from "@/components/payments/BankTransferPanel";
+import WhatsAppFollowUp from "@/components/payments/WhatsAppFollowUp";
 import { MEMBERSHIP_PLANS, getMembershipAmountPkr, type BillingCycle } from "@/lib/payment-config";
 import {
   Sparkles,
@@ -69,7 +70,6 @@ export default function UpgradeHubClient({ currentTier: initialTier, expiresAt =
       const res = await submitPaymentProof({
         tierRequested: modalTier,
         paymentMethod: "bank_transfer",
-        transactionRef: transactionRef.trim(),
         proofImageUrl: proofImage,
         billingCycle,
       });
@@ -79,10 +79,6 @@ export default function UpgradeHubClient({ currentTier: initialTier, expiresAt =
         setSuccessMsg(
           `Payment proof received! Your ${modalTier.toUpperCase()} upgrade is awaiting admin verification.`
         );
-        setTimeout(() => {
-          setModalTier(null);
-          router.refresh();
-        }, 2200);
       } else {
         setErrorMsg(res.error);
       }
@@ -357,8 +353,16 @@ export default function UpgradeHubClient({ currentTier: initialTier, expiresAt =
                   </div>
                   <h3 className="text-lg font-bold text-white">Proof Received</h3>
                   <p className="text-xs text-neutral-400 max-w-sm mx-auto leading-relaxed">
-                    Your payment screenshot has been recorded. An admin will verify it and activate your tier shortly.
+                    Your payment screenshot has been sent to our admin team. They&apos;ll verify it and activate your tier — you&apos;ll get a notification.
                   </p>
+                  <WhatsAppFollowUp purpose={`${modalTier ? MEMBERSHIP_PLANS[modalTier].name : ""} membership (${billingCycle})`} amountPkr={modalTier ? getMembershipAmountPkr(modalTier, billingCycle) : 0} />
+                  <button
+                    type="button"
+                    onClick={() => { setModalTier(null); router.refresh(); }}
+                    className="px-6 py-2.5 rounded-xl text-xs font-bold text-zinc-300 hover:text-white border border-white/10 hover:border-white/20 transition-colors"
+                  >
+                    Done
+                  </button>
                 </div>
               ) : (
                 <form onSubmit={handlePaymentSubmit} className="space-y-5">
@@ -407,8 +411,6 @@ export default function UpgradeHubClient({ currentTier: initialTier, expiresAt =
                     purpose={`${modalTier ? MEMBERSHIP_PLANS[modalTier].name : ""} membership (${billingCycle})`}
                     proofImage={proofImage}
                     onProofImageChange={setProofImage}
-                    transactionRef={transactionRef}
-                    onTransactionRefChange={setTransactionRef}
                     disabled={submitting}
                   />
 

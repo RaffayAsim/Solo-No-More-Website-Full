@@ -281,19 +281,19 @@ export default async function PublicBeaconPage({ params }: PageProps) {
           <div className="space-y-1">
             <div className="text-xs font-black text-pink-300 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Tag Us on Instagram @solonomore</span>
+              <span>Tag Us on Instagram @solonomore.pk</span>
             </div>
             <p className="text-xs text-zinc-300">
-              Meeting up with this squad? Post your hangout stories and tag <strong>@solonomore</strong> to get highlighted across our city network!
+              Meeting up with this squad? Post your hangout stories and tag <strong>@solonomore.pk</strong> to get highlighted across our city network!
             </p>
           </div>
           <a
-            href="https://instagram.com/solonomore"
+            href="https://instagram.com/solonomore.pk/"
             target="_blank"
             rel="noopener noreferrer"
             className="px-4 py-2 rounded-xl text-xs font-bold bg-pink-500/20 hover:bg-pink-500/30 text-pink-200 border border-pink-500/40 shrink-0 self-start sm:self-auto transition-colors"
           >
-            Visit @solonomore ↗
+            Visit @solonomore.pk ↗
           </a>
         </div>
       </main>

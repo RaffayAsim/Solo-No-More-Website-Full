@@ -587,7 +587,7 @@ export async function completeBeaconAction(beaconId: string): Promise<BeaconActi
         app.applicant_id,
         "post_event_vibe_check",
         "📸 MEETUP CONCLUDED · SHARE PHOTOS",
-        `"${beacon.title}" has concluded! Drop your squad photos in the chat and tag @solonomore on Instagram!`,
+        `"${beacon.title}" has concluded! Drop your squad photos in the chat and tag @solonomore.pk on Instagram!`,
         beaconId
       );
     }

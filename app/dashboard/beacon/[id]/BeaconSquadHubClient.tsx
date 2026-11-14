@@ -1705,7 +1705,7 @@ export default function BeaconSquadHubClient({
         shareUrl={
           typeof window !== "undefined"
             ? `${window.location.origin}/b/${beacon.id.slice(0, 8)}`
-            : `https://solonomore.com/b/${beacon.id.slice(0, 8)}`
+            : `https://solonomore.online/b/${beacon.id.slice(0, 8)}`
         }
         shareText={`Join my squad meetup "${beacon.title}" on Solo-No-More!`}
         type="beacon"

@@ -219,7 +219,7 @@ export default function SignUpDropdown({ className = "" }: SignUpDropdownProps) 
 
             {/* 3. Partner Registration */}
             <Link
-              href="/apply?type=partner"
+              href="/portal"
               onClick={() => setIsOpen(false)}
               style={{
                 display: "flex",
@@ -251,10 +251,10 @@ export default function SignUpDropdown({ className = "" }: SignUpDropdownProps) 
               <div style={{ flex: 1 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <span style={{ fontSize: "13.5px", fontWeight: 800, color: "#FFFFFF" }}>
-                    Sign up as Partner
+                    Partners &amp; Artists
                   </span>
                   <span style={{ fontSize: "9.5px", fontWeight: 900, background: "rgba(255, 255, 255, 0.15)", color: "rgba(255, 255, 255, 0.8)", padding: "2px 6px", borderRadius: "999px" }}>
-                    Hosts &amp; Venues
+                    Venues &amp; Artists
                   </span>
                 </div>
                 <p style={{ fontSize: "11.5px", color: "rgba(255, 255, 255, 0.6)", margin: "3px 0 0", lineHeight: 1.4 }}>

@@ -7,10 +7,11 @@ import { Sparkles, Heart, Shield, Users, MapPin, Zap, ArrowRight, Award, Coffee 
 
 export default function AboutUsPage() {
   const stats = [
-    { value: "12,000+", label: "Verified Members", note: "Across Karachi, Lahore & Islamabad" },
-    { value: "1,450+", label: "IRL Meetups Hosted", note: "From chai runs to padel tournaments" },
-    { value: "96%", label: "Show-Up Reliability", note: "Protected by anti-ghosting telemetry" },
-    { value: "45+", label: "Partner Cafes & Venues", note: "Exclusive member table perks" },
+    // Facts about how the platform works — no invented member or meetup counts.
+    { value: "3", label: "Launch Cities", note: "Karachi, Lahore & Islamabad" },
+    { value: "100%", label: "Reviewed Members", note: "Every member application is checked by our team" },
+    { value: "Host OK", label: "Approval to Join", note: "Hosts approve every request to join a beacon" },
+    { value: "QR", label: "Door-Checked Passes", note: "Every event pass is scanned at entry" },
   ];
 
   const pillars = [

@@ -26,6 +26,7 @@ import {
   submitTicketPaymentProofAction,
 } from "@/app/actions/event-booking";
 import BankTransferPanel from "@/components/payments/BankTransferPanel";
+import WhatsAppFollowUp from "@/components/payments/WhatsAppFollowUp";
 
 interface TierPackage {
   id: string;
@@ -214,7 +215,6 @@ export default function EventBookingModal({
       const res = await submitTicketPaymentProofAction({
         bookingRef: booking.bookingRef,
         proofImage,
-        transactionRef: transactionRef.trim(),
         paymentMethod: "bank_transfer",
       });
       if (!res.success) {
@@ -601,8 +601,6 @@ export default function EventBookingModal({
                 payerName={currentUserProfile?.full_name || undefined}
                 proofImage={proofImage}
                 onProofImageChange={setProofImage}
-                transactionRef={transactionRef}
-                onTransactionRefChange={setTransactionRef}
                 disabled={isLoading}
               />
 
@@ -645,16 +643,8 @@ export default function EventBookingModal({
                   ? "Your free pass is active. Open your dashboard to see the QR code for the door."
                   : `Your booking ${booking?.bookingRef || ""} is awaiting verification. Your QR pass activates as soon as an admin confirms the payment — you will get a notification.`}
               </p>
-              {!doneIsFree && whatsappUrl && (
-                <a
-                  href={whatsappUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-[#128C4B] hover:bg-[#0f7a41] transition-colors"
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  <span>Share proof on WhatsApp</span>
-                </a>
+              {!doneIsFree && (
+                <WhatsAppFollowUp purpose={`Event pass — ${event?.title || "event"}`} reference={booking?.bookingRef} />
               )}
               <div>
                 <button

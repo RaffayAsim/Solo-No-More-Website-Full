@@ -1451,3 +1451,12 @@ article.nokia-panel h3 {
 
 
 
+
+/* ── Public website: sharp corners everywhere ─────────────────────────────
+   Every button, card, input, badge and image on the public site is square-cornered.
+   The member dashboard and admin panel (wrapped in [data-app-shell]) keep their look. */
+body:not(:has([data-app-shell])) *:not(input[type="radio"]):not(input[type="checkbox"]),
+body:not(:has([data-app-shell])) *::before,
+body:not(:has([data-app-shell])) *::after {
+  border-radius: 0 !important;
+}

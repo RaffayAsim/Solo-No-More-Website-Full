@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import OverlapFeatureCards from "./OverlapFeatureCards";
 import BeaconSimulator from "./BeaconSimulator";
-import SignUpDropdown from "./SignUpDropdown";
+import SiteNavbar from "./SiteNavbar";
 import { supabase } from "@/lib/supabase/client";
 import EventQuickPreviewModal, { EventPreviewData } from "./events/EventQuickPreviewModal";
 import type { PublicBeaconSummary, PublicEventSummary } from "@/app/actions/public-events";
@@ -532,79 +532,7 @@ export default function LandingPageClient({
 
   return (
     <div className="min-h-screen flex flex-col font-sans" style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}>
-      {/* ── 2. NAVBAR (MATCHING SUBPAGES, NON-STICKY) ── */}
-      {/* ── 2. NAVBAR (MATCHING SUBPAGES, NON-STICKY) ── */}
-      <header
-        className="px-3 py-3 sm:px-6 sm:py-5 md:px-10 w-full flex items-center justify-between gap-2 sm:gap-4 relative z-[60]"
-        style={{
-          background: "transparent",
-        }}
-      >
-        {/* Left: Brand Logo on far-left edge */}
-        <Link href="/" style={{ textDecoration: "none" }} className="flex items-center shrink-0 cursor-pointer group">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/logo.png"
-            alt="solo-no-more"
-            className="h-9 sm:h-11 md:h-12 lg:h-[52px] w-auto object-contain transition-transform duration-200 group-hover:scale-105 drop-shadow-[0_2px_14px_rgba(255,90,31,0.4)]"
-          />
-        </Link>
-
-        {/* Center: Clean Subpage-matching Navbar Links */}
-        <nav className="hidden xl:flex items-center gap-1">
-          {[
-            { href: "/events", label: "Browse Events" },
-            { href: "/how-it-works", label: "How Beacon Works" },
-            { href: "/memberships", label: "Memberships" },
-            { href: "/partners", label: "Partners" },
-            { href: "/sell-tickets", label: "Sell Tickets" },
-            { href: "/about", label: "About" },
-            { href: "/contact", label: "Contact" },
-          ].map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              style={{
-                color: "#FFFFFF",
-                fontWeight: 700,
-                fontSize: "13.5px",
-                textShadow: "0 1px 4px rgba(0, 0, 0, 0.95)",
-                textDecoration: "none",
-                padding: "8px 13px",
-                borderRadius: "8px",
-                letterSpacing: "-0.01em",
-                transition: "all 0.15s ease",
-              }}
-              className="hover:bg-white/10 hover:text-[#FF8A3D] active:scale-95 cursor-pointer"
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-
-        {/* Right Action Buttons */}
-        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-          <Link
-            href="/login"
-            style={{
-              background: "rgba(18, 18, 24, 0.78)",
-              border: "1px solid rgba(255, 255, 255, 0.22)",
-              color: "#FFFFFF",
-              fontWeight: 800,
-              textDecoration: "none",
-              borderRadius: "8px",
-              backdropFilter: "blur(12px)",
-              WebkitBackdropFilter: "blur(12px)",
-              boxShadow: "0 4px 14px rgba(0, 0, 0, 0.3)",
-              transition: "background 0.15s ease, transform 0.15s ease",
-            }}
-            className="hover:bg-white/20 active:scale-95 cursor-pointer inline-flex items-center text-xs sm:text-[13.5px] px-2.5 py-1.5 sm:px-4 sm:py-2 whitespace-nowrap shrink-0"
-          >
-            Sign In
-          </Link>
-          <SignUpDropdown />
-        </div>
-      </header>
+      <SiteNavbar />
 
       {/* ── 3. HERO SECTION (TEXTURED FILM GRAIN + ORANGE/BLACK GRADIENT + USER PHOTO) ── */}
       <section
@@ -815,26 +743,6 @@ export default function LandingPageClient({
               </Link>
             </div>
 
-            {/* Mobile Community Stats Bar */}
-            <div
-              className="flex md:hidden items-center gap-4 mt-6 pt-4 border-t border-white/10"
-              style={{ maxWidth: "420px" }}
-            >
-              <div>
-                <div style={{ fontSize: "18px", fontWeight: 900, color: "#FFA05C" }}>500+</div>
-                <div style={{ fontSize: "10.5px", fontWeight: 700, color: "rgba(255, 255, 255, 0.6)", textTransform: "uppercase", letterSpacing: "0.04em" }}>Vetted Members</div>
-              </div>
-              <div style={{ width: "1px", height: "24px", background: "rgba(255, 255, 255, 0.15)" }} />
-              <div>
-                <div style={{ fontSize: "18px", fontWeight: 900, color: "#FFFFFF" }}>14</div>
-                <div style={{ fontSize: "10.5px", fontWeight: 700, color: "rgba(255, 255, 255, 0.6)", textTransform: "uppercase", letterSpacing: "0.04em" }}>Tonight's Squads</div>
-              </div>
-              <div style={{ width: "1px", height: "24px", background: "rgba(255, 255, 255, 0.15)" }} />
-              <div>
-                <div style={{ fontSize: "18px", fontWeight: 900, color: "#3DDC97" }}>0%</div>
-                <div style={{ fontSize: "10.5px", fontWeight: 700, color: "rgba(255, 255, 255, 0.6)", textTransform: "uppercase", letterSpacing: "0.04em" }}>Ghosting Rate</div>
-              </div>
-            </div>
 
           </div>
         </div>
@@ -2332,7 +2240,7 @@ export default function LandingPageClient({
               margin: "0 0 20px",
             }}
           >
-            {reviewWallData?.tagline || "Tag @solonomore on Instagram to get featured on the Review Wall"}
+            {reviewWallData?.tagline || "Tag @solonomore.pk on Instagram to get featured on the Review Wall"}
           </p>
 
           {/* Pill Toggle Button: [ STORIES FROM THE LAST EVENT ] */}
@@ -2361,13 +2269,13 @@ export default function LandingPageClient({
             {WALL_TILE_LAYOUT.map((layout, i) => {
               const slot = rSlots[i] || {};
               const img = slot.image_url || layout.fallbackImg;
-              const handle = (slot.author || "@solonomore").trim();
+              const handle = (slot.author || "@solonomore.pk").trim();
               const caption = (slot.venue || "").trim();
               const isReel = slot.type === "reel";
               return (
                 <a
                   key={i}
-                  href={slot.url || "https://www.instagram.com/solonomore"}
+                  href={slot.url || "https://www.instagram.com/solonomore.pk/"}
                   target="_blank"
                   rel="noopener noreferrer"
                   className={`${layout.span} rounded-3xl overflow-hidden relative group border border-white/15 bg-[#160C10] transition-all duration-300 hover:border-[#FF5A1F]`}
@@ -2400,7 +2308,7 @@ export default function LandingPageClient({
             })}
           </div>
 
-          {/* Bottom Pill Action: [ 📷 Tag @solonomore on your post and we'll showcase you here! ] */}
+          {/* Bottom Pill Action: [ 📷 Tag @solonomore.pk on your post and we'll showcase you here! ] */}
           <div style={{ display: "flex", justifyContent: "center" }}>
             <a
               href="https://instagram.com"
@@ -2424,7 +2332,7 @@ export default function LandingPageClient({
               className="hover:scale-105 hover:border-[#FF5A1F] hover:shadow-[0_10px_32px_rgba(255,90,31,0.4)]"
             >
               <InstagramIcon className="w-4 h-4 text-[#FF5A1F]" />
-              <span>Tag @solonomore on your post and we&apos;ll showcase you here!</span>
+              <span>Tag @solonomore.pk on your post and we&apos;ll showcase you here!</span>
             </a>
           </div>
         </div>

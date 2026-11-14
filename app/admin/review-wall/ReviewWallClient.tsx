@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { ReviewWallData, ReviewWallSlot, saveReviewWallDataAction } from "@/app/actions/review-wall";
 import { compressImageFile } from "@/lib/image-compress";
 import {
@@ -41,6 +42,11 @@ export default function ReviewWallClient({ initialData }: ReviewWallClientProps)
   const [heading, setHeading] = useState(initialData.heading);
   const [tagline, setTagline] = useState(initialData.tagline);
   const [slots, setSlots] = useState<ReviewWallSlot[]>(initialData.slots);
+  const router = useRouter();
+  // After a save the server returns the stored pictures — show them in the slot previews.
+  useEffect(() => {
+    setSlots(initialData.slots);
+  }, [initialData]);
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
@@ -96,12 +102,16 @@ export default function ReviewWallClient({ initialData }: ReviewWallClientProps)
     const res = await saveReviewWallDataAction(payload);
     setLoading(false);
 
-    if (res.success) {
+    if (res.success && res.warning) {
+      setFeedback({ type: "error", text: res.warning });
+      router.refresh();
+    } else if (res.success) {
       setFeedback({
         type: "success",
-        text: "✓ Review Wall updated successfully! The home page now reflects your changes.",
+        text: "✓ Review Wall updated! Post pictures were pulled from Instagram — the home page now shows them.",
       });
-      setTimeout(() => setFeedback(null), 4000);
+      router.refresh();
+      setTimeout(() => setFeedback(null), 5000);
     } else {
       setFeedback({
         type: "error",
@@ -242,7 +252,7 @@ export default function ReviewWallClient({ initialData }: ReviewWallClientProps)
             type="text"
             value={tagline}
             onChange={(e) => setTagline(e.target.value)}
-            placeholder="Tag @solonomore on Instagram to get featured on the Review Wall"
+            placeholder="Tag @solonomore.pk on Instagram to get featured on the Review Wall"
             style={{
               width: "100%",
               padding: "12px 16px",
@@ -402,7 +412,7 @@ export default function ReviewWallClient({ initialData }: ReviewWallClientProps)
                   type="text"
                   value={slot.author || ""}
                   onChange={(e) => handleSlotFieldChange(index, "author", e.target.value)}
-                  placeholder="@solonomore"
+                  placeholder="@solonomore.pk"
                   maxLength={40}
                   aria-label={`Slot ${index + 1} Instagram handle`}
                   className="focus:border-[#FF6F26] transition-colors"

@@ -306,7 +306,7 @@ export default function ChatsDashboardClient({
 
   const handleCopyInstagramTag = async () => {
     try {
-      await navigator.clipboard.writeText("@solonomore");
+      await navigator.clipboard.writeText("@solonomore.pk");
       setCopiedInstagramTag(true);
       setTimeout(() => setCopiedInstagramTag(false), 2500);
     } catch {}
@@ -1073,7 +1073,7 @@ export default function ChatsDashboardClient({
                           className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-pink-500/20 hover:bg-pink-500/30 text-pink-300 border border-pink-500/30 flex items-center gap-1.5 transition-colors cursor-pointer self-start sm:self-auto shrink-0"
                         >
                           <InstagramIcon className="w-3.5 h-3.5 text-pink-400" />
-                          <span>{copiedInstagramTag ? "Copied @tag!" : "Tag Us @solonomore"}</span>
+                          <span>{copiedInstagramTag ? "Copied @tag!" : "Tag Us @solonomore.pk"}</span>
                         </button>
                       </div>
 
@@ -1743,7 +1743,7 @@ export default function ChatsDashboardClient({
           shareUrl={
             typeof window !== "undefined"
               ? `${window.location.origin}/b/${selectedBeacon.id.slice(0, 8)}`
-              : `https://solonomore.com/b/${selectedBeacon.id.slice(0, 8)}`
+              : `https://solonomore.online/b/${selectedBeacon.id.slice(0, 8)}`
           }
           shareText={`Join my squad meetup "${selectedBeacon.title}" on Solo-No-More!`}
           type="beacon"

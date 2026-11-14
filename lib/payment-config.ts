@@ -83,22 +83,25 @@ export function formatWhatsAppNumber(digits: string): string {
   return `+${digits}`;
 }
 
-/** Builds a wa.me link that opens a chat with the payments desk, message pre-filled. */
+/**
+ * Optional follow-up after the proof was already submitted on the website. The proof
+ * is in the admin queue, so the message only asks for a quicker confirmation — it never
+ * asks the customer to send the screenshot again.
+ */
 export function buildWhatsAppProofLink(details: {
-  purpose: string;
-  amountPkr: number;
+  purpose?: string;
+  amountPkr?: number;
   reference?: string;
   transactionRef?: string;
   payerName?: string;
 }): string {
   const lines = [
-    "Assalam o Alaikum, I have made a payment to Solo-No-More.",
-    `Purpose: ${details.purpose}`,
-    `Amount: PKR ${Number(details.amountPkr || 0).toLocaleString("en-US")}`,
-    details.reference ? `Booking Ref: ${details.reference}` : "",
-    details.transactionRef ? `Transaction ID: ${details.transactionRef}` : "",
+    "Assalam o Alaikum! I have submitted my payment proof on the Solo-No-More website.",
+    details.purpose ? `For: ${details.purpose}` : "",
+    details.amountPkr ? `Amount: PKR ${Number(details.amountPkr).toLocaleString("en-US")}` : "",
+    details.reference ? `Reference: ${details.reference}` : "",
     details.payerName ? `Name: ${details.payerName}` : "",
-    "I am attaching my payment screenshot here.",
+    "Could you please confirm it? Thank you!",
   ].filter(Boolean);
   return `https://wa.me/${PAYMENT_CONFIG.whatsappNumber}?text=${encodeURIComponent(lines.join("\n"))}`;
 }
@@ -112,6 +115,7 @@ export const APPLICATION_PACKAGES: Record<string, { monthly: number; annualTotal
   "Solo Pass Pro": { monthly: MEMBERSHIP_PLANS.member.monthly, annualTotal: MEMBERSHIP_PLANS.member.annualTotal },
   "Founder Circle VIP": { monthly: MEMBERSHIP_PLANS.family.monthly, annualTotal: MEMBERSHIP_PLANS.family.annualTotal },
   "Partner Residency": { monthly: 0, annualTotal: null },
+  "Artist Residency": { monthly: 0, annualTotal: null },
   // legacy names
   "Chai Scout / Explorer": { monthly: 0, annualTotal: null },
   "VIP Inner Circle": { monthly: MEMBERSHIP_PLANS.family.monthly, annualTotal: MEMBERSHIP_PLANS.family.annualTotal },

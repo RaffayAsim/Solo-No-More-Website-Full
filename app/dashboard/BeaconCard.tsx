@@ -155,7 +155,7 @@ export default function BeaconCard({
   const shortCode = beacon.id.length >= 8 ? beacon.id.slice(0, 8) : beacon.id;
   const shortUrl = typeof window !== "undefined"
     ? `${window.location.origin}/b/${shortCode}`
-    : `https://solonomore.com/b/${shortCode}`;
+    : `https://solonomore.online/b/${shortCode}`;
 
   const handleCopyShortLink = async () => {
     try {

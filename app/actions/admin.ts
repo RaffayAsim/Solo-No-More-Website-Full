@@ -27,7 +27,7 @@ export type AdminActionResult =
 /**
  * Server-side Authorization Guard.
  *
- * - Not signed in            → redirect to /login
+ * - Not signed in            → redirect to /admin-login
  * - Signed in, not an admin  → redirect to /dashboard
  * - Sub-admin without the requested `permission` → throws (callers turn this into an
  *   "Unauthorized" result). Root admins hold every permission. Pass "root" for
@@ -38,7 +38,7 @@ export async function verifyAdminStatus(
 ): Promise<{ userId: string; email: string | undefined; isRoot: boolean }> {
   const access = await getAdminAccess();
   if (!access.ok) {
-    redirect(access.reason === "unauthenticated" ? "/login" : "/dashboard");
+    redirect(access.reason === "unauthenticated" ? "/admin-login" : "/dashboard");
   }
   if (permission && !access.isRoot && !access.permissions.includes(permission)) {
     throw new Error("Your sub-admin role does not include this permission.");

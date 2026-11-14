@@ -19,7 +19,7 @@ export default function PublicBeaconInviteCard({
   const shortCode = beaconId.length >= 8 ? beaconId.slice(0, 8) : beaconId;
   const shortUrl = typeof window !== "undefined"
     ? `${window.location.origin}/b/${shortCode}`
-    : `https://solonomore.com/b/${shortCode}`;
+    : `https://solonomore.online/b/${shortCode}`;
 
   const handleCopy = async () => {
     try {

@@ -162,7 +162,7 @@ export default function EarlyBirdPage() {
   };
 
   const shareText = encodeURIComponent(
-    `I just claimed my Early Bird VIP Pass for Solo-No-More! Never go out alone again — find your IRL vibe squad here: https://solonomore.com/early-bird`
+    `I just claimed my Early Bird VIP Pass for Solo-No-More! Never go out alone again — find your IRL vibe squad here: https://solonomore.online/early-bird`
   );
 
   const handleCopyLink = () => {

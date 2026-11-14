@@ -1,6 +1,6 @@
 // Flow H: session handling. With a missing, corrupt, expired or tampered session cookie,
 // /dashboard ends on /login exactly once — no redirect loop — and a tampered JWT is never accepted.
-import { BASE, launch, newPage, login, step, check, finish, ensureUser, plusEmail, logOffset, serverErrorsSince, sleep } from "./lib.mjs";
+import { BASE, launch, newPage, login, step, check, finish, ensureUser, plusEmail, logOffset, serverErrorsSince, sleep, OUT } from "./lib.mjs";
 import { COMPLETE_PROFILE } from "./shared.mjs";
 
 const COOKIE = "sb-dmmgzpiskyocdsxamrgf-auth-token";
@@ -106,7 +106,10 @@ await step("H tampered JWT claiming admin's id cannot open /admin", async () => 
   await setCookie(c, writeTokens([forged, "invalid-refresh"]));
   await c.page.goto(`${BASE}/admin`, { waitUntil: "domcontentloaded" }).catch(() => {});
   await sleep(4000);
-  if (/^\/admin/.test(new URL(c.page.url()).pathname) && (await c.page.getByText("Admin Panel").count())) return "forged token opened the admin panel";
+  await c.page.screenshot({ path: `${OUT}/h-forged-admin.png` }).catch(() => {});
+  // /admin-login (the team sign-in page) is the correct outcome; only the real panel counts as a breach.
+  const at = new URL(c.page.url()).pathname;
+  if (/^\/admin(\/|$)/.test(at) && (await c.page.getByText("OPS COMMAND CENTER").count())) return `forged token opened the admin panel (${at})`;
 });
 
 const errs = serverErrorsSince(off).filter((l) => !/JWT|jwt|signature|session/i.test(l));

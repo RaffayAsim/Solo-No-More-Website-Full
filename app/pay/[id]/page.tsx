@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import BankTransferPanel from "@/components/payments/BankTransferPanel";
+import WhatsAppFollowUp from "@/components/payments/WhatsAppFollowUp";
 import { getApplicationByIdAction, submitApplicationPaymentAction, MemberApplicationRecord } from "@/app/actions/member-applications";
 import {
   CreditCard,
@@ -25,7 +26,6 @@ export default function ApplicationPaymentPage() {
 
   const [application, setApplication] = useState<MemberApplicationRecord | null>(null);
   const [loading, setLoading] = useState(true);
-  const [transactionRef, setTransactionRef] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("bank_transfer");
   const [proofImage, setProofImage] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
@@ -61,7 +61,6 @@ export default function ApplicationPaymentPage() {
     setErrorMsg(null);
 
     const res = await submitApplicationPaymentAction(id, {
-      transactionRef: transactionRef.trim(),
       paymentMethod,
       proofImageUrl: proofImage || undefined,
     });
@@ -180,7 +179,7 @@ export default function ApplicationPaymentPage() {
               <div>
                 {/* Proof Submission Form */}
                 <form onSubmit={handlePaymentSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                  <h3 style={{ fontSize: "16px", fontWeight: 800, margin: 0 }}>Submit Payment Screenshot &amp; Reference</h3>
+                  <h3 style={{ fontSize: "16px", fontWeight: 800, margin: 0 }}>Pay &amp; upload your screenshot</h3>
 
                   {errorMsg && (
                     <div style={{ background: "rgba(235,57,57,0.15)", border: "1px solid rgba(235,57,57,0.3)", borderRadius: "10px", padding: "10px 14px", color: "#FF6B6B", fontSize: "13px" }}>
@@ -195,8 +194,6 @@ export default function ApplicationPaymentPage() {
                     payerName={application.fullName}
                     proofImage={proofImage || null}
                     onProofImageChange={(value) => setProofImage(value || "")}
-                    transactionRef={transactionRef}
-                    onTransactionRefChange={setTransactionRef}
                     disabled={submitting}
                   />
 
@@ -216,7 +213,7 @@ export default function ApplicationPaymentPage() {
                       boxShadow: "0 8px 24px rgba(255,90,31,0.4)",
                     }}
                   >
-                    {submitting ? "SUBMITTING PROOF…" : "CONFIRM PAYMENT PROOF"}
+                    {submitting ? "SUBMITTING PROOF…" : "SUBMIT PAYMENT PROOF"}
                   </button>
                 </form>
               </div>
@@ -228,11 +225,14 @@ export default function ApplicationPaymentPage() {
                 <CheckCircle2 className="w-14 h-14 text-[#27C93F] mx-auto mb-3" />
                 <h3 style={{ fontSize: "22px", fontWeight: 900, margin: "0 0 8px" }}>Payment Proof Received!</h3>
                 <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.75)", lineHeight: 1.6, maxWidth: "460px", margin: "0 auto 20px" }}>
-                  Your payment proof is queued for admin verification. Once verified, your credential setup link will unlock right here.
+                  Thanks! Your screenshot has been sent to our admin team. Once they verify the payment, we&apos;ll email you a link to create your password — the same link also appears on this page.
                 </p>
-                <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)" }}>
-                  Verified automatically during business hours (typically &lt; 2 hours).
-                </div>
+                <WhatsAppFollowUp
+                  purpose={`Membership — ${application.packageSelected}`}
+                  amountPkr={application.packagePricePkr}
+                  reference={id}
+                  payerName={application.fullName}
+                />
               </div>
             )}
 

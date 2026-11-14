@@ -233,61 +233,6 @@ function LoginForm() {
             </p>
           </div>
 
-          {/* Role Selector Tabs */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-              gap: "3px",
-              background: "rgba(0,0,0,0.45)",
-              border: "1px solid rgba(255,255,255,0.1)",
-              borderRadius: "14px",
-              padding: "4px",
-              marginBottom: "24px",
-              width: "100%",
-            }}
-          >
-            {[
-              { id: "member", label: "Member", icon: UserCheck },
-              { id: "artist", label: "Artist", icon: Mic2 },
-              { id: "partner", label: "Partner", icon: Store },
-              { id: "team", label: "Admin", icon: Shield },
-            ].map((role) => {
-              const Icon = role.icon;
-              const isSelected = loginRole === role.id;
-              return (
-                <button
-                  key={role.id}
-                  type="button"
-                  onClick={() => {
-                    setLoginRole(role.id as any);
-                    setError(null);
-                  }}
-                  style={{
-                    padding: "8px 2px",
-                    borderRadius: "10px",
-                    fontSize: "clamp(10.5px, 2.7vw, 12px)",
-                    fontWeight: 800,
-                    border: "none",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "4px",
-                    background: isSelected ? "linear-gradient(135deg, #FF6F26 0%, #FF5A1F 100%)" : "transparent",
-                    color: isSelected ? "#fff" : "rgba(255,255,255,0.6)",
-                    boxShadow: isSelected ? "0 4px 14px rgba(255,90,31,0.4)" : "none",
-                    transition: "all 0.15s ease",
-                    minWidth: 0,
-                  }}
-                >
-                  <Icon className="w-3.5 h-3.5 shrink-0" />
-                  <span className="truncate">{role.label}</span>
-                </button>
-              );
-            })}
-          </div>
-
           {/* Error Alert */}
           {error && (
             <div
@@ -408,7 +353,7 @@ function LoginForm() {
               }}
               className="hover:scale-[1.02] active:scale-98"
             >
-              <span>{isLoading ? "AUTHENTICATING…" : `LOGIN TO ${loginRole.toUpperCase()}`}</span>
+              <span>{isLoading ? "SIGNING IN…" : "LOG IN"}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>
@@ -423,6 +368,12 @@ function LoginForm() {
             >
               Apply to Join Club
             </Link>
+            <div style={{ marginTop: "14px", fontSize: "12.5px", color: "rgba(255,255,255,0.45)" }}>
+              Venue, brand or artist?{" "}
+              <Link href="/portal?mode=signin" style={{ color: "rgba(255,255,255,0.7)", textDecoration: "underline" }}>
+                Use the partner &amp; artist portal
+              </Link>
+            </div>
           </div>
         </div>
       </main>

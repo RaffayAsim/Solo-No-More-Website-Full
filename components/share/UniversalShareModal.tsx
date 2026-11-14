@@ -88,7 +88,7 @@ export default function UniversalShareModal({
 
   const handleCopyTag = async () => {
     try {
-      await navigator.clipboard.writeText("@solonomore");
+      await navigator.clipboard.writeText("@solonomore.pk");
       setCopiedTag(true);
       setTimeout(() => setCopiedTag(false), 2500);
     } catch {}
@@ -230,7 +230,7 @@ export default function UniversalShareModal({
           </div>
           <p className="text-[11px] text-zinc-300 leading-relaxed">
             Share hangout selfies or event stories on Instagram and tag{" "}
-            <strong className="text-pink-300">@solonomore</strong> to get your squad featured on our official platform highlights!
+            <strong className="text-pink-300">@solonomore.pk</strong> to get your squad featured on our official platform highlights!
           </p>
         </div>
       </div>

@@ -114,6 +114,26 @@ export async function waitForEmail(offset, subjectPart, { count = 1, timeoutMs =
   }
   return found;
 }
+/**
+ * Completes the "Send verification code → enter code → Verify" step of a signup form.
+ * The server logs the code as [e2e-email-code] only when E2E_EMAIL_LOG=1 (never in production).
+ */
+export async function verifyEmailInForm(page, email, { timeoutMs = 30000 } = {}) {
+  const offset = logOffset();
+  await page.getByRole("button", { name: /Send verification code/ }).locator("visible=true").first().click();
+  const want = email.toLowerCase();
+  const end = Date.now() + timeoutMs;
+  let code = null;
+  while (!code && Date.now() < end) {
+    for (const m of logSince(offset).matchAll(/\[e2e-email-code\] (\S+) (\d{6})/g)) if (m[1] === want) code = m[2];
+    if (!code) await sleep(400);
+  }
+  if (!code) throw new Error("verification code was not logged for " + email);
+  await page.getByLabel("Email verification code").locator("visible=true").first().fill(code);
+  await page.getByRole("button", { name: "Verify", exact: true }).locator("visible=true").first().click();
+  await page.getByText("Email verified").locator("visible=true").first().waitFor({ timeout: 15000 });
+}
+
 export function serverErrorsSince(offset) {
   return logSince(offset)
     .split(/\r?\n/)
@@ -153,7 +173,9 @@ export function randomPassword(len = 24) {
   return Array.from(bytes, (b) => chars[b % chars.length]).join("");
 }
 export function plusEmail(tag) {
-  const [user, domain] = (process.env.SMTP_USER || "thesolonomore@gmail.com").split("@");
+  // A real inbox: E2E_INBOX, else SMTP_USER if it is an address (it is not with Resend, whose SMTP user is "resend").
+  const inbox = [process.env.E2E_INBOX, process.env.SMTP_USER, "thesolonomore@gmail.com"].find((v) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v || ""));
+  const [user, domain] = inbox.split("@");
   return `${user}+test-${tag}-${RUN_ID}@${domain}`.toLowerCase();
 }
 

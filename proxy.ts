@@ -47,13 +47,17 @@ export function proxy(request: NextRequest) {
   // The signature is verified server-side in lib/supabase/session.ts.
   const isLoggedIn = hasUnexpiredSession(sessionCookie?.value);
 
-  const isProtectedRoute = protectedRoutes.some((route) =>
-    pathname.startsWith(route)
-  );
-  const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route));
+  // Whole path segments only: "/admin-login" is NOT under "/admin".
+  const under = (route: string) => pathname === route || pathname.startsWith(route + "/");
+  const isProtectedRoute = protectedRoutes.some(under);
+  const isAuthRoute = authRoutes.some(under);
 
   // 1. Redirect unauthenticated users away from protected routes
   if (isProtectedRoute && !isLoggedIn) {
+    // Team → team sign-in; partner/artist hubs → their portal; everyone else → member login.
+    if (under("/admin")) return NextResponse.redirect(new URL("/admin-login", request.nextUrl));
+    if (under("/dashboard/partner")) return NextResponse.redirect(new URL("/portal?type=partner&mode=signin", request.nextUrl));
+    if (under("/dashboard/artist")) return NextResponse.redirect(new URL("/portal?type=artist&mode=signin", request.nextUrl));
     const loginUrl = new URL("/login", request.nextUrl);
     loginUrl.searchParams.set("redirect", pathname + request.nextUrl.search); // preserve destination
     return NextResponse.redirect(loginUrl);

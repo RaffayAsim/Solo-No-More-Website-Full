@@ -15,10 +15,18 @@ export default async function AdminLayout({
   await verifyAdminStatus();
 
   // Fetch real platform totals for header figures (Total Users, Total Events, Total Bookings)
-  const [profilesCountRes, eventsCountRes, bookingsCountRes] = await Promise.all([
+  const [profilesCountRes, eventsCountRes, bookingsCountRes, appsToActRes, paymentsToActRes] = await Promise.all([
     (supabaseAdmin.from("profiles") as any).select("*", { count: "exact", head: true }),
     (supabaseAdmin.from("official_events") as any).select("*", { count: "exact", head: true }),
     (supabaseAdmin.from("event_tickets") as any).select("*", { count: "exact", head: true }),
+    // Badges: applications waiting for a decision or with a payment proof to verify,
+    // and event/upgrade payment proofs waiting for review.
+    (supabaseAdmin.from("membership_applications") as any)
+      .select("*", { count: "exact", head: true })
+      .in("status", ["pending_admin_approval", "payment_submitted"]),
+    (supabaseAdmin.from("payment_submissions") as any)
+      .select("*", { count: "exact", head: true })
+      .eq("status", "pending"),
   ]);
 
   const totalUsers = profilesCountRes.count ?? 0;
@@ -27,6 +35,7 @@ export default async function AdminLayout({
 
   return (
     <div
+      data-app-shell="admin"
       style={{
         minHeight: "100vh",
         display: "flex",
@@ -72,6 +81,8 @@ export default async function AdminLayout({
         totalUsers={totalUsers}
         totalEvents={totalEvents}
         totalBookings={totalBookings}
+        applicationsToReview={appsToActRes.count ?? 0}
+        paymentsToReview={paymentsToActRes.count ?? 0}
       />
 
       {/* Main command content pane - expansive full-width canvas */}

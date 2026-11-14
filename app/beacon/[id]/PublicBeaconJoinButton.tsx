@@ -46,7 +46,7 @@ export default function PublicBeaconJoinButton({
   const shortUrl =
     typeof window !== "undefined"
       ? `${window.location.origin}/b/${shortCode}`
-      : `https://solonomore.com/b/${shortCode}`;
+      : `https://solonomore.online/b/${shortCode}`;
 
   useEffect(() => {
     if (shouldAutoJoin && isLoggedIn && !isHost && !isFull && beacon.status === "active") {

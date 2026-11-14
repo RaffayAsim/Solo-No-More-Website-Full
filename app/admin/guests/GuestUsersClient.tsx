@@ -831,7 +831,31 @@ export default function GuestUsersClient({ initialGuests }: GuestUsersClientProp
 
               <div>
                 <label style={{ fontSize: "11px", fontWeight: 700, color: "rgba(255,255,255,0.6)", textTransform: "uppercase" }}>
-                  Bio / Notes
+                  Instagram (from signup)
+                </label>
+                <div style={{ marginTop: "6px", fontSize: "13px", fontWeight: 600 }}>
+                  {selectedGuest?.instagram ? (
+                    <a
+                      href={
+                        /^https?:\/\//i.test(selectedGuest.instagram)
+                          ? selectedGuest.instagram
+                          : `https://instagram.com/${selectedGuest.instagram.replace(/^@/, "")}`
+                      }
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{ color: "#FF8A3D" }}
+                    >
+                      {selectedGuest.instagram}
+                    </a>
+                  ) : (
+                    <span style={{ color: "rgba(255,255,255,0.4)" }}>Not provided</span>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: "11px", fontWeight: 700, color: "rgba(255,255,255,0.6)", textTransform: "uppercase" }}>
+                  Your Vibe / Preferred Activities
                 </label>
                 <textarea
                   rows={3}

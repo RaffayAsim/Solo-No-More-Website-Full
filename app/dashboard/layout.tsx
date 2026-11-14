@@ -206,6 +206,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div
+      data-app-shell="dashboard"
       style={{
         minHeight: "100vh",
         display: "flex",

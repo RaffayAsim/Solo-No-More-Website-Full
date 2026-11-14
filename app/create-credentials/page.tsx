@@ -91,7 +91,10 @@ function CreateCredentialsContent() {
     }
 
     setSuccess(true);
-    setTimeout(() => router.push("/dashboard"), 1500);
+    // Partners and artists land on their own hub.
+    const pkg = (application?.packageSelected || "").toLowerCase();
+    const home = pkg.includes("artist") ? "/dashboard/artist" : application?.type === "partner" ? "/dashboard/partner" : "/dashboard";
+    setTimeout(() => router.push(home), 1500);
   };
 
   return (

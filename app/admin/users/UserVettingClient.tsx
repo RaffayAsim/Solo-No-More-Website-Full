@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import { SIGNUP_CITIES, SIGNUP_INTERESTS } from "@/lib/signup-options";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   adminUpdateUserStatusAction,
@@ -73,6 +74,8 @@ export interface UnifiedUserRecord {
   instagramScreenshots: string[];
   instagram: string;
   packageSelected: string;
+  /** Raw membership_applications.status, when this user came through /apply. */
+  applicationStatus?: string;
   paymentMethod?: string;
   transactionRef?: string;
   inviteToken?: string;
@@ -188,7 +191,7 @@ export default function UserVettingClient({ initialUsers }: UserVettingClientPro
     setEditCnic(user.cnic || "");
     setEditCity(user.city || "Karachi");
     setEditAddress(user.address || "");
-    setEditGender(user.gender || "Male");
+    setEditGender(user.gender || "Prefer not to say");
     setEditDateOfBirth(user.dateOfBirth || "");
     setEditEmergencyName(user.emergencyContactName || "");
     setEditEmergencyPhone(user.emergencyContactPhone || "");
@@ -196,7 +199,7 @@ export default function UserVettingClient({ initialUsers }: UserVettingClientPro
     setEditBio(user.bio || "");
     setEditProfilePic(user.profilePictureUrl || "");
     setEditCnicPic(user.cnicPictureUrl || "");
-    setEditVibeTags(Array.isArray(user.vibeTags) && user.vibeTags.length > 0 ? user.vibeTags : ["Techno & House"]);
+    setEditVibeTags(Array.isArray(user.vibeTags) ? user.vibeTags : []);
     const initialIgShot = user.instagramScreenshotUrl || (user.instagramScreenshots && user.instagramScreenshots[0]) || "";
     setEditInstagramShot(initialIgShot);
     setEditInstagramShots(user.instagramScreenshots || []);
@@ -828,8 +831,33 @@ export default function UserVettingClient({ initialUsers }: UserVettingClientPro
                       {/* Actions: View Details */}
                       <td style={{ padding: "16px 20px", textAlign: "right" }}>
                         <div style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                          {/* Payment proof uploaded — verify it on the Applications page */}
+                          {user.applicationStatus === "payment_submitted" && user.applicationId && (
+                            <a
+                              href={`/admin/applications?id=${encodeURIComponent(user.applicationId)}`}
+                              title="Payment screenshot received — open it to verify"
+                              style={{
+                                background: "rgba(16, 185, 129, 0.18)",
+                                border: "1px solid rgba(16, 185, 129, 0.45)",
+                                color: "#34D399",
+                                padding: "6px 10px",
+                                borderRadius: "8px",
+                                fontSize: "11px",
+                                fontWeight: 800,
+                                textDecoration: "none",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              <CreditCard size={12} />
+                              <span>Verify payment</span>
+                            </a>
+                          )}
+
                           {/* Quick Invoice Link button for payment pending */}
-                          {user.status === "payment_pending" && (
+                          {user.status === "payment_pending" && user.applicationStatus !== "payment_submitted" && (
                             <button
                               type="button"
                               onClick={() => {
@@ -975,6 +1003,14 @@ export default function UserVettingClient({ initialUsers }: UserVettingClientPro
                     <div style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.55)" }}>
                       @{editUsername} • {editEmail}
                     </div>
+                    {selectedUser?.applicationId && (
+                      <a
+                        href={`/admin/applications?id=${encodeURIComponent(selectedUser.applicationId)}`}
+                        style={{ fontSize: "11.5px", fontWeight: 800, color: "#FF8A3D", textDecoration: "underline" }}
+                      >
+                        View signup answers (as submitted) →
+                      </a>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1321,7 +1357,7 @@ export default function UserVettingClient({ initialUsers }: UserVettingClientPro
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
                   <div>
                     <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.7)", marginBottom: "6px" }}>
-                      Full Legal Name *
+                      Full Name *
                     </label>
                     <input
                       type="text"
@@ -1341,7 +1377,7 @@ export default function UserVettingClient({ initialUsers }: UserVettingClientPro
                   </div>
                   <div>
                     <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.7)", marginBottom: "6px" }}>
-                      WhatsApp / Phone *
+                      Phone *
                     </label>
                     <input
                       type="text"
@@ -1364,7 +1400,7 @@ export default function UserVettingClient({ initialUsers }: UserVettingClientPro
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "14px" }}>
                   <div>
                     <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.7)", marginBottom: "6px" }}>
-                      City Radar Hub *
+                      City *
                     </label>
                     <select
                       value={editCity}
@@ -1380,9 +1416,9 @@ export default function UserVettingClient({ initialUsers }: UserVettingClientPro
                         outline: "none",
                       }}
                     >
-                      <option value="Karachi">Karachi</option>
-                      <option value="Lahore">Lahore</option>
-                      <option value="Islamabad">Islamabad</option>
+                      {Array.from(new Set<string>([...SIGNUP_CITIES, editCity].filter(Boolean))).map((c) => (
+                        <option key={c} value={c}>{c === "Other" ? "Other City" : c}</option>
+                      ))}
                     </select>
                   </div>
 
@@ -1456,7 +1492,7 @@ export default function UserVettingClient({ initialUsers }: UserVettingClientPro
                   </div>
                   <div>
                     <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.7)", marginBottom: "6px" }}>
-                      Registered Email
+                      Email
                     </label>
                     <input
                       type="email"
@@ -1486,7 +1522,7 @@ export default function UserVettingClient({ initialUsers }: UserVettingClientPro
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
                   <div>
                     <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.7)", marginBottom: "6px" }}>
-                      CNIC Number (Optional)
+                      CNIC Number
                     </label>
                     <input
                       type="text"
@@ -1509,7 +1545,7 @@ export default function UserVettingClient({ initialUsers }: UserVettingClientPro
 
                   <div>
                     <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.7)", marginBottom: "6px" }}>
-                      Instagram Handle (@) *
+                      Instagram Username
                     </label>
                     <div style={{ position: "relative" }}>
                       <span style={{ position: "absolute", left: "12px", top: "10px", color: "rgba(255, 255, 255, 0.4)", fontSize: "13px" }}>@</span>
@@ -1588,21 +1624,10 @@ export default function UserVettingClient({ initialUsers }: UserVettingClientPro
 
                 <div>
                   <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.7)", marginBottom: "8px" }}>
-                    Selected Vibes
+                    Interests (from signup)
                   </label>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                    {[
-                      "Techno & House",
-                      "Late Night Chai",
-                      "Padel & Sports",
-                      "Live Music",
-                      "Rooftop Lounges",
-                      "Deep Beats",
-                      "Weekend Roadtrips",
-                      "Café Crawls",
-                      "Gaming & Tech",
-                      "Art & Culture",
-                    ].map((vibe) => {
+                    {Array.from(new Set<string>([...SIGNUP_INTERESTS, ...editVibeTags])).map((vibe) => {
                       const isSelected = editVibeTags.includes(vibe);
                       return (
                         <button
@@ -1632,7 +1657,7 @@ export default function UserVettingClient({ initialUsers }: UserVettingClientPro
 
                 <div>
                   <label style={{ display: "block", fontSize: "11.5px", fontWeight: 800, color: "rgba(255, 255, 255, 0.7)", marginBottom: "6px" }}>
-                    Personal Bio / Vibe Statement
+                    Vibe / Event Type
                   </label>
                   <textarea
                     rows={2}
@@ -1725,8 +1750,34 @@ export default function UserVettingClient({ initialUsers }: UserVettingClientPro
                   borderTop: "1px solid rgba(255, 255, 255, 0.08)",
                 }}
               >
-                {/* For pending members: Quick Approve & Send Invoice */}
-                {selectedUser && (selectedUser.status === "pending" || selectedUser.status === "payment_pending") && (
+                {/* Payment proof uploaded: verify it where the screenshot is shown */}
+                {selectedUser?.applicationStatus === "payment_submitted" && selectedUser.applicationId && (
+                  <a
+                    href={`/admin/applications?id=${encodeURIComponent(selectedUser.applicationId)}`}
+                    style={{
+                      background: "rgba(16, 185, 129, 0.18)",
+                      border: "1px solid rgba(16, 185, 129, 0.45)",
+                      color: "#34D399",
+                      padding: "9px 16px",
+                      borderRadius: "10px",
+                      fontSize: "12.5px",
+                      fontWeight: 800,
+                      textDecoration: "none",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      marginRight: "auto",
+                    }}
+                  >
+                    <CreditCard size={14} />
+                    <span>Payment proof received — Verify</span>
+                  </a>
+                )}
+
+                {/* For new applicants: Approve & Send Invoice (not once a proof is in) */}
+                {selectedUser &&
+                  selectedUser.applicationStatus !== "payment_submitted" &&
+                  (selectedUser.status === "pending" || selectedUser.status === "payment_pending") && (
                   <button
                     type="button"
                     onClick={() => handleApproveAndIssuePayment(selectedUser)}

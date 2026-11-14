@@ -78,7 +78,7 @@ export default function SellYourTicketPage() {
     {
       icon: Users,
       title: "Built-In Squad Discovery",
-      desc: "Tap into our nationwide network of over 12,000+ vetted youth actively looking for plans. Your event automatically pulses onto the live city radar feed.",
+      desc: "Tap into our community of vetted members actively looking for plans. Your event automatically pulses onto the live city radar feed.",
     },
     {
       icon: BarChart3,
@@ -387,238 +387,33 @@ export default function SellYourTicketPage() {
                 <Sparkles className="w-3.5 h-3.5" /> START TICKETING
               </div>
               <h2 style={{ fontSize: "clamp(26px, 4vw, 36px)", fontWeight: 900, margin: "0 0 10px", color: "#fff" }}>
-                Submit Your Event for Listing
-              </h2>
+                Host &amp; Sell Tickets with Us</h2>
               <p style={{ fontSize: "15px", color: "rgba(255,255,255,0.65)", margin: 0 }}>
-                Get your custom ticketing page, QR scanner access, and radar push notification.
-              </p>
+                Artists, organisers and venues apply through our Partner &amp; Artist Portal. Once approved you can list gigs, sell passes and scan guests at the door.</p>
             </div>
 
-            {submitted ? (
-              <div style={{ textAlign: "center", padding: "40px 20px" }}>
-                <ShieldCheck className="w-16 h-16 text-[#27C93F] mx-auto mb-4" />
-                <h3 style={{ fontSize: "24px", fontWeight: 900, margin: "0 0 8px" }}>Event Submitted for Review!</h3>
-                <p style={{ fontSize: "15px", color: "rgba(255,255,255,0.7)", maxWidth: "520px", margin: "0 auto 24px" }}>
-                  Thank you <strong>{hostName}</strong>. Your event <strong>&ldquo;{eventTitle}&rdquo;</strong> is being prepared. We will send your ticketing link and door QR scanner login to WhatsApp ({phone}) shortly.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setSubmitted(false)}
-                  style={{
-                    background: "rgba(255,255,255,0.1)",
-                    border: "none",
-                    color: "#fff",
-                    padding: "10px 24px",
-                    borderRadius: "10px",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                  }}
-                >
-                  List Another Event
-                </button>
-              </div>
-            ) : (
-              <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px" }}>
-                  <div>
-                    <label style={{ display: "block", fontSize: "12px", fontWeight: 800, color: "rgba(255,255,255,0.6)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "6px" }}>
-                      Host / Organizer Name
-                    </label>
-                    <input
-                      required
-                      value={hostName}
-                      onChange={(e) => setHostName(e.target.value)}
-                      placeholder="e.g. Ayesha &amp; Hamza"
-                      style={{
-                        width: "100%",
-                        background: "rgba(0,0,0,0.5)",
-                        border: "1px solid rgba(255,255,255,0.14)",
-                        borderRadius: "12px",
-                        padding: "12px 14px",
-                        color: "#fff",
-                        fontSize: "14px",
-                        outline: "none",
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: "block", fontSize: "12px", fontWeight: 800, color: "rgba(255,255,255,0.6)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "6px" }}>
-                      WhatsApp Phone Number
-                    </label>
-                    <input
-                      required
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="0300 1234567"
-                      style={{
-                        width: "100%",
-                        background: "rgba(0,0,0,0.5)",
-                        border: "1px solid rgba(255,255,255,0.14)",
-                        borderRadius: "12px",
-                        padding: "12px 14px",
-                        color: "#fff",
-                        fontSize: "14px",
-                        outline: "none",
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label style={{ display: "block", fontSize: "12px", fontWeight: 800, color: "rgba(255,255,255,0.6)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "6px" }}>
-                    Event Title
-                  </label>
-                  <input
-                    required
-                    value={eventTitle}
-                    onChange={(e) => setEventTitle(e.target.value)}
-                    placeholder="e.g. Sunset Acoustic Rooftop Jam"
-                    style={{
-                      width: "100%",
-                      background: "rgba(0,0,0,0.5)",
-                      border: "1px solid rgba(255,255,255,0.14)",
-                      borderRadius: "12px",
-                      padding: "12px 14px",
-                      color: "#fff",
-                      fontSize: "14px",
-                      outline: "none",
-                    }}
-                  />
-                </div>
-
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px" }}>
-                  <div>
-                    <label style={{ display: "block", fontSize: "12px", fontWeight: 800, color: "rgba(255,255,255,0.6)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "6px" }}>
-                      Venue &amp; Neighborhood
-                    </label>
-                    <input
-                      required
-                      value={venue}
-                      onChange={(e) => setVenue(e.target.value)}
-                      placeholder="e.g. District 19 or Chai Shai DHA"
-                      style={{
-                        width: "100%",
-                        background: "rgba(0,0,0,0.5)",
-                        border: "1px solid rgba(255,255,255,0.14)",
-                        borderRadius: "12px",
-                        padding: "12px 14px",
-                        color: "#fff",
-                        fontSize: "14px",
-                        outline: "none",
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: "block", fontSize: "12px", fontWeight: 800, color: "rgba(255,255,255,0.6)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "6px" }}>
-                      Target Date &amp; Time
-                    </label>
-                    <input
-                      required
-                      value={date}
-                      onChange={(e) => setDate(e.target.value)}
-                      placeholder="e.g. Friday, 9:00 PM"
-                      style={{
-                        width: "100%",
-                        background: "rgba(0,0,0,0.5)",
-                        border: "1px solid rgba(255,255,255,0.14)",
-                        borderRadius: "12px",
-                        padding: "12px 14px",
-                        color: "#fff",
-                        fontSize: "14px",
-                        outline: "none",
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px" }}>
-                  <div>
-                    <label style={{ display: "block", fontSize: "12px", fontWeight: 800, color: "rgba(255,255,255,0.6)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "6px" }}>
-                      Ticket Price (PKR)
-                    </label>
-                    <input
-                      required
-                      value={priceInput}
-                      onChange={(e) => setPriceInput(e.target.value)}
-                      placeholder="e.g. 1500 (or Free)"
-                      style={{
-                        width: "100%",
-                        background: "rgba(0,0,0,0.5)",
-                        border: "1px solid rgba(255,255,255,0.14)",
-                        borderRadius: "12px",
-                        padding: "12px 14px",
-                        color: "#fff",
-                        fontSize: "14px",
-                        outline: "none",
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: "block", fontSize: "12px", fontWeight: 800, color: "rgba(255,255,255,0.6)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "6px" }}>
-                      Capacity Limit
-                    </label>
-                    <input
-                      required
-                      value={capacity}
-                      onChange={(e) => setCapacity(e.target.value)}
-                      placeholder="e.g. 25 spots"
-                      style={{
-                        width: "100%",
-                        background: "rgba(0,0,0,0.5)",
-                        border: "1px solid rgba(255,255,255,0.14)",
-                        borderRadius: "12px",
-                        padding: "12px 14px",
-                        color: "#fff",
-                        fontSize: "14px",
-                        outline: "none",
-                      }}
-                    />
-                  </div>
-                </div>
-
-                {errorMsg && (
-                  <div
-                    style={{
-                      background: "rgba(239, 68, 68, 0.15)",
-                      border: "1px solid rgba(239, 68, 68, 0.4)",
-                      color: "#FCA5A5",
-                      padding: "10px 14px",
-                      borderRadius: "10px",
-                      fontSize: "13px",
-                      fontWeight: 600,
-                    }}
-                  >
-                    ⚠️ {errorMsg}
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  style={{
-                    marginTop: "8px",
-                    background: "linear-gradient(135deg, #FF6F26 0%, #FF5A1F 45%, #E6450A 100%)",
-                    border: "none",
-                    borderRadius: "14px",
-                    padding: "15px",
-                    color: "#fff",
-                    fontSize: "14.5px",
-                    fontWeight: 900,
-                    letterSpacing: "0.03em",
-                    cursor: "pointer",
-                    boxShadow: "0 10px 28px rgba(255, 90, 31, 0.45)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "8px",
-                    opacity: loading ? 0.75 : 1,
-                  }}
-                >
-                  <Send className="w-4 h-4" />
-                  {loading ? "CREATING EVENT LISTING…" : "LIST MY EVENT &amp; GET QR SCANNER"}
-                </button>
-              </form>
-            )}
+            {/* Partner & artist signup lives on one page: /portal (email-verified, checked data). */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "14px", textAlign: "center" }}>
+              <Link
+                href="/portal?type=artist"
+                style={{
+                  background: "#FF5A1F",
+                  color: "#fff",
+                  padding: "14px 28px",
+                  fontSize: "15px",
+                  fontWeight: 900,
+                  textDecoration: "none",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                Apply on the Artist Portal →
+              </Link>
+              <Link href="/portal?type=artist&mode=signin" style={{ color: "rgba(255,255,255,0.65)", fontSize: "13px" }}>
+                Already approved? Sign in to your hub
+              </Link>
+            </div>
           </div>
         </div>
       </main>

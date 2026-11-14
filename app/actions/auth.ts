@@ -3,6 +3,8 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { isAdminEmail } from "@/lib/server/auth";
 import { isValidEmail } from "@/lib/server/auth-users";
+import { isEmailVerified } from "@/lib/server/email-verification";
+import { checkEmail, checkInstagram, checkPersonName, normalizeInstagram } from "@/lib/signup-validation";
 
 export type SignUpResult =
   | { success: true }
@@ -24,16 +26,20 @@ export async function signUpAction(formData: {
   city?: string;
   isPartner?: boolean;
   businessName?: string;
+  /** From the email code step (components/forms/EmailVerifyBox). */
+  emailVerifiedToken?: string;
 }): Promise<SignUpResult> {
   const email = (formData.email || "").trim().toLowerCase();
   const password = formData.password || "";
-  const fullName = (formData.fullName || "").trim().slice(0, 80);
-  const socialLink = (formData.socialLink || "").trim().slice(0, 255);
+  const fullName = (formData.fullName || "").trim().replace(/\s+/g, " ").slice(0, 80);
+  const instagram = normalizeInstagram(formData.socialLink || "");
+  const socialLink = instagram ? `https://instagram.com/${instagram}` : "";
   const bio = (formData.bio || "").trim().slice(0, 300);
   const city = ["Karachi", "Lahore", "Islamabad"].includes(formData.city || "") ? formData.city : "Karachi";
 
-  if (!isValidEmail(email)) {
-    return { success: false, error: "Please enter a valid email address." };
+  const problem = checkEmail(email) || checkPersonName(fullName) || checkInstagram(formData.socialLink || "");
+  if (problem || !isValidEmail(email)) {
+    return { success: false, error: problem || "Please enter a valid email address." };
   }
   if (password.length < 8) {
     return { success: false, error: "Password must be at least 8 characters." };
@@ -44,6 +50,10 @@ export async function signUpAction(formData: {
   // Staff addresses can never be self-registered.
   if (isAdminEmail(email)) {
     return { success: false, error: "This email address cannot be used to sign up." };
+  }
+
+  if (!isEmailVerified(email, formData.emailVerifiedToken)) {
+    return { success: false, error: "Please verify your email address with the 6-digit code first." };
   }
 
   // Public sign-up always creates a regular, un-vetted Explorer account. Partner and

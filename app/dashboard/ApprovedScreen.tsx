@@ -1951,7 +1951,7 @@ export default function ApprovedScreen({
           shareUrl={
             typeof window !== "undefined"
               ? `${window.location.origin}/e/${eventToShare.id.slice(0, 8)}`
-              : `https://solonomore.com/e/${eventToShare.id.slice(0, 8)}`
+              : `https://solonomore.online/e/${eventToShare.id.slice(0, 8)}`
           }
           shareText={`Check out "${eventToShare.title}" on Solo-No-More! Book passes:`}
           type="event"

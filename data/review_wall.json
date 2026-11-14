@@ -1,15 +1,15 @@
 {
   "heading": "Stories from the Squad",
-  "tagline": "Tag @solonomore on Instagram to get featured on the Review Wall",
+  "tagline": "Tag @solonomore.pk on Instagram to get featured on the Review Wall",
   "slots": [
     {
       "id": "slot-1",
       "slot": 1,
       "label": "Slot 1 — Featured video",
       "type": "reel",
-      "url": "https://www.instagram.com/solonomore",
+      "url": "https://www.instagram.com/solonomore.pk/",
       "image_url": "/images/beach-bonfire.jpg",
-      "author": "@solonomore",
+      "author": "@solonomore.pk",
       "venue": ""
     },
     {
@@ -17,9 +17,9 @@
       "slot": 2,
       "label": "Slot 2 — Featured video",
       "type": "reel",
-      "url": "https://www.instagram.com/solonomore",
+      "url": "https://www.instagram.com/solonomore.pk/",
       "image_url": "/images/padel-squad.jpg",
-      "author": "@solonomore",
+      "author": "@solonomore.pk",
       "venue": ""
     },
     {
@@ -27,9 +27,9 @@
       "slot": 3,
       "label": "Slot 3",
       "type": "post",
-      "url": "https://www.instagram.com/solonomore",
+      "url": "https://www.instagram.com/solonomore.pk/",
       "image_url": "/images/acoustic-jam.jpg",
-      "author": "@solonomore",
+      "author": "@solonomore.pk",
       "venue": ""
     },
     {
@@ -37,9 +37,9 @@
       "slot": 4,
       "label": "Slot 4",
       "type": "post",
-      "url": "https://www.instagram.com/solonomore",
+      "url": "https://www.instagram.com/solonomore.pk/",
       "image_url": "/images/chai-cafe.jpg",
-      "author": "@solonomore",
+      "author": "@solonomore.pk",
       "venue": ""
     },
     {
@@ -47,9 +47,9 @@
       "slot": 5,
       "label": "Slot 5",
       "type": "post",
-      "url": "https://www.instagram.com/solonomore",
+      "url": "https://www.instagram.com/solonomore.pk/",
       "image_url": "/images/beacon-chai.jpg",
-      "author": "@solonomore",
+      "author": "@solonomore.pk",
       "venue": ""
     },
     {
@@ -57,9 +57,9 @@
       "slot": 6,
       "label": "Slot 6",
       "type": "post",
-      "url": "https://www.instagram.com/solonomore",
+      "url": "https://www.instagram.com/solonomore.pk/",
       "image_url": "/images/beacon-padel.jpg",
-      "author": "@solonomore",
+      "author": "@solonomore.pk",
       "venue": ""
     },
     {
@@ -67,9 +67,9 @@
       "slot": 7,
       "label": "Slot 7",
       "type": "post",
-      "url": "https://www.instagram.com/solonomore",
+      "url": "https://www.instagram.com/solonomore.pk/",
       "image_url": "/images/hero-rooftop.jpg",
-      "author": "@solonomore",
+      "author": "@solonomore.pk",
       "venue": ""
     },
     {
@@ -77,9 +77,9 @@
       "slot": 8,
       "label": "Slot 8",
       "type": "post",
-      "url": "https://www.instagram.com/solonomore",
+      "url": "https://www.instagram.com/solonomore.pk/",
       "image_url": "/images/beacon-now-26.jpg",
-      "author": "@solonomore",
+      "author": "@solonomore.pk",
       "venue": ""
     },
     {
@@ -87,9 +87,9 @@
       "slot": 9,
       "label": "Slot 9",
       "type": "post",
-      "url": "https://www.instagram.com/solonomore",
+      "url": "https://www.instagram.com/solonomore.pk/",
       "image_url": "/images/hero-image.jpg",
-      "author": "@solonomore",
+      "author": "@solonomore.pk",
       "venue": ""
     }
   ]

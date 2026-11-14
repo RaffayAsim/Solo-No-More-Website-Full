@@ -158,7 +158,7 @@ export default function BeaconQuickPreviewModal({
   const shareUrl =
     typeof window !== "undefined"
       ? `${window.location.origin}/b/${shortCode}`
-      : `https://solonomore.com/b/${shortCode}`;
+      : `https://solonomore.online/b/${shortCode}`;
 
   const handleShare = async () => {
     if (navigator.share) {

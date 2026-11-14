@@ -75,20 +75,23 @@ const ticket = t1?.[0];
 if (ticket) record("event_ticket", ticket.id, `${title} / booker`);
 check("B DB: ticket is pending before payment", ticket?.ticket_status === "pending", `status=${ticket?.ticket_status}`);
 
-await step("B WhatsApp button opens wa.me/<NEXT_PUBLIC_PAYMENT_WHATSAPP> with pre-filled text", async () => {
+await step("B proof form has no transaction ID field and no WhatsApp before submit", async () => {
   await page.locator('input[type="file"]').setInputFiles(pngFile("ticket-proof.png"));
-  await page.getByPlaceholder("e.g. 9840210294").fill(`TEST-B-${RUN_ID}`);
-  const wa = page.locator('a[href*="wa.me"]').first();
-  await wa.waitFor();
-  const href = decodeURIComponent(await wa.getAttribute("href"));
-  if (!href.startsWith(`https://wa.me/${(process.env.NEXT_PUBLIC_PAYMENT_WHATSAPP || "").replace(/D/g, "")}?text=`)) return `href starts ${href.slice(0, 40)}`;
-  for (const part of ["Amount: PKR 1,500", `Booking Ref: ${ticket?.payment_reference}`, `Transaction ID: TEST-B-${RUN_ID}`]) {
-    if (!href.includes(part)) return `pre-filled text missing "${part}"`;
-  }
+  if (await page.getByPlaceholder("e.g. 9840210294").count()) return "transaction ID field is still shown";
+  if (await page.locator('a[href*="wa.me"]').count()) return "WhatsApp is offered before the proof is submitted";
 }, page);
 await step("B upload proof and submit", async () => {
   await page.getByRole("button", { name: /Submit Payment Proof/ }).click();
   await page.getByText("Payment proof received").first().waitFor({ timeout: 30000 });
+}, page);
+await step("B after submit: optional WhatsApp to wa.me/<NEXT_PUBLIC_PAYMENT_WHATSAPP> with the booking reference", async () => {
+  const wa = page.locator('a[href*="wa.me"]').first();
+  await wa.waitFor();
+  const href = decodeURIComponent(await wa.getAttribute("href"));
+  if (!href.startsWith(`https://wa.me/${(process.env.NEXT_PUBLIC_PAYMENT_WHATSAPP || "").replace(/D/g, "")}?text=`)) return `href starts ${href.slice(0, 40)}`;
+  for (const part of ["submitted my payment proof", `Reference: ${ticket?.payment_reference}`]) {
+    if (!href.includes(part)) return `pre-filled text missing "${part}"`;
+  }
 }, page);
 const { data: sub } = await poll(
   () => db.from("payment_submissions").select("id,status,booking_ref").eq("booking_ref", ticket?.payment_reference || "-").maybeSingle(),

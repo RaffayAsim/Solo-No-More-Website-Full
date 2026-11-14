@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   MemberApplicationRecord,
@@ -33,17 +33,61 @@ import { IconX } from "@/components/icons/AppIcons";
 
 interface AdminApplicationsClientProps {
   initialApplications: MemberApplicationRecord[];
+  /** Opened from an email link (/admin/applications?id=...). */
+  initialSelectedId?: string;
+  initialFilter?: string;
 }
 
-export default function AdminApplicationsClient({ initialApplications }: AdminApplicationsClientProps) {
+const STATUS_FILTERS = ["all", "pending_admin_approval", "payment_pending", "payment_submitted", "approved", "credentials_created"] as const;
+type StatusFilter = (typeof STATUS_FILTERS)[number];
+
+/** One read-only answer, labelled exactly like the signup form. */
+function Answer({ label, value, mono }: { label: string; value?: string | null; mono?: boolean }) {
+  return (
+    <div className="flex justify-between gap-3 py-1.5 border-b border-white/[0.04]">
+      <span className="text-neutral-400 shrink-0">{label}</span>
+      <span
+        className={`text-right break-words min-w-0 font-medium ${
+          value ? (mono ? "text-[#FF6F26] font-mono" : "text-white") : "text-neutral-600"
+        }`}
+      >
+        {value || "Not provided"}
+      </span>
+    </div>
+  );
+}
+
+function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-0.5">
+      <div className="text-[10.5px] font-extrabold uppercase tracking-wider text-[#FFA05C] pb-1">{title}</div>
+      {children}
+    </div>
+  );
+}
+
+const pkTime = (iso?: string) =>
+  iso ? new Date(iso).toLocaleString("en-PK", { timeZone: "Asia/Karachi", dateStyle: "medium", timeStyle: "short" }) : "";
+
+export default function AdminApplicationsClient({ initialApplications, initialSelectedId, initialFilter }: AdminApplicationsClientProps) {
   const router = useRouter();
   const [applications, setApplications] = useState<MemberApplicationRecord[]>(initialApplications);
   // Applications whose create-password email failed to send (admin must share the link manually).
   const [inviteEmailFailedIds, setInviteEmailFailedIds] = useState<string[]>([]);
-  const [filter, setFilter] = useState<"all" | "pending_admin_approval" | "payment_pending" | "payment_submitted" | "approved" | "credentials_created">("all");
+  const [filter, setFilter] = useState<StatusFilter>(
+    STATUS_FILTERS.includes(initialFilter as StatusFilter) ? (initialFilter as StatusFilter) : "all"
+  );
   const [typeFilter, setTypeFilter] = useState<"all" | "member" | "partner">("all");
   const [search, setSearch] = useState("");
-  const [selectedApp, setSelectedApp] = useState<MemberApplicationRecord | null>(null);
+  const [selectedApp, setSelectedApp] = useState<MemberApplicationRecord | null>(
+    () => initialApplications.find((a) => a.id === initialSelectedId) || null
+  );
+
+  // Keep the list in sync after router.refresh() (e.g. a new payment proof arrived).
+  useEffect(() => {
+    setApplications(initialApplications);
+    setSelectedApp((prev) => (prev ? initialApplications.find((a) => a.id === prev.id) || prev : prev));
+  }, [initialApplications]);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -294,7 +338,7 @@ export default function AdminApplicationsClient({ initialApplications }: AdminAp
                               app.type === "partner" ? "text-cyan-400" : "text-[#FF6F26]"
                             }`}
                           >
-                            {app.type}
+                            {/artist/i.test(app.packageSelected) ? "artist" : app.type}
                           </span>
                         </td>
 
@@ -392,66 +436,79 @@ export default function AdminApplicationsClient({ initialApplications }: AdminAp
               </span>
             </div>
 
-            {/* Application Data Fields */}
-            <div className="space-y-2 text-xs text-neutral-300">
-              <div className="flex justify-between py-1 border-b border-white/[0.04]">
-                <span className="text-neutral-400">Email:</span>
-                <span className="text-white font-medium">{selectedApp.email}</span>
+            {/* Answers — same sections, labels and order as the signup form on /apply */}
+            {selectedApp.type === "partner" ? (
+              <div className="space-y-4 text-xs text-neutral-300">
+                <FormSection title={/artist/i.test(selectedApp.packageSelected) ? "Artist details" : "Partner details"}>
+                  <Answer label={/artist/i.test(selectedApp.packageSelected) ? "Artist / Stage Name" : "Business / Venue Name"} value={selectedApp.partnerBusinessName} />
+                  <Answer label="Contact Name" value={selectedApp.fullName} />
+                  <Answer label="Phone / WhatsApp" value={selectedApp.phone} />
+                  <Answer label="Work Email" value={selectedApp.email} />
+                  <Answer label="City" value={selectedApp.city} />
+                  <Answer label="Category" value={selectedApp.partnerCategory} />
+                  <Answer label="Instagram" value={selectedApp.instagram} />
+                  <Answer label="Applied on" value={pkTime(selectedApp.createdAt)} />
+                </FormSection>
+                <FormSection title="Proposed Perks or Events for Squad Members">
+                  <p className={`whitespace-pre-wrap leading-relaxed ${selectedApp.partnerPerks ? "text-white" : "text-neutral-600"}`}>
+                    {selectedApp.partnerPerks || "Not provided"}
+                  </p>
+                </FormSection>
               </div>
-              <div className="flex justify-between py-1 border-b border-white/[0.04]">
-                <span className="text-neutral-400">Phone:</span>
-                <span className="text-white font-medium">{selectedApp.phone}</span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-white/[0.04]">
-                <span className="text-neutral-400">Gender:</span>
-                <span className="text-white capitalize font-medium">{selectedApp.gender}</span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-white/[0.04]">
-                <span className="text-neutral-400">Date of Birth:</span>
-                <span className="text-white font-medium">{selectedApp.dateOfBirth || "N/A"}</span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-white/[0.04]">
-                <span className="text-neutral-400">CNIC:</span>
-                <span className="text-[#FF6F26] font-mono font-medium">{selectedApp.cnic || "N/A"}</span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-white/[0.04]">
-                <span className="text-neutral-400">Emergency:</span>
-                <span className="text-white font-medium">{selectedApp.emergencyName} ({selectedApp.emergencyPhone})</span>
-              </div>
-              {selectedApp.instagram && (
-                <div className="flex justify-between py-1 border-b border-white/[0.04]">
-                  <span className="text-neutral-400">Instagram:</span>
-                  <a
-                    href={`https://instagram.com/${selectedApp.instagram.replace("@", "")}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-[#FF6F26] hover:underline"
-                  >
-                    {selectedApp.instagram}
-                  </a>
-                </div>
-              )}
-              <div className="flex justify-between py-1 border-b border-white/[0.04]">
-                <span className="text-neutral-400">Preferred Vibe:</span>
-                <span className="text-white font-medium">{selectedApp.vibe}</span>
-              </div>
-
-              {selectedApp.interests && selectedApp.interests.length > 0 && (
-                <div className="pt-2">
-                  <span className="text-neutral-400 block mb-2">Interests:</span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {selectedApp.interests.map((int) => (
-                      <span
-                        key={int}
-                        className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-[#FF6F26]/10 text-[#FF6F26] border border-[#FF6F26]/20"
+            ) : (
+              <div className="space-y-4 text-xs text-neutral-300">
+                <FormSection title="1 · Personal Information">
+                  <Answer label="Username" value={selectedApp.username ? `@${selectedApp.username.replace(/^@/, "")}` : ""} />
+                  <Answer label="Email" value={selectedApp.email} />
+                  <Answer label="Full Name" value={selectedApp.fullName} />
+                  <Answer label="Phone" value={selectedApp.phone} />
+                  <Answer label="City" value={selectedApp.city} />
+                  <Answer label="Gender" value={selectedApp.gender} />
+                  <Answer label="Vibe / Event Type" value={selectedApp.vibe} />
+                  <Answer label="Date of Birth" value={selectedApp.dateOfBirth} />
+                </FormSection>
+                <FormSection title="2 · Identity & Emergency">
+                  <Answer label="CNIC Number" value={selectedApp.cnic} mono />
+                  <Answer label="Emergency Contact Name" value={selectedApp.emergencyName} />
+                  <Answer label="Emergency Contact Phone" value={selectedApp.emergencyPhone} />
+                  <div className="flex justify-between gap-3 py-1.5 border-b border-white/[0.04]">
+                    <span className="text-neutral-400 shrink-0">Instagram Username</span>
+                    {selectedApp.instagram ? (
+                      <a
+                        href={`https://instagram.com/${selectedApp.instagram.replace("@", "")}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[#FF6F26] hover:underline font-medium"
                       >
-                        {int}
-                      </span>
-                    ))}
+                        {selectedApp.instagram}
+                      </a>
+                    ) : (
+                      <span className="text-neutral-600 font-medium">Not provided</span>
+                    )}
                   </div>
-                </div>
-              )}
-            </div>
+                </FormSection>
+                <FormSection title="3 · Your Interests">
+                  {selectedApp.interests && selectedApp.interests.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {selectedApp.interests.map((int) => (
+                        <span
+                          key={int}
+                          className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-[#FF6F26]/10 text-[#FF6F26] border border-[#FF6F26]/20"
+                        >
+                          {int}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-neutral-600">None selected</span>
+                  )}
+                </FormSection>
+                <FormSection title="4 · Photo & Package">
+                  <Answer label="Membership Package" value={selectedApp.packageSelected} />
+                  <Answer label="Applied on" value={pkTime(selectedApp.createdAt)} />
+                </FormSection>
+              </div>
+            )}
 
             {/* Payment & Verification Section */}
             <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08] space-y-3">
@@ -490,14 +547,17 @@ export default function AdminApplicationsClient({ initialApplications }: AdminAp
               {selectedApp.paymentProofUrl && (
                 <div className="space-y-1.5">
                   <div className="text-[11px] text-neutral-300 font-semibold">
-                    Submitted Proof (TID: {selectedApp.transactionRef}):
+                    Payment screenshot
+                    {selectedApp.paymentSubmittedAt ? ` · sent ${pkTime(selectedApp.paymentSubmittedAt)}` : ""}
+                    {selectedApp.transactionRef && selectedApp.transactionRef !== "N/A" ? ` · Ref ${selectedApp.transactionRef}` : ""}
+                    {" "}(tap to enlarge):
                   </div>
                   <a href={selectedApp.paymentProofUrl} target="_blank" rel="noreferrer" className="block">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={selectedApp.paymentProofUrl}
-                      alt="Proof"
-                      className="w-full h-36 object-cover rounded-xl border border-white/10 hover:opacity-90 transition-opacity"
+                      alt="Payment screenshot"
+                      className="w-full max-h-80 object-contain bg-black/40 rounded-xl border border-white/10 hover:opacity-90 transition-opacity"
                     />
                   </a>
                 </div>

@@ -112,19 +112,19 @@ export default async function UserVettingPage() {
       registeredDate: regDate,
       createdAtIso: createdAt,
       city: p.city || app?.city || "Karachi",
-      address: app?.city ? `DHA Phase 6, ${app.city}` : "Karachi, Pakistan",
+      address: p.address || "",
       cnic: p.cnic || app?.cnic || "",
-      gender: p.gender || "Male",
-      dateOfBirth: p.date_of_birth || "",
-      emergencyContactName: p.emergency_contact_name || app?.emergencyContactName || "",
-      emergencyContactPhone: p.emergency_contact_phone || app?.emergencyContactPhone || "",
+      gender: p.gender || app?.gender || "",
+      dateOfBirth: p.date_of_birth || app?.dateOfBirth || "",
+      emergencyContactName: p.emergency_contact_name || app?.emergencyName || "",
+      emergencyContactPhone: p.emergency_contact_phone || app?.emergencyPhone || "",
       instagramUsername: (p.instagram_username || p.social_link || app?.instagram || "").replace(/^@/, ""),
       bio: p.bio || app?.vibe || "",
       profilePictureUrl: profilePic,
       avatarIcon: p.avatar_icon || "👾",
       cnicPictureUrl: p.cnic_picture_url || "",
       instagramScreenshotUrl: p.instagram_screenshot_url || p.social_link || (app?.instagramScreenshots && app.instagramScreenshots[0]) || "",
-      vibeTags: Array.isArray(p.vibe_tags) && p.vibe_tags.length > 0 ? p.vibe_tags : ["Techno & House"],
+      vibeTags: Array.isArray(p.vibe_tags) && p.vibe_tags.length > 0 ? p.vibe_tags : app?.interests || [],
       isProfileComplete: Boolean(p.is_profile_complete),
       instagramScreenshots: [],
       instagram: p.instagram_username || p.social_link || app?.instagram || "",
@@ -132,6 +132,7 @@ export default async function UserVettingPage() {
       paymentMethod: app?.paymentMethod,
       transactionRef: app?.transactionRef,
       inviteToken: app?.inviteToken,
+      applicationStatus: app?.status,
     });
   }
 
@@ -154,7 +155,7 @@ export default async function UserVettingPage() {
 
       let status: "approved" | "pending" | "payment_pending" | "suspended" | "rejected" = "pending";
       if (app.status === "approved" || app.status === "credentials_created") status = "approved";
-      else if (app.status === "payment_pending") status = "payment_pending";
+      else if (app.status === "payment_pending" || app.status === "payment_submitted") status = "payment_pending";
       else if (app.status === "rejected") status = "rejected";
       else status = "pending";
 
@@ -175,19 +176,19 @@ export default async function UserVettingPage() {
         registeredDate: regDate,
         createdAtIso: createdAt,
         city: app.city || "Karachi",
-        address: `${app.city || "Karachi"}, Pakistan`,
+        address: "",
         cnic: app.cnic || "",
-        gender: "Male",
-        dateOfBirth: "",
-        emergencyContactName: app.emergencyContactName || "",
-        emergencyContactPhone: app.emergencyContactPhone || "",
+        gender: app.gender || "",
+        dateOfBirth: app.dateOfBirth || "",
+        emergencyContactName: app.emergencyName || "",
+        emergencyContactPhone: app.emergencyPhone || "",
         instagramUsername: (app.instagram || "").replace(/^@/, ""),
         bio: app.vibe || "",
         profilePictureUrl: getValidImageUrl(app.photoUrl),
         avatarIcon: "👾",
         cnicPictureUrl: "",
         instagramScreenshotUrl: (app.instagramScreenshots && app.instagramScreenshots[0]) || "",
-        vibeTags: ["Techno & House"],
+        vibeTags: app.interests || [],
         isProfileComplete: false,
         instagramScreenshots: [],
         instagram: app.instagram || "",
@@ -195,6 +196,7 @@ export default async function UserVettingPage() {
         paymentMethod: app.paymentMethod,
         transactionRef: app.transactionRef,
         inviteToken: app.inviteToken,
+        applicationStatus: app.status,
       });
     }
   }

@@ -1,8 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import SignOutButton from "@/app/dashboard/SignOutButton";
 import {
   ShieldCheck,
@@ -16,18 +16,43 @@ interface AdminNavProps {
   totalUsers?: number;
   totalEvents?: number;
   totalBookings?: number;
+  /** New applications + membership payment proofs waiting for an admin. */
+  applicationsToReview?: number;
+  /** Event / upgrade payment proofs waiting for an admin. */
+  paymentsToReview?: number;
 }
 
 export default function AdminSidebarClient({
   totalUsers = 0,
   totalEvents = 0,
   totalBookings = 0,
+  applicationsToReview = 0,
+  paymentsToReview = 0,
 }: AdminNavProps) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  // Keep the waiting-count badges fresh: refresh when the admin returns to this tab.
+  const lastRefresh = useRef(Date.now());
+  useEffect(() => {
+    const onFocus = () => {
+      if (document.visibilityState !== "visible" || Date.now() - lastRefresh.current < 30_000) return;
+      lastRefresh.current = Date.now();
+      router.refresh();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
+  }, [router]);
 
   // Navigation tabs matching Image 1 style
-  const navTabs = [
+  const navTabs: { label: string; href: string; isExact?: boolean; badge?: number }[] = [
     { label: "Overview", href: "/admin", isExact: true },
+    { label: "Applications", href: "/admin/applications", badge: applicationsToReview },
+    { label: "Payments", href: "/admin/payments", badge: paymentsToReview },
     { label: "Events", href: "/admin/events" },
     { label: "Member Users", href: "/admin/users" },
     { label: "Member's Bookings", href: "/admin/bookings" },
@@ -371,6 +396,28 @@ export default function AdminSidebarClient({
                   className={active ? "" : "hover:text-white hover:bg-white/[0.08]"}
                 >
                   <span>{tab.label}</span>
+                  {!!tab.badge && tab.badge > 0 && (
+                    <span
+                      aria-label={`${tab.badge} waiting`}
+                      style={{
+                        marginLeft: "7px",
+                        minWidth: "20px",
+                        height: "20px",
+                        padding: "0 6px",
+                        borderRadius: "999px",
+                        background: active ? "#FFFFFF" : "#FF4D4F",
+                        color: active ? "#FF4400" : "#FFFFFF",
+                        fontSize: "11px",
+                        fontWeight: 900,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        boxShadow: active ? "none" : "0 0 10px rgba(255, 77, 79, 0.6)",
+                      }}
+                    >
+                      {tab.badge > 99 ? "99+" : tab.badge}
+                    </span>
+                  )}
                 </Link>
               );
             })}

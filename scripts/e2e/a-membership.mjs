@@ -3,7 +3,7 @@
 // Pass E2E_ANNUAL=1 to apply for the annual plan instead of monthly.
 import {
   BASE, db, launch, newPage, login, step, check, finish, plusEmail, pngFile, record, RUN_ID,
-  logOffset, waitForEmail, emailsSince, serverErrorsSince, randomPassword, sleep,
+  logOffset, waitForEmail, emailsSince, serverErrorsSince, randomPassword, sleep, verifyEmailInForm,
 } from "./lib.mjs";
 import { poll } from "./shared.mjs";
 
@@ -11,7 +11,8 @@ const annual = process.env.E2E_ANNUAL === "1";
 const off = logOffset();
 const email = plusEmail(annual ? "apply-annual" : "apply");
 const username = `test_${RUN_ID}${annual ? "y" : "m"}`;
-const fullName = `TEST- Applicant ${RUN_ID}`;
+// Names may only contain letters, so the run id is spelled with letters (0→a … 9→j).
+const fullName = `TEST- Applicant ${RUN_ID.replace(/\d/g, (d) => "abcdefghij"[d])}`;
 const browser = await launch();
 const { page } = await newPage(browser);
 const visible = (loc) => loc.locator("visible=true").first();
@@ -25,8 +26,9 @@ await step("A open /apply member form", async () => {
 await step("A fill personal information", async () => {
   await visible(page.getByPlaceholder("johndoe")).fill(username);
   await visible(page.getByPlaceholder("you@example.com")).fill(email);
+  await verifyEmailInForm(page, email);
   await visible(page.getByPlaceholder("Your full name")).fill(fullName);
-  await visible(page.getByPlaceholder("+92 300 1234567")).fill("+92 300 0000011");
+  await visible(page.getByPlaceholder("0300 1234567")).fill(`${annual ? "0301" : "0300"} ${RUN_ID.slice(-7)}`);
   const selects = page.locator("select").locator("visible=true");
   await selects.nth(1).selectOption("Male");
   await visible(page.getByPlaceholder("All Future Events, VIP, Rave, etc.")).fill("Chai");
@@ -36,9 +38,9 @@ await step("A fill personal information", async () => {
 }, page);
 
 await step("A fill identity & emergency", async () => {
-  await visible(page.getByPlaceholder("XXXXX-XXXXXXX-X")).fill("42101-0000000-1");
-  await visible(page.getByPlaceholder("Contact name")).fill("TEST- Emergency");
-  await visible(page.getByPlaceholder("+92 300 1234567")).fill("+92 300 0000012");
+  await visible(page.getByPlaceholder("42101-1234567-1")).fill(`42101-${RUN_ID.slice(-7)}-${annual ? 3 : 1}`);
+  await visible(page.getByPlaceholder("Contact name")).fill("TEST Emergency Contact");
+  await visible(page.getByPlaceholder("0300 1234567")).fill(`${annual ? "0322" : "0321"} ${RUN_ID.slice(-7)}`);
   await visible(page.getByPlaceholder("@yourusername")).fill("@test_solonomore");
   await visible(page.getByRole("button", { name: "Next" })).click();
   await page.getByRole("heading", { name: "Your Interests" }).waitFor();
@@ -59,7 +61,7 @@ await step(`A choose Solo Pass Pro (${annual ? "annual" : "monthly"}) and submit
   await page.getByRole("button", { name: "Submit Application" }).click();
   await page.waitForFunction(() => !document.body.innerText.includes("SUBMITTING TO ADMIN"), null, { timeout: 45000 });
   await sleep(500);
-  const err = await page.locator("text=/Failed|Please ensure|Please provide|already (exists|registered|applied)/i").first().textContent().catch(() => null);
+  const err = await page.locator("text=/Failed|Please ensure|Please provide|already (exists|registered|applied)|Could not reach|taking too long/i").first().textContent().catch(() => null);
   if (err && !/received|success/i.test(err)) return `form error: ${err.slice(0, 120)}`;
 }, page);
 
@@ -100,9 +102,12 @@ await step("A /pay/<id> shows bank details and accepts screenshot", async () => 
   await page.goto(`${BASE}/pay/${app0.id}`, { waitUntil: "domcontentloaded" });
   await page.getByText(process.env.NEXT_PUBLIC_PAYMENT_IBAN).first().waitFor({ timeout: 30000 });
   await page.locator('input[type="file"]').setInputFiles(pngFile("membership-proof.png"));
-  await page.getByPlaceholder("e.g. 9840210294").fill(`TEST-A-${RUN_ID}`);
-  await page.getByRole("button", { name: /CONFIRM PAYMENT PROOF/ }).click();
+  if (await page.getByText(/Transaction ID/i).count()) return "transaction ID field is still shown";
+  if (await page.locator('a[href*="wa.me"]').count()) return "WhatsApp is offered before the proof is submitted";
+  await page.getByRole("button", { name: /SUBMIT PAYMENT PROOF/ }).click();
   await page.getByRole("heading", { name: /Payment Proof Received/ }).waitFor({ timeout: 30000 });
+  const wa = decodeURIComponent((await page.locator('a[href*="wa.me"]').first().getAttribute("href")) || "");
+  if (!wa.includes(`Reference: ${app0.id}`) || /attaching/i.test(wa)) return `after-submit WhatsApp text wrong: ${wa.slice(0, 120)}`;
 }, page);
 const { data: app2 } = await poll(() => db.from("membership_applications").select("status").eq("id", app0.id).single(), (r) => r.data?.status === "payment_submitted");
 check("A DB: status payment_submitted", app2?.status === "payment_submitted", `status=${app2?.status}`);
@@ -114,7 +119,7 @@ await step("A admin sees uploaded screenshot next to 'Verify Payment Proof'", as
   await admin.getByPlaceholder("Search by name, email, @username, or CNIC...").fill(email);
   await admin.locator("tr").filter({ hasText: fullName }).first().getByRole("button", { name: "Details" }).click();
   await admin.getByRole("button", { name: /Verify Payment Proof/ }).waitFor({ timeout: 20000 });
-  const img = admin.locator('img[alt="Proof"]').first();
+  const img = admin.locator('img[alt="Payment screenshot"]').first();
   if (!(await img.count())) return "no proof image on the verify screen";
   await img.scrollIntoViewIfNeeded();
   const loaded = await img.evaluate((el) => el.complete && el.naturalWidth > 0);
